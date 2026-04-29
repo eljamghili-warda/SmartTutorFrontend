@@ -20,7 +20,12 @@ export const disconnectSocket = () => { if (socket) { socket.disconnect(); socke
 
 export const joinSalle    = (id) => socket?.emit('join:salle',  { salleId: id })
 export const leaveSalle   = (id) => socket?.emit('leave:salle', { salleId: id })
-export const sendMessage  = (id, contenu) => socket?.emit('chat:message', { salleId: id, contenu })
+export const sendMessage = (id, contenu) => {
+  const socket = getSocket()
+  if (!socket) return
+
+  socket.emit('chat:message', { salleId: id, contenu })
+}
 
 export const drawOnBoard  = (id, donnees) => socket?.emit('whiteboard:draw',  { salleId: id, donnees })
 export const clearBoard   = (id) => socket?.emit('whiteboard:clear',  { salleId: id })

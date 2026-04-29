@@ -1,88 +1,144 @@
-// src/pages/Admin/AdminTuteurs.jsx
-import React, { useEffect, useState } from 'react';
-import { adminAPI } from '../../services/api';
-import Header from '../../components/Header/Header';
-import { Card, Btn, Badge, Avatar, Spinner, EmptyState, ToastContainer } from '../../components/UI';
-import { useToast } from '../../hooks/useToast';
+import React, { useEffect, useState } from 'react'
+import { adminAPI } from '../../services/api'
+import Header from '../../components/Header/Header'
+import { Btn, Badge, Avatar, Stars, Spinner, EmptyState, ToastContainer } from '../../components/UI'
+import { useToast } from '../../hooks/useToast'
+
+const statutConfig = {
+  PENDING:   { v: 'warning', label: '⏳ En attente' },
+  ACTIVE:    { v: 'success', label: '✓ Validé'      },
+  REJECTED:  { v: 'danger',  label: '✕ Refusé'      },
+  SUSPENDED: { v: 'danger',  label: '🔒 Suspendu'   },
+}
 
 export default function AdminTuteurs() {
-  const [tuteurs, setTuteurs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { toasts, success, error } = useToast();
+  const [tuteurs,  setTuteurs]  = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [filter,   setFilter]   = useState('ALL')
+  const { toasts, success, error } = useToast()
 
   useEffect(() => {
-    // Récupérer tous les tuteurs
-    Promise.all([
-      adminAPI.getTuteursPending?.(),
-      adminAPI.getUtilisateurs?.()
-    ]).catch(() => {
-      // Si les méthodes n'existent pas, utiliser des données mock
-      setTuteurs([
-        { id: 1, prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', role: 'tuteur', statut: 'pending' },
-        { id: 2, prenom: 'Marie', nom: 'Martin', email: 'marie@example.com', role: 'tuteur', statut: 'active' },
-      ]);
-    }).finally(() => setLoading(false));
-  }, []);
+    adminAPI.getUtilisateurs({ role: 'tuteur' })
+      .then(({ data }) => setTuteurs(data))
+      .finally(() => setLoading(false))
+  }, [])
 
-  const validerTuteur = async (id) => {
+  const valider = async (id, accepte) => {
     try {
-      if (adminAPI.validerTuteur) {
-        await adminAPI.validerTuteur(id, true);
-      }
-      setTuteurs(prev => prev.filter(t => t.id !== id));
-      success('Tuteur validé');
-    } catch {
-      error('Erreur');
-    }
-  };
+      await adminAPI.validerTuteur(id, accepte)
+      setTuteurs(prev => prev.map(t =>
+        t.id === id ? { ...t, statut_tuteur: accepte ? 'ACTIVE' : 'REJECTED' } : t
+      ))
+      success(accepte ? '✅ Tuteur validé !' : 'Tuteur refusé.')
+    } catch { error('Erreur') }
+  }
 
-  const refuserTuteur = async (id) => {
-    try {
-      if (adminAPI.validerTuteur) {
-        await adminAPI.validerTuteur(id, false);
-      }
-      setTuteurs(prev => prev.filter(t => t.id !== id));
-      success('Tuteur refusé');
-    } catch {
-      error('Erreur');
-    }
-  };
+  const filtered = tuteurs.filter(t =>
+    filter === 'ALL' || t.statut_tuteur === filter
+  )
 
-  if (loading) return <div className="flex justify-center p-20"><Spinner size="lg" /></div>;
-
-  const tuteursEnAttente = tuteurs.filter(t => t.role === 'tuteur' && t.statut !== 'active');
+  const counts = {
+    ALL:      tuteurs.length,
+    PENDING:  tuteurs.filter(t => t.statut_tuteur === 'PENDING').length,
+    ACTIVE:   tuteurs.filter(t => t.statut_tuteur === 'ACTIVE').length,
+    REJECTED: tuteurs.filter(t => t.statut_tuteur === 'REJECTED').length,
+  }
 
   return (
     <>
       <Header title="Gestion des tuteurs" />
       <ToastContainer toasts={toasts} />
-      <div className="p-6">
-        {tuteursEnAttente.length === 0 ? (
-          <EmptyState title="Aucun tuteur en attente" message="Tous les tuteurs sont validés" />
+      <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+
+        {/* Filter tabs */}
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { v: 'ALL',      label: 'Tous'         },
+            { v: 'PENDING',  label: '⏳ En attente' },
+            { v: 'ACTIVE',   label: '✓ Validés'    },
+            { v: 'REJECTED', label: '✕ Refusés'    },
+          ].map(f => (
+            <button key={f.v} onClick={() => setFilter(f.v)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border flex items-center gap-2
+                ${filter === f.v
+                  ? 'bg-violet-600/15 text-violet-400 border-violet-600/30'
+                  : 'bg-ink-800 text-slate-400 border-ink-700 hover:border-ink-600'}`}>
+              {f.label}
+              <span className={`text-xs px-1.5 py-0.5 rounded-full
+                ${filter === f.v ? 'bg-violet-600/30 text-violet-300' : 'bg-ink-700 text-slate-500'}`}>
+                {counts[f.v]}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+        ) : filtered.length === 0 ? (
+          <EmptyState icon="👨‍🏫" title="Aucun tuteur" desc="Aucun tuteur dans cette catégorie." />
         ) : (
-          <div className="space-y-3">
-            {tuteursEnAttente.map(tuteur => (
-              <Card key={tuteur.id} className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <Avatar name={`${tuteur.prenom} ${tuteur.nom}`} size="sm" />
-                  <div>
-                    <h3 className="font-semibold text-white">{tuteur.prenom} {tuteur.nom}</h3>
-                    <p className="text-sm text-slate-500">{tuteur.email}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filtered.map(t => {
+              const sc = statutConfig[t.statut_tuteur] || statutConfig.PENDING
+              return (
+                <div key={t.id}
+                  className="bg-ink-800 border border-ink-700 rounded-2xl p-5 flex flex-col gap-4 hover:border-ink-600 transition-colors">
+                  {/* Header */}
+                  <div className="flex items-start gap-3">
+                    <Avatar user={t} size="lg" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-display font-bold text-white">{t.prenom} {t.nom}</p>
+                        <Badge variant={sc.v}>{sc.label}</Badge>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">{t.email}</p>
+                      <Stars note={t.note_moyenne || 0} />
+                    </div>
                   </div>
+
+                  {/* Spécialités */}
+                  {(t.specialites || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {t.specialites.map(s => (
+                        <span key={s} className="px-2.5 py-0.5 rounded-full bg-violet-600/15 text-violet-400 text-xs border border-violet-600/25">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Inscription */}
+                  <p className="text-xs text-slate-600">
+                    Inscrit le {new Date(t.date_inscription).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+
+                  {/* Actions */}
+                  {t.statut_tuteur === 'PENDING' && (
+                    <div className="flex gap-2 pt-1 border-t border-ink-700">
+                      <Btn variant="success" size="sm" onClick={() => valider(t.id, true)}  className="flex-1 justify-center">✓ Valider</Btn>
+                      <Btn variant="danger"  size="sm" onClick={() => valider(t.id, false)} className="flex-1 justify-center">✕ Refuser</Btn>
+                    </div>
+                  )}
+                  {t.statut_tuteur === 'ACTIVE' && (
+                    <div className="pt-1 border-t border-ink-700">
+                      <Btn variant="danger" size="sm" onClick={() => valider(t.id, false)} className="w-full justify-center">
+                        Révoquer la validation
+                      </Btn>
+                    </div>
+                  )}
+                  {t.statut_tuteur === 'REJECTED' && (
+                    <div className="pt-1 border-t border-ink-700">
+                      <Btn variant="success" size="sm" onClick={() => valider(t.id, true)} className="w-full justify-center">
+                        Valider quand même
+                      </Btn>
+                    </div>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <Btn variant="success" size="sm" onClick={() => validerTuteur(tuteur.id)}>
-                    ✓ Valider
-                  </Btn>
-                  <Btn variant="danger" size="sm" onClick={() => refuserTuteur(tuteur.id)}>
-                    ✕ Refuser
-                  </Btn>
-                </div>
-              </Card>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
     </>
-  );
+  )
 }

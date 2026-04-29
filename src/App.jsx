@@ -20,6 +20,7 @@ import AdminSeances   from './pages/Admin/AdminSeances'
 
  function App() {
   return (
+    
     <AuthProvider>
       <BrowserRouter>
         <Routes>

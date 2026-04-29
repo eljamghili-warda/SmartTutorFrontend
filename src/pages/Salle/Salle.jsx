@@ -26,7 +26,7 @@ export default function Salle() {
   const [isMuted,     setIsMuted]     = useState(false)
   const [showPlan,    setShowPlan]    = useState(false)
   const [planForm,    setPlanForm]    = useState({ titre:'', matiere:'', dateDebut:'', duree:60 })
-
+const [ready, setReady] = useState(false)
   useEffect(() => {
     const load = async () => {
       try {
@@ -46,21 +46,51 @@ export default function Salle() {
   }, [id])
 
   useEffect(() => {
-    const socket = getSocket(); if (!socket) return
-    joinSalle(id)
-    socket.on('chat:message',    (msg) => setMessages(prev => [...prev, msg]))
-    socket.on('salle:user-joined', ({ userId, prenom, nom }) =>
-      setParticipants(prev => prev.some(p => p.id === userId) ? prev : [...prev, { id:userId, prenom, nom }])
+  const socket = getSocket()
+  if (!socket) return
+
+  setReady(false)
+
+  joinSalle(id)
+
+  const handleJoined = () => {
+    console.log("✅ Joined room confirmed")
+    setReady(true)
+  }
+
+  socket.on('salle:joined', handleJoined)
+
+  const handleMessage = (msg) => {
+    setMessages(prev => [...prev, msg])
+  }
+
+  socket.on('chat:message', handleMessage)
+
+  const handleJoin = ({ userId, prenom, nom }) => {
+    setParticipants(prev =>
+      prev.some(p => p.id === userId)
+        ? prev
+        : [...prev, { id: userId, prenom, nom }]
     )
-    socket.on('salle:user-left', ({ userId }) => setParticipants(prev => prev.filter(p => p.id !== userId)))
-    socket.on('call:started',    ({ sessionId }) => { setActiveCall(sessionId); joinCall(id, sessionId) })
-    socket.on('call:ended',      () => setActiveCall(null))
-    return () => {
-      leaveSalle(id)
-      socket.off('chat:message'); socket.off('salle:user-joined')
-      socket.off('salle:user-left'); socket.off('call:started'); socket.off('call:ended')
-    }
-  }, [id])
+  }
+
+  socket.on('salle:user-joined', handleJoin)
+
+  const handleLeave = ({ userId }) => {
+    setParticipants(prev => prev.filter(p => p.id !== userId))
+  }
+
+  socket.on('salle:user-left', handleLeave)
+
+  return () => {
+    leaveSalle(id)
+
+    socket.off('salle:joined', handleJoined)
+    socket.off('chat:message', handleMessage)
+    socket.off('salle:user-joined', handleJoin)
+    socket.off('salle:user-left', handleLeave)
+  }
+}, [id])
 
   const handleQuitter = async () => {
     if (!confirm('Quitter la salle ?')) return
@@ -104,7 +134,17 @@ export default function Salle() {
       success('Séance terminée.')
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
+const handleSend = (text) => {
+  const socket = getSocket()
 
+  if (!socket) {
+    console.log("❌ socket not ready yet")
+    return
+  }
+
+  console.log("📤 sending:", text)
+  sendMessage(id, text)
+}
   const isTuteur  = user?.role === 'tuteur' && myRole === 'CO_ADMIN'
   const isAdmin   = myRole === 'ADMIN'
   const canCall   = (isAdmin && !isTuteur) || isTuteur
