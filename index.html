@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartTutor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { display: ['Syne','sans-serif'], body: ['DM Sans','sans-serif'] },
+          colors: {
+            ink: { 950:'#080A12',900:'#0D0F1C',800:'#141625',700:'#1C1F35',600:'#252847',500:'#2E3258' }
+          },
+          boxShadow: { glow:'0 0 24px rgba(139,92,246,0.35)', 'glow-sm':'0 0 10px rgba(139,92,246,0.2)' },
+          animation: { 'fade-in':'fadeIn 0.3s ease forwards', 'slide-up':'slideUp 0.35s ease forwards' },
+          keyframes: {
+            fadeIn:{ from:{opacity:0}, to:{opacity:1} },
+            slideUp:{ from:{transform:'translateY(14px)',opacity:0}, to:{transform:'translateY(0)',opacity:1} }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',sans-serif;background:#080A12;color:#E2E8F0;overflow:hidden;height:100vh}
+    #root{height:100vh;display:flex;flex-direction:column}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:#252847;border-radius:2px}
+    ::-webkit-scrollbar-thumb:hover{background:#8B5CF6}
+    .font-display{font-family:'Syne',sans-serif}
+    input,textarea,select{font-family:'DM Sans',sans-serif;background:#0D0F1C;border:1px solid #252847;color:#E2E8F0;border-radius:10px;padding:10px 14px;width:100%;font-size:14px;transition:border-color .2s,box-shadow .2s;outline:none}
+    input:focus,textarea:focus,select:focus{border-color:#8B5CF6;box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+    input:disabled,textarea:disabled{opacity:.45;cursor:not-allowed}
+    textarea{resize:vertical}
+    select option{background:#0D0F1C}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
