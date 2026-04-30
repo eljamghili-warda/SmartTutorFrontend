@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { sallesAPI, seancesAPI, tuteursAPI, invitationsAPI } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
-import { getSocket, joinSalle, leaveSalle, sendMessage, startCall, endCall, joinCall, toggleMute } from '../../services/socket'
+import { getSocket, joinSalle, leaveSalle, sendMessage, startCall, endCall, joinCall, toggleMute, sendOffer, sendAnswer, sendIce } from '../../services/socket'
 import Chat from '../../components/Chat/Chat'
 import Whiteboard from '../../components/Whiteboard/Whiteboard'
 import { Avatar, Badge, Btn, Spinner, Modal, FormGroup, ToastContainer } from '../../components/UI'
@@ -133,52 +133,154 @@ const [ready, setReady] = useState(false)
     load()
   }, [id])
 
+  // Refs WebRTC
+  const peerRef    = React.useRef(null)
+  const streamRef  = React.useRef(null)
+
+  // Créer la connexion WebRTC
+  const createPeer = (socket, targetUserId, sessionId, isInitiator) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+      ]
+    })
+
+    // ICE candidates
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        sendIce(targetUserId, e.candidate)
+      }
+    }
+
+    // Remote stream → créer audio element
+    pc.ontrack = (e) => {
+      let audio = document.getElementById('remote-audio')
+      if (!audio) {
+        audio = document.createElement('audio')
+        audio.id = 'remote-audio'
+        audio.autoplay = true
+        document.body.appendChild(audio)
+      }
+      audio.srcObject = e.streams[0]
+    }
+
+    if (isInitiator) {
+      pc.onnegotiationneeded = async () => {
+        const offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+        sendOffer(targetUserId, offer, sessionId)
+      }
+    }
+
+    return pc
+  }
+
+  const stopCall = () => {
+    if (peerRef.current)   { peerRef.current.close();   peerRef.current = null }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
+    const audio = document.getElementById('remote-audio')
+    if (audio) audio.remove()
+  }
+
   useEffect(() => {
-  const socket = getSocket()
-  if (!socket) return
+    const socket = getSocket()
+    if (!socket) return
 
-  setReady(false)
+    setReady(false)
+    joinSalle(id)
 
-  joinSalle(id)
+    // ── Salle events ──────────────────────────────────────
+    const handleJoined = () => { setReady(true) }
+    const handleMessage = (msg) => setMessages(prev => [...prev, msg])
+    const handleJoin = ({ userId, prenom, nom }) => {
+      setParticipants(prev => prev.some(p => p.id === userId) ? prev : [...prev, { id: userId, prenom, nom }])
+    }
+    const handleLeave = ({ userId }) => setParticipants(prev => prev.filter(p => p.id !== userId))
 
-  const handleJoined = () => {
-    console.log("✅ Joined room confirmed")
-    setReady(true)
-  }
+    socket.on('salle:joined',      handleJoined)
+    socket.on('chat:message',      handleMessage)
+    socket.on('salle:user-joined', handleJoin)
+    socket.on('salle:user-left',   handleLeave)
 
-  socket.on('salle:joined', handleJoined)
+    // ── Call events ───────────────────────────────────────
+    const handleCallStarted = async ({ sessionId, initiateur }) => {
+      setActiveCall(sessionId)
+      joinCall(id, sessionId)
 
-  const handleMessage = (msg) => {
-    setMessages(prev => [...prev, msg])
-  }
+      // Si ce n'est pas l'initiateur, on attend l'offer
+      if (initiateur !== socket.id) return
 
-  socket.on('chat:message', handleMessage)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        streamRef.current = stream
+        const pc = createPeer(socket, null, sessionId, true)
+        peerRef.current = pc
+        stream.getTracks().forEach(t => pc.addTrack(t, stream))
+      } catch (err) {
+        console.error('getUserMedia error:', err)
+        error('Impossible d\'accéder au microphone.')
+      }
+    }
 
-  const handleJoin = ({ userId, prenom, nom }) => {
-    setParticipants(prev =>
-      prev.some(p => p.id === userId)
-        ? prev
-        : [...prev, { id: userId, prenom, nom }]
-    )
-  }
+    const handleOffer = async ({ fromUserId, offer, sessionId }) => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        streamRef.current = stream
+        const pc = createPeer(socket, fromUserId, sessionId, false)
+        peerRef.current = pc
+        stream.getTracks().forEach(t => pc.addTrack(t, stream))
 
-  socket.on('salle:user-joined', handleJoin)
+        await pc.setRemoteDescription(new RTCSessionDescription(offer))
+        const answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        sendAnswer(fromUserId, answer, sessionId)
+      } catch (err) {
+        console.error('handle offer error:', err)
+      }
+    }
 
-  const handleLeave = ({ userId }) => {
-    setParticipants(prev => prev.filter(p => p.id !== userId))
-  }
+    const handleAnswer = async ({ answer }) => {
+      try {
+        if (peerRef.current) {
+          await peerRef.current.setRemoteDescription(new RTCSessionDescription(answer))
+        }
+      } catch (err) { console.error('handle answer error:', err) }
+    }
 
-  socket.on('salle:user-left', handleLeave)
+    const handleIce = async ({ candidate }) => {
+      try {
+        if (peerRef.current && candidate) {
+          await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+        }
+      } catch (err) { console.error('handle ice error:', err) }
+    }
 
-  return () => {
-    leaveSalle(id)
+    const handleCallEnded = () => {
+      setActiveCall(null)
+      stopCall()
+    }
 
-    socket.off('salle:joined', handleJoined)
-    socket.off('chat:message', handleMessage)
-    socket.off('salle:user-joined', handleJoin)
-    socket.off('salle:user-left', handleLeave)
-  }
-}, [id])
+    socket.on('call:started',       handleCallStarted)
+    socket.on('call:offer',         handleOffer)
+    socket.on('call:answer',        handleAnswer)
+    socket.on('call:ice-candidate', handleIce)
+    socket.on('call:ended',         handleCallEnded)
+
+    return () => {
+      leaveSalle(id)
+      stopCall()
+      socket.off('salle:joined',      handleJoined)
+      socket.off('chat:message',      handleMessage)
+      socket.off('salle:user-joined', handleJoin)
+      socket.off('salle:user-left',   handleLeave)
+      socket.off('call:started',      handleCallStarted)
+      socket.off('call:offer',        handleOffer)
+      socket.off('call:answer',       handleAnswer)
+      socket.off('call:ice-candidate',handleIce)
+      socket.off('call:ended',        handleCallEnded)
+    }
+  }, [id])
 
   const handleQuitter = async () => {
     if (!confirm('Quitter la salle ?')) return
@@ -213,10 +315,11 @@ const [ready, setReady] = useState(false)
 
   const handleLancer = async (seanceId) => {
     try {
-      const { data } = await seancesAPI.lancer(seanceId)
+      await seancesAPI.lancer(seanceId)
       setSeances(prev => prev.map(s => s.id === seanceId ? { ...s, statut:'EN_COURS' } : s))
+      // Démarre l'appel socket → tous les membres reçoivent 'call:started'
       startCall(id, seanceId)
-      success('Séance lancée !')
+      success('Séance lancée ! Appel démarré.')
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 

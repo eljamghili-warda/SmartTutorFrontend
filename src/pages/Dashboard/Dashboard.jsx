@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { sallesAPI } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import Header from '../../components/Header/Header'
-import { Btn, Badge, Card, Modal, FormGroup, EmptyState, Spinner } from '../../components/UI'
+import { Btn, Badge, Card, Modal, FormGroup, EmptyState, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
-import { ToastContainer } from '../../components/UI'
 
-const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir }) => {
+const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir, userRole }) => {
   const isPrivee  = salle.type === 'PRIVEE'
   const estMembre = salle.est_membre === true || salle.est_membre === 'true'
 
@@ -47,8 +47,10 @@ const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir }) => {
             ✉️ Demander une invitation
           </Btn>
         ) : (
-          <Btn size="sm" className="w-full justify-center" onClick={() => onRejoindre(salle)}>
-            ➕ Rejoindre
+          // Salle publique → demande à l'admin (pas rejoindre direct)
+          <Btn size="sm" variant="secondary" className="w-full justify-center"
+            onClick={() => onRejoindre(salle)}>
+            📨 Demander à rejoindre
           </Btn>
         )}
       </div>
@@ -99,6 +101,9 @@ const CreateModal = ({ open, onClose, onCreate }) => {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth()
+  const isTuteur = user?.role === 'tuteur'
+
   const [salles, setSalles]     = useState([])
   const [loading, setLoading]   = useState(true)
   const [showCreate, setCreate] = useState(false)
@@ -112,13 +117,14 @@ export default function Dashboard() {
 
   const handleOuvrir = (salle) => navigate(`/salle/${salle.id}`)
 
+  // Salle publique → envoyer demande d'invitation à l'admin (même logique que privée)
   const handleRejoindre = async (salle) => {
     try {
-      await sallesAPI.rejoindre(salle.id)
-      success(`Vous avez rejoint "${salle.nom}" !`)
+      await sallesAPI.demanderInvitation(salle.id)
+      success(`Demande envoyée à l'admin de "${salle.nom}" ! En attente de confirmation.`)
       load()
     } catch (err) {
-      if (err.response?.status === 409) navigate(`/salle/${salle.id}`)
+      if (err.response?.status === 409) error("Demande déjà envoyée, en attente de l'admin.")
       else error(err.response?.data?.error || 'Erreur')
     }
   }
@@ -127,6 +133,7 @@ export default function Dashboard() {
     try {
       await sallesAPI.demanderInvitation(salle.id)
       success(`Demande envoyée à l'admin de "${salle.nom}" !`)
+      load()
     } catch (err) {
       if (err.response?.status === 409) error("Demande déjà envoyée, en attente de l'admin.")
       else error(err.response?.data?.error || 'Erreur')
@@ -153,18 +160,22 @@ export default function Dashboard() {
           <p className="text-sm text-slate-500">
             {salles.length} salle{salles.length > 1 ? 's' : ''} disponible{salles.length > 1 ? 's' : ''}
           </p>
-          <Btn onClick={() => setCreate(true)}>➕ Créer une salle</Btn>
+          {/* ✅ Bouton créer salle masqué pour les tuteurs */}
+          {!isTuteur && (
+            <Btn onClick={() => setCreate(true)}>➕ Créer une salle</Btn>
+          )}
         </div>
         {loading ? (
           <div className="flex justify-center py-20"><Spinner size="lg" /></div>
         ) : salles.length === 0 ? (
           <EmptyState icon="🏠" title="Aucune salle disponible"
-            desc="Créez la première salle collaborative ou attendez qu'une salle soit partagée."
-            action={<Btn onClick={() => setCreate(true)}>Créer une salle</Btn>} />
+            desc={isTuteur ? "Aucune salle disponible pour le moment." : "Créez la première salle collaborative."}
+            action={!isTuteur && <Btn onClick={() => setCreate(true)}>Créer une salle</Btn>} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {salles.map(s => (
               <SalleCard key={s.id} salle={s}
+                userRole={user?.role}
                 onRejoindre={handleRejoindre}
                 onDemanderInvitation={handleDemanderInvitation}
                 onOuvrir={handleOuvrir}
@@ -173,7 +184,9 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-      <CreateModal open={showCreate} onClose={() => setCreate(false)} onCreate={handleCreate} />
+      {!isTuteur && (
+        <CreateModal open={showCreate} onClose={() => setCreate(false)} onCreate={handleCreate} />
+      )}
     </>
   )
 }
