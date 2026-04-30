@@ -6,38 +6,64 @@ import { Btn, Badge, Card, Modal, FormGroup, EmptyState, Spinner } from '../../c
 import { useToast } from '../../hooks/useToast'
 import { ToastContainer } from '../../components/UI'
 
-const SalleCard = ({ salle, onEnter }) => (
-  <Card onClick={() => onEnter(salle)} className="flex flex-col gap-3 group">
-    <div className="flex items-start justify-between gap-2">
-      <div className="flex gap-2 flex-wrap">
-        <Badge variant={salle.type === 'PUBLIQUE' ? 'public' : 'private'}>
-          {salle.type === 'PUBLIQUE' ? '🔓 Publique' : '🔒 Privée'}
-        </Badge>
-        <Badge variant={salle.statut === 'ACTIVE_AVEC_TUTEUR' ? 'primary' : 'default'}>
-          {salle.statut === 'ACTIVE_AVEC_TUTEUR' ? '👨‍🏫 Avec tuteur' : '📚 Sans tuteur'}
-        </Badge>
+const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir }) => {
+  const isPrivee  = salle.type === 'PRIVEE'
+  const estMembre = salle.est_membre === true || salle.est_membre === 'true'
+
+  return (
+    <Card className="flex flex-col gap-3 group">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Badge variant={isPrivee ? 'private' : 'public'}>
+            {isPrivee ? '🔒 Privée' : '🔓 Publique'}
+          </Badge>
+          <Badge variant={salle.statut === 'ACTIVE_AVEC_TUTEUR' ? 'primary' : 'default'}>
+            {salle.statut === 'ACTIVE_AVEC_TUTEUR' ? '👨‍🏫 Avec tuteur' : '📚 Sans tuteur'}
+          </Badge>
+          {estMembre && salle.mon_role && (
+            <Badge variant="warning">
+              {salle.mon_role === 'ADMIN' ? '👑 Admin' : salle.mon_role === 'CO_ADMIN' ? '🤝 Co-admin' : '👤 Membre'}
+            </Badge>
+          )}
+        </div>
       </div>
-    </div>
-    <h3 className="font-display font-bold text-white text-base leading-tight group-hover:text-violet-400 transition-colors">{salle.nom}</h3>
-    {salle.matiere && <p className="text-xs text-violet-400 font-medium">📖 {salle.matiere}</p>}
-    <p className="text-sm text-slate-500 flex-1 line-clamp-2">{salle.description || 'Aucune description.'}</p>
-    <div className="flex items-center justify-between pt-3 border-t border-ink-700 text-xs text-slate-500">
-      <span>👥 {salle.nb_participants} participants</span>
-      <span>par {salle.createur_nom}</span>
-    </div>
-  </Card>
-)
+      <h3 className="font-display font-bold text-white text-base leading-tight group-hover:text-violet-400 transition-colors">
+        {salle.nom}
+      </h3>
+      {salle.matiere && <p className="text-xs text-violet-400 font-medium">📖 {salle.matiere}</p>}
+      <p className="text-sm text-slate-500 flex-1 line-clamp-2">{salle.description || 'Aucune description.'}</p>
+      <div className="flex items-center justify-between pt-3 border-t border-ink-700 text-xs text-slate-500">
+        <span>👥 {salle.nb_participants} participants</span>
+        <span>par {salle.createur_nom}</span>
+      </div>
+      <div>
+        {estMembre ? (
+          <Btn size="sm" className="w-full justify-center" onClick={() => onOuvrir(salle)}>
+            🚪 Entrer dans la salle
+          </Btn>
+        ) : isPrivee ? (
+          <Btn size="sm" variant="secondary" className="w-full justify-center"
+            onClick={() => onDemanderInvitation(salle)}>
+            ✉️ Demander une invitation
+          </Btn>
+        ) : (
+          <Btn size="sm" className="w-full justify-center" onClick={() => onRejoindre(salle)}>
+            ➕ Rejoindre
+          </Btn>
+        )}
+      </div>
+    </Card>
+  )
+}
 
 const CreateModal = ({ open, onClose, onCreate }) => {
   const [form, setForm] = useState({ nom: '', type: 'PUBLIQUE', matiere: '', description: '' })
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     await onCreate(form)
     setForm({ nom: '', type: 'PUBLIQUE', matiere: '', description: '' })
   }
-
   return (
     <Modal open={open} onClose={onClose} title="✨ Créer une salle">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -46,7 +72,8 @@ const CreateModal = ({ open, onClose, onCreate }) => {
         </FormGroup>
         <FormGroup label="Type de salle">
           <div className="grid grid-cols-2 gap-3">
-            {[{ v:'PUBLIQUE', icon:'🔓', label:'Publique', desc:'Accès libre' },{ v:'PRIVEE', icon:'🔒', label:'Privée', desc:'Sur invitation' }].map(t => (
+            {[{ v:'PUBLIQUE', icon:'🔓', label:'Publique', desc:'Accès libre' },
+              { v:'PRIVEE',   icon:'🔒', label:'Privée',   desc:'Sur invitation' }].map(t => (
               <button key={t.v} type="button" onClick={() => setForm(f => ({ ...f, type: t.v }))}
                 className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all text-left
                   ${form.type === t.v ? 'border-violet-500 bg-violet-600/10 text-violet-400' : 'border-ink-600 text-slate-400 hover:border-ink-500'}`}>
@@ -83,12 +110,25 @@ export default function Dashboard() {
 
   useEffect(() => { load() }, [])
 
-  const handleEnter = async (salle) => {
+  const handleOuvrir = (salle) => navigate(`/salle/${salle.id}`)
+
+  const handleRejoindre = async (salle) => {
     try {
-      if (!salle.est_membre || parseInt(salle.est_membre) === 0) await sallesAPI.rejoindre(salle.id)
-      navigate(`/salle/${salle.id}`)
+      await sallesAPI.rejoindre(salle.id)
+      success(`Vous avez rejoint "${salle.nom}" !`)
+      load()
     } catch (err) {
-      if (err.response?.status === 409 || err.response?.status === 403) navigate(`/salle/${salle.id}`)
+      if (err.response?.status === 409) navigate(`/salle/${salle.id}`)
+      else error(err.response?.data?.error || 'Erreur')
+    }
+  }
+
+  const handleDemanderInvitation = async (salle) => {
+    try {
+      await sallesAPI.demanderInvitation(salle.id)
+      success(`Demande envoyée à l'admin de "${salle.nom}" !`)
+    } catch (err) {
+      if (err.response?.status === 409) error("Demande déjà envoyée, en attente de l'admin.")
       else error(err.response?.data?.error || 'Erreur')
     }
   }
@@ -97,7 +137,7 @@ export default function Dashboard() {
     try {
       const { data } = await sallesAPI.create(form)
       setCreate(false)
-      success('Salle créée !')
+      success('Salle créée ! Vous êtes admin.')
       navigate(`/salle/${data.id}`)
     } catch (err) {
       error(err.response?.data?.error || 'Erreur')
@@ -108,13 +148,13 @@ export default function Dashboard() {
     <>
       <Header title="Salles disponibles" onSearch={load} />
       <ToastContainer toasts={toasts} />
-
       <div className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-6">
-          <p className="text-sm text-slate-500">{salles.length} salle{salles.length > 1 ? 's' : ''} disponible{salles.length > 1 ? 's' : ''}</p>
+          <p className="text-sm text-slate-500">
+            {salles.length} salle{salles.length > 1 ? 's' : ''} disponible{salles.length > 1 ? 's' : ''}
+          </p>
           <Btn onClick={() => setCreate(true)}>➕ Créer une salle</Btn>
         </div>
-
         {loading ? (
           <div className="flex justify-center py-20"><Spinner size="lg" /></div>
         ) : salles.length === 0 ? (
@@ -123,11 +163,16 @@ export default function Dashboard() {
             action={<Btn onClick={() => setCreate(true)}>Créer une salle</Btn>} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {salles.map(s => <SalleCard key={s.id} salle={s} onEnter={handleEnter} />)}
+            {salles.map(s => (
+              <SalleCard key={s.id} salle={s}
+                onRejoindre={handleRejoindre}
+                onDemanderInvitation={handleDemanderInvitation}
+                onOuvrir={handleOuvrir}
+              />
+            ))}
           </div>
         )}
       </div>
-
       <CreateModal open={showCreate} onClose={() => setCreate(false)} onCreate={handleCreate} />
     </>
   )

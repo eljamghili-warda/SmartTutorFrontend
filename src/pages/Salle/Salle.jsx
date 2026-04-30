@@ -1,12 +1,72 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { sallesAPI, seancesAPI } from '../../services/api'
+import { sallesAPI, seancesAPI, tuteursAPI, invitationsAPI } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { getSocket, joinSalle, leaveSalle, sendMessage, startCall, endCall, joinCall, toggleMute } from '../../services/socket'
 import Chat from '../../components/Chat/Chat'
 import Whiteboard from '../../components/Whiteboard/Whiteboard'
 import { Avatar, Badge, Btn, Spinner, Modal, FormGroup, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
+
+// ─── Composant modal: inviter un tuteur ───────────────────────────────────────
+function InviteTuteurModal({ salleId, onClose, onSuccess, onError }) {
+  const [tuteurs, setTuteurs]       = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [selected, setSelected]     = useState('')
+  const [sending, setSending]       = useState(false)
+
+  useEffect(() => {
+    tuteursAPI.getAll().then(({ data }) => setTuteurs(data)).finally(() => setLoading(false))
+  }, [])
+
+  const handleSend = async () => {
+    if (!selected) return onError('Choisissez un tuteur')
+    setSending(true)
+    try {
+      await invitationsAPI.send({ salleId, destinataireId: Number(selected), typeInvitation: 'VERS_TUTEUR' })
+      onSuccess('Invitation envoyée au tuteur !')
+      onClose()
+    } catch (err) {
+      onError(err.response?.data?.error || 'Erreur lors de l\'envoi')
+    } finally { setSending(false) }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {loading ? (
+        <div className="flex justify-center py-4"><span className="text-slate-400 text-sm">Chargement des tuteurs...</span></div>
+      ) : tuteurs.length === 0 ? (
+        <p className="text-sm text-slate-500 bg-ink-700 rounded-xl p-3 text-center">Aucun tuteur disponible sur la plateforme.</p>
+      ) : (
+        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+          {tuteurs.map(t => (
+            <button key={t.id} type="button"
+              onClick={() => setSelected(String(t.id))}
+              className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all
+                ${selected === String(t.id) ? 'border-violet-500 bg-violet-600/10' : 'border-ink-600 hover:border-ink-500'}`}>
+              <div className="w-9 h-9 rounded-full bg-violet-600/20 flex items-center justify-center text-sm font-bold text-violet-400 flex-shrink-0">
+                {t.prenom?.[0]}{t.nom?.[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{t.prenom} {t.nom}</p>
+                {t.specialites?.length > 0 && (
+                  <p className="text-xs text-slate-500 truncate">{t.specialites.slice(0,3).join(', ')}</p>
+                )}
+              </div>
+              {selected === String(t.id) && <span className="text-violet-400 text-sm">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-3 justify-end pt-1 border-t border-ink-700">
+        <Btn variant="secondary" onClick={onClose}>Annuler</Btn>
+        <Btn onClick={handleSend} disabled={!selected || sending}>
+          {sending ? 'Envoi...' : '✉️ Envoyer l\'invitation'}
+        </Btn>
+      </div>
+    </div>
+  )
+}
 
 export default function Salle() {
   const { id }        = useParams()
@@ -26,6 +86,9 @@ export default function Salle() {
   const [isMuted,     setIsMuted]     = useState(false)
   const [showPlan,    setShowPlan]    = useState(false)
   const [planForm,    setPlanForm]    = useState({ titre:'', matiere:'', dateDebut:'', duree:60 })
+  const [showInviteTuteur, setShowInviteTuteur] = useState(false)
+  const [tuteurs,     setTuteurs]     = useState([])
+  const [selectedTuteur, setSelectedTuteur] = useState('')
 const [ready, setReady] = useState(false)
   useEffect(() => {
     const load = async () => {
@@ -227,6 +290,13 @@ const handleSend = (text) => {
           {/* Participants */}
           {rightTab === 'participants' && (
             <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+              {/* Bouton inviter tuteur — visible uniquement pour l'admin */}
+              {isAdmin && (
+                <Btn size="sm" variant="secondary" className="w-full justify-center mb-1"
+                  onClick={() => setShowInviteTuteur(true)}>
+                  ➕ Inviter un tuteur
+                </Btn>
+              )}
               {participants.map(p => (
                 <div key={p.id} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-ink-800 transition-colors">
                   <Avatar user={p} size="sm" />
@@ -311,6 +381,17 @@ const handleSend = (text) => {
             <Btn type="submit">Planifier</Btn>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal inviter un tuteur */}
+      <Modal open={showInviteTuteur} onClose={() => { setShowInviteTuteur(false); setSelectedTuteur('') }}
+        title="👨‍🏫 Inviter un tuteur dans la salle">
+        <InviteTuteurModal
+          salleId={id}
+          onClose={() => { setShowInviteTuteur(false); setSelectedTuteur('') }}
+          onSuccess={(msg) => success(msg)}
+          onError={(msg) => error(msg)}
+        />
       </Modal>
     </div>
   )

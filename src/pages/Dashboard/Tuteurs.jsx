@@ -39,7 +39,7 @@ export default function Tuteurs() {
 
   useEffect(() => {
     tuteursAPI.getAll().then(({ data }) => setTuteurs(data)).finally(() => setLoading(false))
-    sallesAPI.getMesSalles().then(({ data }) => setMesSalles(data.filter(s => s.role === 'ADMIN')))
+    sallesAPI.getMesSalles().then(({ data }) => setMesSalles(data.filter(s => s.mon_role === 'ADMIN')))
   }, [])
 
   const handleSearch = (q) => {
