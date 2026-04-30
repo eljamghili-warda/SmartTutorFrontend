@@ -12,7 +12,7 @@ const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
 const statutConfig = {
   PLANIFIEE:  { color: 'text-amber-400',   bg: 'bg-amber-400/10',   border: 'border-amber-400/25',   label: 'Planifiée' },
   EN_COURS:   { color: 'text-violet-400',  bg: 'bg-violet-400/10',  border: 'border-violet-400/25',  label: 'En cours' },
-  REALISEE:   { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/25', label: 'Réalisée' },
+  REALISEE:   { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/25', label: 'Réalisée ✓' },
   ANNULEE:    { color: 'text-rose-400',    bg: 'bg-rose-400/10',    border: 'border-rose-400/25',    label: 'Annulée' },
 }
 
@@ -37,8 +37,12 @@ export default function EmploiDuTemps() {
   }
 
   useEffect(() => { loadSeances() }, [weekStart])
+
   useEffect(() => {
-    if (isTuteur) sallesAPI.getMesSalles().then(({ data }) => setMesSalles(data.filter(s => s.role === 'CO_ADMIN')))
+    if (isTuteur) {
+      // ✅ FIX: utiliser mon_role (pas role)
+      sallesAPI.getMesSalles().then(({ data }) => setMesSalles(data.filter(s => s.mon_role === 'CO_ADMIN')))
+    }
   }, [isTuteur])
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -64,6 +68,7 @@ export default function EmploiDuTemps() {
   const handleTerminer = async (id) => {
     try {
       await seancesAPI.terminer(id)
+      // ✅ FIX: garder la séance dans la liste avec statut REALISEE (ne pas supprimer)
       setSeances(prev => prev.map(s => s.id === id ? { ...s, statut: 'REALISEE' } : s))
       success('Séance terminée.')
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
@@ -92,6 +97,15 @@ export default function EmploiDuTemps() {
           {isTuteur && <Btn size="sm" onClick={() => setCreate(true)}>➕ Planifier</Btn>}
         </div>
 
+        {/* Legend */}
+        <div className="flex gap-3 flex-shrink-0 flex-wrap">
+          {Object.entries(statutConfig).map(([k, v]) => (
+            <span key={k} className={`text-xs px-2 py-1 rounded-lg border ${v.bg} ${v.border} ${v.color} font-medium`}>
+              {v.label}
+            </span>
+          ))}
+        </div>
+
         {/* Calendar */}
         {loading ? (
           <div className="flex justify-center py-20"><Spinner size="lg" /></div>
@@ -103,7 +117,6 @@ export default function EmploiDuTemps() {
               return (
                 <div key={i} className={`flex flex-col rounded-xl border overflow-hidden min-h-[200px]
                   ${isToday ? 'border-violet-500/50 bg-violet-600/5' : 'border-ink-700 bg-ink-800'}`}>
-                  {/* Day header */}
                   <div className={`px-2 py-2.5 text-center border-b flex-shrink-0
                     ${isToday ? 'border-violet-500/30 bg-violet-600/10' : 'border-ink-700 bg-ink-900'}`}>
                     <p className="text-xs font-semibold text-slate-500 uppercase">{JOURS[i]}</p>
@@ -111,7 +124,6 @@ export default function EmploiDuTemps() {
                       {format(day, 'd')}
                     </p>
                   </div>
-                  {/* Séances */}
                   <div className="flex-1 p-1.5 flex flex-col gap-1.5 overflow-y-auto">
                     {daySeances.length === 0 ? (
                       <div className="flex-1 flex items-center justify-center text-slate-700 text-lg">·</div>
@@ -121,6 +133,7 @@ export default function EmploiDuTemps() {
                         <div key={s.id} className={`rounded-lg p-2 border ${cfg.bg} ${cfg.border} flex flex-col gap-1`}>
                           <p className="text-xs font-bold text-slate-200 leading-tight line-clamp-2">{s.titre}</p>
                           <p className="text-xs text-slate-500">{format(new Date(s.date_debut), 'HH:mm')} · {s.duree}min</p>
+                          {s.salle_nom && <p className="text-xs text-slate-600 truncate">🏠 {s.salle_nom}</p>}
                           <p className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</p>
                           {isTuteur && s.statut === 'PLANIFIEE' && (
                             <Btn size="sm" variant="success" onClick={() => handleLancer(s.id)} className="mt-1 justify-center text-xs !py-1">▶ Lancer</Btn>
@@ -139,7 +152,6 @@ export default function EmploiDuTemps() {
         )}
       </div>
 
-      {/* Modal créer séance */}
       <Modal open={showCreate} onClose={() => setCreate(false)} title="📅 Planifier une séance">
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
           <FormGroup label="Salle *">

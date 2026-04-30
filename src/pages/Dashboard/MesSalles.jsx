@@ -5,7 +5,11 @@ import Header from '../../components/Header/Header'
 import { Btn, Badge, Card, EmptyState, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
-const roleBadge = { ADMIN: { v:'primary', label:'👑 Admin' }, CO_ADMIN: { v:'warning', label:'🤝 Co-admin' }, MEMBRE: { v:'default', label:'👤 Membre' } }
+const roleBadge = {
+  ADMIN:    { v:'primary', label:'👑 Admin' },
+  CO_ADMIN: { v:'warning', label:'🤝 Co-admin' },
+  MEMBRE:   { v:'default', label:'👤 Membre' }
+}
 
 export default function MesSalles() {
   const [salles, setSalles]   = useState([])
@@ -43,7 +47,8 @@ export default function MesSalles() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {salles.map(s => {
-              const rb = roleBadge[s.role] || roleBadge.MEMBRE
+              // ✅ FIX: utiliser mon_role (pas role)
+              const rb = roleBadge[s.mon_role] || roleBadge.MEMBRE
               return (
                 <Card key={s.id} onClick={() => navigate(`/salle/${s.id}`)} className="flex flex-col gap-3 group">
                   <div className="flex gap-2 flex-wrap">
@@ -57,7 +62,9 @@ export default function MesSalles() {
                   <p className="text-sm text-slate-500 flex-1 line-clamp-2">{s.description || 'Aucune description.'}</p>
                   <div className="flex items-center justify-between pt-3 border-t border-ink-700">
                     <span className="text-xs text-slate-500">👥 {s.nb_participants}</span>
-                    <Btn variant="danger" size="sm" onClick={(e) => handleQuitter(e, s.id)}>Quitter</Btn>
+                    {s.mon_role !== 'ADMIN' && (
+                      <Btn variant="danger" size="sm" onClick={(e) => handleQuitter(e, s.id)}>Quitter</Btn>
+                    )}
                   </div>
                 </Card>
               )

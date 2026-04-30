@@ -9,51 +9,75 @@ import { Avatar, Badge, Btn, Spinner, Modal, FormGroup, ToastContainer } from '.
 import { useToast } from '../../hooks/useToast'
 
 // ─── Composant modal: inviter un tuteur ───────────────────────────────────────
-function InviteTuteurModal({ salleId, onClose, onSuccess, onError }) {
-  const [tuteurs, setTuteurs]       = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [selected, setSelected]     = useState('')
-  const [sending, setSending]       = useState(false)
+function InviteTuteurModal({ salleId, hasTuteur, onClose, onSuccess, onError }) {
+  const [tuteurs, setTuteurs]     = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [selected, setSelected]   = useState('')
+  const [sending, setSending]     = useState(false)
+  const [confirmed, setConfirmed] = useState(false)
 
   useEffect(() => {
     tuteursAPI.getAll().then(({ data }) => setTuteurs(data)).finally(() => setLoading(false))
   }, [])
 
-  const handleSend = async () => {
-    if (!selected) return onError('Choisissez un tuteur')
+  const doSend = async () => {
     setSending(true)
     try {
       await invitationsAPI.send({ salleId, destinataireId: Number(selected), typeInvitation: 'VERS_TUTEUR' })
       onSuccess('Invitation envoyée au tuteur !')
       onClose()
     } catch (err) {
-      onError(err.response?.data?.error || 'Erreur lors de l\'envoi')
+      onError(err.response?.data?.error || "Erreur lors de l'envoi")
     } finally { setSending(false) }
   }
 
+  const handleSend = () => {
+    if (!selected) return onError('Choisissez un tuteur')
+    if (hasTuteur && !confirmed) { setConfirmed(true); return }
+    doSend()
+  }
+
+  if (confirmed) return (
+    <div className="flex flex-col gap-4">
+      <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-4 flex gap-3">
+        <span className="text-xl flex-shrink-0">⚠️</span>
+        <div>
+          <p className="text-sm font-semibold text-amber-400 mb-1">Cette salle a déjà un tuteur</p>
+          <p className="text-sm text-slate-400">L'ancien tuteur sera retiré dès que le nouveau accepte. Confirmer ?</p>
+        </div>
+      </div>
+      <div className="flex gap-3 justify-end">
+        <Btn variant="secondary" onClick={() => setConfirmed(false)}>← Retour</Btn>
+        <Btn onClick={doSend} disabled={sending}>{sending ? 'Envoi...' : '✅ Confirmer'}</Btn>
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex flex-col gap-4">
+      {hasTuteur && (
+        <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-3 flex gap-2 items-center">
+          <span>⚠️</span>
+          <p className="text-xs text-amber-400">Cette salle a déjà un tuteur. Le sélectionner le remplacera.</p>
+        </div>
+      )}
       {loading ? (
-        <div className="flex justify-center py-4"><span className="text-slate-400 text-sm">Chargement des tuteurs...</span></div>
+        <div className="flex justify-center py-4"><span className="text-slate-400 text-sm">Chargement...</span></div>
       ) : tuteurs.length === 0 ? (
-        <p className="text-sm text-slate-500 bg-ink-700 rounded-xl p-3 text-center">Aucun tuteur disponible sur la plateforme.</p>
+        <p className="text-sm text-slate-500 bg-ink-700 rounded-xl p-3 text-center">Aucun tuteur disponible.</p>
       ) : (
         <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
           {tuteurs.map(t => (
-            <button key={t.id} type="button"
-              onClick={() => setSelected(String(t.id))}
-              className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all
-                ${selected === String(t.id) ? 'border-violet-500 bg-violet-600/10' : 'border-ink-600 hover:border-ink-500'}`}>
+            <button key={t.id} type="button" onClick={() => setSelected(String(t.id))}
+              className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${selected === String(t.id) ? 'border-violet-500 bg-violet-600/10' : 'border-ink-600 hover:border-ink-500'}`}>
               <div className="w-9 h-9 rounded-full bg-violet-600/20 flex items-center justify-center text-sm font-bold text-violet-400 flex-shrink-0">
                 {t.prenom?.[0]}{t.nom?.[0]}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{t.prenom} {t.nom}</p>
-                {t.specialites?.length > 0 && (
-                  <p className="text-xs text-slate-500 truncate">{t.specialites.slice(0,3).join(', ')}</p>
-                )}
+                {t.specialites?.length > 0 && <p className="text-xs text-slate-500 truncate">{t.specialites.slice(0,3).join(', ')}</p>}
               </div>
-              {selected === String(t.id) && <span className="text-violet-400 text-sm">✓</span>}
+              {selected === String(t.id) && <span className="text-violet-400">✓</span>}
             </button>
           ))}
         </div>
@@ -61,12 +85,13 @@ function InviteTuteurModal({ salleId, onClose, onSuccess, onError }) {
       <div className="flex gap-3 justify-end pt-1 border-t border-ink-700">
         <Btn variant="secondary" onClick={onClose}>Annuler</Btn>
         <Btn onClick={handleSend} disabled={!selected || sending}>
-          {sending ? 'Envoi...' : '✉️ Envoyer l\'invitation'}
+          {sending ? 'Envoi...' : hasTuteur ? '🔄 Remplacer le tuteur' : "✉️ Envoyer l'invitation"}
         </Btn>
       </div>
     </div>
   )
 }
+
 
 export default function Salle() {
   const { id }        = useParams()
@@ -175,8 +200,14 @@ const [ready, setReady] = useState(false)
     e.preventDefault()
     try {
       const { data } = await seancesAPI.create({ ...planForm, salleId: id })
-      setSeances(prev => [...prev, data]); setShowPlan(false)
+      setSeances(prev => [...prev, data])
+      setShowPlan(false)
       success('Séance planifiée !')
+      // Envoyer message automatique dans le chat
+      const dateStr = new Date(planForm.dateDebut).toLocaleString('fr-FR', {
+        weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'
+      })
+      sendMessage(id, `📅 Séance planifiée : ${planForm.titre} le ${dateStr} (${planForm.duree} min).`)
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 
@@ -210,7 +241,10 @@ const handleSend = (text) => {
 }
   const isTuteur  = user?.role === 'tuteur' && myRole === 'CO_ADMIN'
   const isAdmin   = myRole === 'ADMIN'
-  const canCall   = (isAdmin && !isTuteur) || isTuteur
+  const hasTuteur = salle?.statut === 'ACTIVE_AVEC_TUTEUR'
+  // Admin peut appeler uniquement si pas de tuteur dans la salle
+  // Le tuteur peut toujours appeler
+  const canCall   = isTuteur || (isAdmin && !hasTuteur)
 
   const statutBadge = {
     PLANIFIEE: 'warning', EN_COURS: 'primary', REALISEE: 'success', ANNULEE: 'danger'
@@ -388,6 +422,7 @@ const handleSend = (text) => {
         title="👨‍🏫 Inviter un tuteur dans la salle">
         <InviteTuteurModal
           salleId={id}
+          hasTuteur={hasTuteur}
           onClose={() => { setShowInviteTuteur(false); setSelectedTuteur('') }}
           onSuccess={(msg) => success(msg)}
           onError={(msg) => error(msg)}
