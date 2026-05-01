@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { sallesAPI } from '../../services/api'
 import Header from '../../components/Header/Header'
-import { Btn, Badge, Card, EmptyState, Spinner, ToastContainer } from '../../components/UI'
+import { Btn, Badge, Card, Modal, EmptyState, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
 const roleBadge = {
@@ -12,8 +12,9 @@ const roleBadge = {
 }
 
 export default function MesSalles() {
-  const [salles, setSalles]   = useState([])
-  const [loading, setLoading] = useState(true)
+  const [salles, setSalles]         = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [confirmSalle, setConfirm]  = useState(null) // salle à quitter/supprimer
   const navigate = useNavigate()
   const { toasts, success, error } = useToast()
 
@@ -21,13 +22,22 @@ export default function MesSalles() {
     sallesAPI.getMesSalles().then(({ data }) => setSalles(data)).finally(() => setLoading(false))
   }, [])
 
-  const handleQuitter = async (e, id) => {
+  const handleQuitterClick = (e, salle) => {
     e.stopPropagation()
-    if (!confirm('Quitter cette salle définitivement ?')) return
+    setConfirm(salle)
+  }
+
+  const handleConfirmerQuitter = async () => {
+    const salle = confirmSalle
+    setConfirm(null)
     try {
-      await sallesAPI.quitter(id)
-      setSalles(prev => prev.filter(s => s.id !== id))
-      success('Vous avez quitté la salle.')
+      await sallesAPI.quitter(salle.id)
+      setSalles(prev => prev.filter(s => s.id !== salle.id))
+      if (salle.mon_role === 'ADMIN') {
+        success('La salle a été supprimée.')
+      } else {
+        success('Vous avez quitté la salle.')
+      }
     } catch (err) {
       error(err.response?.data?.error || 'Erreur')
     }
@@ -47,7 +57,6 @@ export default function MesSalles() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {salles.map(s => {
-              // ✅ FIX: utiliser mon_role (pas role)
               const rb = roleBadge[s.mon_role] || roleBadge.MEMBRE
               return (
                 <Card key={s.id} onClick={() => navigate(`/salle/${s.id}`)} className="flex flex-col gap-3 group">
@@ -62,9 +71,10 @@ export default function MesSalles() {
                   <p className="text-sm text-slate-500 flex-1 line-clamp-2">{s.description || 'Aucune description.'}</p>
                   <div className="flex items-center justify-between pt-3 border-t border-ink-700">
                     <span className="text-xs text-slate-500">👥 {s.nb_participants}</span>
-                    {s.mon_role !== 'ADMIN' && (
-                      <Btn variant="danger" size="sm" onClick={(e) => handleQuitter(e, s.id)}>Quitter</Btn>
-                    )}
+                    {/* ✅ Bouton Quitter visible pour TOUS (même admin) */}
+                    <Btn variant="danger" size="sm" onClick={(e) => handleQuitterClick(e, s)}>
+                      {s.mon_role === 'ADMIN' ? '🗑️ Supprimer' : 'Quitter'}
+                    </Btn>
                   </div>
                 </Card>
               )
@@ -72,6 +82,40 @@ export default function MesSalles() {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmation quitter/supprimer */}
+      <Modal
+        open={!!confirmSalle}
+        onClose={() => setConfirm(null)}
+        title={confirmSalle?.mon_role === 'ADMIN' ? '⚠️ Supprimer la salle' : '⚠️ Quitter la salle'}
+      >
+        <div className="flex flex-col gap-5">
+          {confirmSalle?.mon_role === 'ADMIN' ? (
+            <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 flex gap-3">
+              <span className="text-2xl flex-shrink-0">🚨</span>
+              <div>
+                <p className="text-sm font-semibold text-rose-400 mb-1">Vous êtes l'admin de cette salle</p>
+                <p className="text-sm text-slate-400">
+                  Si vous quittez <span className="text-white font-medium">"{confirmSalle?.nom}"</span>,
+                  la salle sera <span className="text-rose-400 font-semibold">définitivement supprimée</span> avec
+                  tous ses messages, fichiers et participants.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">
+              Êtes-vous sûr de vouloir quitter <span className="text-white font-medium">"{confirmSalle?.nom}"</span> ?
+              Vous devrez demander une nouvelle invitation pour y revenir.
+            </p>
+          )}
+          <div className="flex gap-3 justify-end">
+            <Btn variant="secondary" onClick={() => setConfirm(null)}>Annuler</Btn>
+            <Btn variant="danger" onClick={handleConfirmerQuitter}>
+              {confirmSalle?.mon_role === 'ADMIN' ? '🗑️ Supprimer définitivement' : '🚪 Quitter la salle'}
+            </Btn>
+          </div>
+        </div>
+      </Modal>
     </>
   )
 }

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { tuteursAPI, invitationsAPI, sallesAPI, evaluationsAPI } from '../../services/api'
+import { tuteursAPI, evaluationsAPI } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import Header from '../../components/Header/Header'
 import { Btn, Badge, Card, Avatar, Stars, Modal, FormGroup, EmptyState, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
-// Carte tuteur pour étudiant (avec boutons Inviter + Évaluer)
-const TuteurCardEtudiant = ({ t, onInvite, onEval }) => (
+// Carte tuteur pour étudiant (bouton Évaluer uniquement — l'invitation se fait depuis la salle)
+const TuteurCardEtudiant = ({ t, onEval }) => (
   <Card className="flex flex-col gap-4">
     <div className="flex items-center gap-3">
       <Avatar user={t} size="lg" />
@@ -22,8 +22,7 @@ const TuteurCardEtudiant = ({ t, onInvite, onEval }) => (
       <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">{t.biographie}</p>
     )}
     <div className="flex gap-2 pt-2 border-t border-ink-700 mt-auto">
-      <Btn size="sm" onClick={() => onInvite(t)} className="flex-1 justify-center">✉️ Inviter</Btn>
-      <Btn size="sm" variant="secondary" onClick={() => onEval(t)} className="flex-1 justify-center">⭐ Évaluer</Btn>
+      <Btn size="sm" variant="secondary" onClick={() => onEval(t)} className="w-full justify-center">⭐ Évaluer</Btn>
     </div>
   </Card>
 )
@@ -58,33 +57,18 @@ export default function Tuteurs() {
 
   const [tuteurs, setTuteurs]     = useState([])
   const [loading, setLoading]     = useState(true)
-  const [mesSalles, setMesSalles] = useState([])
-  const [inviteTarget, setInvite] = useState(null)
   const [evalTarget, setEval]     = useState(null)
-  const [selectedSalle, setSalle] = useState('')
   const [evalNote, setEvalNote]   = useState(5)
   const [evalComment, setEvalCmt] = useState('')
   const { toasts, success, error } = useToast()
 
   useEffect(() => {
     tuteursAPI.getAll().then(({ data }) => setTuteurs(data)).finally(() => setLoading(false))
-    // Charger les salles seulement pour les étudiants (pour inviter)
-    if (!isTuteur) {
-      sallesAPI.getMesSalles().then(({ data }) => setMesSalles(data.filter(s => s.mon_role === 'ADMIN')))
-    }
+
   }, [isTuteur])
 
   const handleSearch = (q) => {
     tuteursAPI.getAll({ search: q }).then(({ data }) => setTuteurs(data))
-  }
-
-  const handleInvite = async () => {
-    if (!selectedSalle) return error('Choisissez une salle')
-    try {
-      await invitationsAPI.send({ salleId: selectedSalle, destinataireId: inviteTarget.id, typeInvitation: 'VERS_TUTEUR' })
-      success(`Invitation envoyée à ${inviteTarget.prenom} !`)
-      setInvite(null); setSalle('')
-    } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 
   const handleEval = async () => {
@@ -114,7 +98,7 @@ export default function Tuteurs() {
             {tuteurs.map(t =>
               isTuteur
                 ? <TuteurCardTuteur key={t.id} t={t} />
-                : <TuteurCardEtudiant key={t.id} t={t} onInvite={setInvite} onEval={setEval} />
+                : <TuteurCardEtudiant key={t.id} t={t} onEval={setEval} />
             )}
           </div>
         )}
@@ -123,27 +107,6 @@ export default function Tuteurs() {
       {/* Modal Inviter — étudiant seulement */}
       {!isTuteur && (
         <>
-          <Modal open={!!inviteTarget} onClose={() => setInvite(null)}
-            title={`Inviter ${inviteTarget?.prenom || ''} ${inviteTarget?.nom || ''}`}>
-            <div className="flex flex-col gap-4">
-              <FormGroup label="Choisir une salle (dont vous êtes admin)">
-                <select value={selectedSalle} onChange={e => setSalle(e.target.value)}>
-                  <option value="">Sélectionner une salle...</option>
-                  {mesSalles.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
-                </select>
-              </FormGroup>
-              {mesSalles.length === 0 && (
-                <p className="text-sm text-slate-500 bg-ink-700 rounded-xl p-3">
-                  Vous n'administrez aucune salle. Créez-en une d'abord depuis l'accueil.
-                </p>
-              )}
-              <div className="flex gap-3 justify-end">
-                <Btn variant="secondary" onClick={() => setInvite(null)}>Annuler</Btn>
-                <Btn onClick={handleInvite} disabled={!selectedSalle}>Envoyer l'invitation</Btn>
-              </div>
-            </div>
-          </Modal>
-
           <Modal open={!!evalTarget} onClose={() => setEval(null)}
             title={`Évaluer ${evalTarget?.prenom || ''} ${evalTarget?.nom || ''}`}>
             <div className="flex flex-col gap-4">

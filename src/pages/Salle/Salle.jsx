@@ -114,7 +114,11 @@ export default function Salle() {
   const [showInviteTuteur, setShowInviteTuteur] = useState(false)
   const [tuteurs,     setTuteurs]     = useState([])
   const [selectedTuteur, setSelectedTuteur] = useState('')
+  const [incomingCall, setIncomingCall] = useState(null) // { sessionId, initiateur: {prenom, nom} }
 const [ready, setReady] = useState(false)
+  // Garder userRef synchronisé pour les callbacks WebRTC
+  React.useEffect(() => { userRef.current = user }, [user])
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -133,54 +137,88 @@ const [ready, setReady] = useState(false)
     load()
   }, [id])
 
-  // Refs WebRTC
-  const peerRef    = React.useRef(null)
-  const streamRef  = React.useRef(null)
+  // Refs WebRTC - Map userId → RTCPeerConnection pour multi-participants
+  const peersRef   = React.useRef({})   // { userId: RTCPeerConnection }
+  const streamRef  = React.useRef(null) // LocalStream
+  const sessionRef = React.useRef(null) // sessionId courant
+  const userRef    = React.useRef(null) // user courant (stable dans les callbacks)
 
-  // Créer la connexion WebRTC
-  const createPeer = (socket, targetUserId, sessionId, isInitiator) => {
+  // Obtenir ou créer le stream local (micro)
+  const getLocalStream = async () => {
+    if (streamRef.current) return streamRef.current
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    streamRef.current = stream
+    return stream
+  }
+
+  // Créer une RTCPeerConnection vers un pair spécifique
+  const createPeerConnection = (targetUserId, sessionId) => {
+    if (peersRef.current[targetUserId]) {
+      peersRef.current[targetUserId].close()
+    }
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
       ]
     })
 
-    // ICE candidates
+    // Envoyer les ICE candidates au bon pair
     pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        sendIce(targetUserId, e.candidate)
+      if (e.candidate) sendIce(targetUserId, e.candidate)
+    }
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === 'failed') {
+        pc.restartIce()
       }
     }
 
-    // Remote stream → créer audio element
+    // Audio distant → créer un élément audio par pair
     pc.ontrack = (e) => {
-      let audio = document.getElementById('remote-audio')
+      const audioId = `remote-audio-${targetUserId}`
+      let audio = document.getElementById(audioId)
       if (!audio) {
         audio = document.createElement('audio')
-        audio.id = 'remote-audio'
+        audio.id = audioId
         audio.autoplay = true
+        audio.setAttribute('playsinline', '')
         document.body.appendChild(audio)
       }
       audio.srcObject = e.streams[0]
     }
 
-    if (isInitiator) {
-      pc.onnegotiationneeded = async () => {
-        const offer = await pc.createOffer()
-        await pc.setLocalDescription(offer)
-        sendOffer(targetUserId, offer, sessionId)
-      }
-    }
-
+    peersRef.current[targetUserId] = pc
     return pc
   }
 
+  // Démarrer un appel vers un pair (envoyer l'offer)
+  const callPeer = async (targetUserId, sessionId) => {
+    try {
+      const stream = await getLocalStream()
+      const pc = createPeerConnection(targetUserId, sessionId)
+      stream.getTracks().forEach(t => pc.addTrack(t, stream))
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+      sendOffer(targetUserId, offer, sessionId)
+    } catch (err) {
+      console.error('callPeer error:', err)
+    }
+  }
+
   const stopCall = () => {
-    if (peerRef.current)   { peerRef.current.close();   peerRef.current = null }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
-    const audio = document.getElementById('remote-audio')
-    if (audio) audio.remove()
+    // Fermer toutes les connexions peer
+    Object.values(peersRef.current).forEach(pc => pc.close())
+    peersRef.current = {}
+    // Arrêter le micro
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+    sessionRef.current = null
+    // Supprimer tous les éléments audio distants
+    document.querySelectorAll('[id^="remote-audio-"]').forEach(el => el.remove())
   }
 
   useEffect(() => {
@@ -204,33 +242,66 @@ const [ready, setReady] = useState(false)
     socket.on('salle:user-left',   handleLeave)
 
     // ── Call events ───────────────────────────────────────
-    const handleCallStarted = async ({ sessionId, initiateur }) => {
-      setActiveCall(sessionId)
-      joinCall(id, sessionId)
+    const handleCallStarted = async ({ sessionId, initiateur, initiateurNom }) => {
+      const myUserId = userRef.current?.id
 
-      // Si ce n'est pas l'initiateur, on attend l'offer
-      if (initiateur !== socket.id) return
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        streamRef.current = stream
-        const pc = createPeer(socket, null, sessionId, true)
-        peerRef.current = pc
-        stream.getTracks().forEach(t => pc.addTrack(t, stream))
-      } catch (err) {
-        console.error('getUserMedia error:', err)
-        error('Impossible d\'accéder au microphone.')
+      if (String(initiateur) === String(myUserId)) {
+        // Je suis l'initiateur → démarrer l'audio et appeler les participants
+        setActiveCall(sessionId)
+        sessionRef.current = sessionId
+        joinCall(id, sessionId)
+        try {
+          const stream = await getLocalStream()
+          // Appeler chaque participant présent dans la salle
+          const others = participants.filter(p => String(p.id) !== String(myUserId))
+          for (const p of others) {
+            await callPeer(p.id, sessionId)
+          }
+        } catch (err) {
+          console.error('getUserMedia error:', err)
+          error("Impossible d'accéder au microphone. Vérifiez les permissions.")
+        }
+      } else {
+        // Je ne suis pas l'initiateur → afficher notification incoming call
+        setIncomingCall({ sessionId, initiateurNom: initiateurNom || 'Tuteur' })
       }
+    }
+
+    // Accepter l'appel entrant
+    const handleAcceptCall = async (sessionId) => {
+      setIncomingCall(null)
+      setActiveCall(sessionId)
+      sessionRef.current = sessionId
+      joinCall(id, sessionId)
+      // Notifier l'initiateur qu'on a rejoint → il nous enverra un offer
+      getSocket()?.emit('call:joined', { salleId: id, sessionId, userId: userRef.current?.id })
+    }
+
+    // Refuser l'appel entrant
+    const handleRefuseCall = (sessionId) => {
+      setIncomingCall(null)
+      getSocket()?.emit('call:refused', { sessionId, userId: userRef.current?.id })
+    }
+
+    // Exposer les handlers pour le JSX (via ref)
+    window.__acceptCall  = handleAcceptCall
+    window.__refuseCall  = handleRefuseCall
+
+    // Quand quelqu'un rejoint l'appel après son démarrage
+    const handleCallUserJoined = async ({ userId }) => {
+      if (!sessionRef.current) return
+      // L'initiateur appelle le nouvel arrivant
+      const myId = userRef.current?.id
+      if (String(myId) === String(userId)) return
+      if (peersRef.current[userId]) return // déjà connecté
+      await callPeer(userId, sessionRef.current)
     }
 
     const handleOffer = async ({ fromUserId, offer, sessionId }) => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        streamRef.current = stream
-        const pc = createPeer(socket, fromUserId, sessionId, false)
-        peerRef.current = pc
+        const stream = await getLocalStream()
+        const pc = createPeerConnection(fromUserId, sessionId)
         stream.getTracks().forEach(t => pc.addTrack(t, stream))
-
         await pc.setRemoteDescription(new RTCSessionDescription(offer))
         const answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
@@ -240,18 +311,20 @@ const [ready, setReady] = useState(false)
       }
     }
 
-    const handleAnswer = async ({ answer }) => {
+    const handleAnswer = async ({ fromUserId, answer }) => {
       try {
-        if (peerRef.current) {
-          await peerRef.current.setRemoteDescription(new RTCSessionDescription(answer))
+        const pc = peersRef.current[fromUserId]
+        if (pc && pc.signalingState !== 'stable') {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer))
         }
       } catch (err) { console.error('handle answer error:', err) }
     }
 
-    const handleIce = async ({ candidate }) => {
+    const handleIce = async ({ fromUserId, candidate }) => {
       try {
-        if (peerRef.current && candidate) {
-          await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+        const pc = peersRef.current[fromUserId]
+        if (pc && candidate) {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate))
         }
       } catch (err) { console.error('handle ice error:', err) }
     }
@@ -261,11 +334,19 @@ const [ready, setReady] = useState(false)
       stopCall()
     }
 
+    const handleCallYouLeft = () => {
+      setActiveCall(null)
+      setIncomingCall(null)
+      stopCall()
+    }
+
     socket.on('call:started',       handleCallStarted)
+    socket.on('call:user-joined',   handleCallUserJoined)
     socket.on('call:offer',         handleOffer)
     socket.on('call:answer',        handleAnswer)
     socket.on('call:ice-candidate', handleIce)
     socket.on('call:ended',         handleCallEnded)
+    socket.on('call:you-left',      handleCallYouLeft)
 
     return () => {
       leaveSalle(id)
@@ -275,17 +356,27 @@ const [ready, setReady] = useState(false)
       socket.off('salle:user-joined', handleJoin)
       socket.off('salle:user-left',   handleLeave)
       socket.off('call:started',      handleCallStarted)
+      socket.off('call:user-joined',  handleCallUserJoined)
       socket.off('call:offer',        handleOffer)
       socket.off('call:answer',       handleAnswer)
       socket.off('call:ice-candidate',handleIce)
       socket.off('call:ended',        handleCallEnded)
+      socket.off('call:you-left',     handleCallYouLeft)
     }
   }, [id])
 
   const handleQuitter = async () => {
-    if (!confirm('Quitter la salle ?')) return
-    await sallesAPI.quitter(id)
-    navigate('/dashboard')
+    const isAdmin = myRole === 'ADMIN'
+    const msg = isAdmin
+      ? 'Vous êtes admin. Quitter supprimera définitivement cette salle et toutes ses données. Confirmer ?'
+      : 'Quitter cette salle ? Vous devrez demander une nouvelle invitation pour revenir.'
+    if (!confirm(msg)) return
+    try {
+      await sallesAPI.quitter(id)
+      navigate('/dashboard')
+    } catch (err) {
+      error(err.response?.data?.error || 'Erreur')
+    }
   }
 
   const uploadFichier = async (e) => {
@@ -385,7 +476,18 @@ const handleSend = (text) => {
               <Btn variant="secondary" size="sm" onClick={() => { setIsMuted(m => { toggleMute(activeCall, !m); return !m }) }}>
                 {isMuted ? '🔇' : '🎙️'}
               </Btn>
-              <Btn variant="danger" size="sm" onClick={() => { endCall(id, activeCall); setActiveCall(null) }}>📵 Terminer</Btn>
+              {canCall ? (
+                <Btn variant="danger" size="sm" onClick={() => { endCall(id, activeCall); setActiveCall(null); stopCall() }}>
+                  📵 Terminer l'appel
+                </Btn>
+              ) : (
+                <Btn variant="secondary" size="sm" onClick={() => {
+                  getSocket()?.emit('call:leave', { sessionId: activeCall })
+                  setActiveCall(null); stopCall()
+                }}>
+                  🚪 Quitter l'appel
+                </Btn>
+              )}
             </>
           ) : (
             canCall && <Btn variant="success" size="sm" onClick={() => startCall(id, null)}>📞 Appel</Btn>
@@ -495,6 +597,44 @@ const handleSend = (text) => {
           )}
         </div>
       </div>
+
+      {/* ── Notification appel entrant ─────────────────────────────────── */}
+      {incomingCall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-ink-800 border border-ink-600 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4 animate-slide-up">
+            {/* Avatar animé */}
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-violet-600/20 border-2 border-violet-500 flex items-center justify-center text-3xl">
+                👨‍🏫
+              </div>
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-ink-800 animate-pulse" />
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-violet-400 font-semibold uppercase tracking-wider mb-1">Appel entrant</p>
+              <p className="font-display font-bold text-white text-lg">{incomingCall.initiateurNom}</p>
+              <p className="text-sm text-slate-500 mt-1">vous invite à rejoindre l'appel</p>
+            </div>
+            {/* Boutons accepter / refuser */}
+            <div className="flex gap-4 mt-2">
+              <button
+                onClick={() => window.__refuseCall(incomingCall.sessionId)}
+                className="w-14 h-14 rounded-full bg-rose-500/20 border-2 border-rose-500 text-rose-400 text-2xl flex items-center justify-center hover:bg-rose-500/40 transition-all active:scale-95">
+                📵
+              </button>
+              <button
+                onClick={() => window.__acceptCall(incomingCall.sessionId)}
+                className="w-14 h-14 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 text-2xl flex items-center justify-center hover:bg-emerald-500/40 transition-all active:scale-95">
+                📞
+              </button>
+            </div>
+            <p className="text-xs text-slate-600">
+              <span className="text-rose-400">📵 Refuser</span>
+              {' '}·{' '}
+              <span className="text-emerald-400">📞 Accepter</span>
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Modal planifier séance */}
       <Modal open={showPlan} onClose={() => setShowPlan(false)} title="📅 Planifier une séance">

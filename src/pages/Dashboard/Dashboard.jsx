@@ -6,7 +6,7 @@ import Header from '../../components/Header/Header'
 import { Btn, Badge, Card, Modal, FormGroup, EmptyState, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
-const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir, userRole }) => {
+const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir, userRole, demandeEnvoyee }) => {
   const isPrivee  = salle.type === 'PRIVEE'
   const estMembre = salle.est_membre === true || salle.est_membre === 'true'
 
@@ -43,15 +43,24 @@ const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir, userRol
           </Btn>
         ) : isPrivee ? (
           <Btn size="sm" variant="secondary" className="w-full justify-center"
+            disabled={demandeEnvoyee}
             onClick={() => onDemanderInvitation(salle)}>
-            ✉️ Demander une invitation
+            {demandeEnvoyee ? '⏳ Demande envoyée' : '✉️ Demander une invitation'}
           </Btn>
         ) : (
-          // Salle publique → demande à l'admin (pas rejoindre direct)
-          <Btn size="sm" variant="secondary" className="w-full justify-center"
-            onClick={() => onRejoindre(salle)}>
-            📨 Demander à rejoindre
-          </Btn>
+          // Salle publique : étudiant → direct | tuteur → demande
+          userRole === 'tuteur' ? (
+            <Btn size="sm" variant="secondary" className="w-full justify-center"
+              disabled={demandeEnvoyee}
+              onClick={() => onDemanderInvitation(salle)}>
+              {demandeEnvoyee ? '⏳ Demande envoyée' : '📨 Demander à rejoindre'}
+            </Btn>
+          ) : (
+            <Btn size="sm" className="w-full justify-center"
+              onClick={() => onRejoindre(salle)}>
+              ➕ Rejoindre
+            </Btn>
+          )
         )}
       </div>
     </Card>
@@ -104,9 +113,10 @@ export default function Dashboard() {
   const { user } = useAuth()
   const isTuteur = user?.role === 'tuteur'
 
-  const [salles, setSalles]     = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [showCreate, setCreate] = useState(false)
+  const [salles, setSalles]         = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [showCreate, setCreate]     = useState(false)
+  const [demandesEnv, setDemandes]  = useState(new Set()) // IDs de salles avec demande envoyée
   const navigate = useNavigate()
   const { toasts, success, error } = useToast()
 
@@ -117,26 +127,31 @@ export default function Dashboard() {
 
   const handleOuvrir = (salle) => navigate(`/salle/${salle.id}`)
 
-  // Salle publique → envoyer demande d'invitation à l'admin (même logique que privée)
+  // Salle publique → rejoindre directement
   const handleRejoindre = async (salle) => {
     try {
-      await sallesAPI.demanderInvitation(salle.id)
-      success(`Demande envoyée à l'admin de "${salle.nom}" ! En attente de confirmation.`)
-      load()
+      await sallesAPI.rejoindre(salle.id)
+      success(`Vous avez rejoint "${salle.nom}" !`)
+      navigate(`/salle/${salle.id}`)
     } catch (err) {
-      if (err.response?.status === 409) error("Demande déjà envoyée, en attente de l'admin.")
+      if (err.response?.status === 409) navigate(`/salle/${salle.id}`)
       else error(err.response?.data?.error || 'Erreur')
     }
   }
 
   const handleDemanderInvitation = async (salle) => {
+    if (demandesEnv.has(salle.id)) return // déjà envoyée
     try {
       await sallesAPI.demanderInvitation(salle.id)
+      setDemandes(prev => new Set([...prev, salle.id]))
       success(`Demande envoyée à l'admin de "${salle.nom}" !`)
-      load()
     } catch (err) {
-      if (err.response?.status === 409) error("Demande déjà envoyée, en attente de l'admin.")
-      else error(err.response?.data?.error || 'Erreur')
+      if (err.response?.status === 409) {
+        setDemandes(prev => new Set([...prev, salle.id])) // marquer comme envoyée quand même
+        error("Demande déjà envoyée, en attente de l'admin.")
+      } else {
+        error(err.response?.data?.error || 'Erreur')
+      }
     }
   }
 
@@ -176,6 +191,7 @@ export default function Dashboard() {
             {salles.map(s => (
               <SalleCard key={s.id} salle={s}
                 userRole={user?.role}
+                demandeEnvoyee={demandesEnv.has(s.id)}
                 onRejoindre={handleRejoindre}
                 onDemanderInvitation={handleDemanderInvitation}
                 onOuvrir={handleOuvrir}
