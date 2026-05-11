@@ -241,6 +241,12 @@ const [ready, setReady] = useState(false)
     socket.on('salle:user-joined', handleJoin)
     socket.on('salle:user-left',   handleLeave)
 
+    // ── Mise à jour statut séance en temps réel (quand appel démarre/se termine)
+    const handleSeanceUpdated = ({ seanceId, statut }) => {
+      setSeances(prev => prev.map(s => s.id === seanceId ? { ...s, statut } : s))
+    }
+    socket.on('seance:updated', handleSeanceUpdated)
+
     // ── Call events ───────────────────────────────────────
     const handleCallStarted = async ({ sessionId, initiateur, initiateurNom }) => {
       const myUserId = userRef.current?.id
@@ -282,6 +288,14 @@ const [ready, setReady] = useState(false)
       setIncomingCall(null)
       getSocket()?.emit('call:refused', { sessionId, userId: userRef.current?.id })
     }
+
+    // ── NOUVEAU: Appel déjà actif quand on entre dans la salle ───────
+    // Envoyé par le serveur uniquement si un appel est en cours
+    const handleCallActive = ({ sessionId, initiateurNom }) => {
+      // Réutilise exactement le même state que incomingCall → même UI
+      setIncomingCall({ sessionId, initiateurNom: initiateurNom || 'Tuteur' })
+    }
+    socket.on('call:active', handleCallActive)
 
     // Exposer les handlers pour le JSX (via ref)
     window.__acceptCall  = handleAcceptCall
@@ -355,6 +369,8 @@ const [ready, setReady] = useState(false)
       socket.off('chat:message',      handleMessage)
       socket.off('salle:user-joined', handleJoin)
       socket.off('salle:user-left',   handleLeave)
+      socket.off('seance:updated',    handleSeanceUpdated)
+      socket.off('call:active',       handleCallActive)
       socket.off('call:started',      handleCallStarted)
       socket.off('call:user-joined',  handleCallUserJoined)
       socket.off('call:offer',        handleOffer)
@@ -584,11 +600,14 @@ const handleSend = (text) => {
                   <p className="text-xs text-slate-500">{new Date(s.date_debut).toLocaleString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</p>
                   <p className="text-xs text-slate-500">⏱ {s.duree} min</p>
                   <Badge variant={statutBadge[s.statut] || 'default'}>{s.statut}</Badge>
-                  {isTuteur && s.statut === 'PLANIFIEE' && (
-                    <Btn size="sm" variant="success" onClick={() => handleLancer(s.id)} className="justify-center mt-1">▶ Lancer</Btn>
+                  {s.statut === 'PLANIFIEE' && (
+                    <p className="text-xs text-slate-600 mt-0.5">📞 Démarre automatiquement à l'appel</p>
                   )}
-                  {isTuteur && s.statut === 'EN_COURS' && (
-                    <Btn size="sm" variant="danger" onClick={() => handleTerminer(s.id)} className="justify-center mt-1">⏹ Terminer</Btn>
+                  {s.statut === 'EN_COURS' && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <p className="text-xs text-emerald-400">En cours</p>
+                    </div>
                   )}
                 </div>
               ))}

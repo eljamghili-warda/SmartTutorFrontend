@@ -57,22 +57,7 @@ export default function EmploiDuTemps() {
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 
-  const handleLancer = async (id) => {
-    try {
-      await seancesAPI.lancer(id)
-      setSeances(prev => prev.map(s => s.id === id ? { ...s, statut: 'EN_COURS' } : s))
-      success('Séance lancée !')
-    } catch (err) { error(err.response?.data?.error || 'Erreur') }
-  }
-
-  const handleTerminer = async (id) => {
-    try {
-      await seancesAPI.terminer(id)
-      // ✅ FIX: garder la séance dans la liste avec statut REALISEE (ne pas supprimer)
-      setSeances(prev => prev.map(s => s.id === id ? { ...s, statut: 'REALISEE' } : s))
-      success('Séance terminée.')
-    } catch (err) { error(err.response?.data?.error || 'Erreur') }
-  }
+  // Lancer/Terminer séance = automatique via l'appel (pas de boutons manuels)
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const getDay = (day) => seances.filter(s => isSameDay(new Date(s.date_debut), day))
@@ -136,10 +121,7 @@ export default function EmploiDuTemps() {
                           {s.salle_nom && <p className="text-xs text-slate-600 truncate">🏠 {s.salle_nom}</p>}
                           <p className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</p>
                           {isTuteur && s.statut === 'PLANIFIEE' && (
-                            <Btn size="sm" variant="success" onClick={() => handleLancer(s.id)} className="mt-1 justify-center text-xs !py-1">▶ Lancer</Btn>
-                          )}
-                          {isTuteur && s.statut === 'EN_COURS' && (
-                            <Btn size="sm" variant="danger" onClick={() => handleTerminer(s.id)} className="mt-1 justify-center text-xs !py-1">⏹ Terminer</Btn>
+                            <p className="text-xs text-violet-400 mt-1">📞 Appel = séance lancée</p>
                           )}
                         </div>
                       )
