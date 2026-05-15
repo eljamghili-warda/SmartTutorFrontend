@@ -32,7 +32,7 @@ export const clearBoard   = (id) => socket?.emit('whiteboard:clear',  { salleId:
 export const blockBoard   = (id, bloquer) => socket?.emit('whiteboard:block', { salleId: id, bloquer })
 export const syncBoard    = (id) => socket?.emit('whiteboard:sync',  { salleId: id })
 
-export const startCall    = (id) => socket?.emit('call:start', { salleId: id })
+export const startCall    = (id, seanceId = null) => socket?.emit('call:start', { salleId: id, seanceId })
 export const endCall      = (id, sessionId) => socket?.emit('call:end',  { salleId: id, sessionId })
 export const joinCall     = (id, sessionId) => socket?.emit('call:join', { salleId: id, sessionId })
 export const sendOffer    = (to, offer, sid) => socket?.emit('call:offer',          { targetUserId: to, offer, sessionId: sid })
