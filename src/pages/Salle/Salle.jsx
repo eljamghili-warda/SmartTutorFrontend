@@ -2,17 +2,21 @@ import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { sallesAPI, seancesAPI, tuteursAPI, invitationsAPI } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
-import { getSocket, joinSalle, leaveSalle, sendMessage, startCall, endCall, joinCall, toggleMute, sendOffer, sendAnswer, sendIce } from '../../services/socket'
+import {
+  getSocket, joinSalle, leaveSalle, sendMessage,
+  startCall, endCall, joinCall, toggleMute,
+  sendOffer, sendAnswer, sendIce,
+  startScreenShare, stopScreenShare, sendScreenOffer, sendScreenAnswer, sendScreenIce
+} from '../../services/socket'
 import Chat from '../../components/Chat/Chat'
 import Whiteboard from '../../components/Whiteboard/Whiteboard'
 import { Avatar, Badge, Btn, Spinner, Modal, FormGroup, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
-// ─── Hook: timer d'appel ──────────────────────────────────────────────────────
+// ─── Hook: timer ──────────────────────────────────────────────────────────────
 function useCallTimer(active) {
   const [seconds, setSeconds] = useState(0)
   const intervalRef = useRef(null)
-
   useEffect(() => {
     if (active) {
       setSeconds(0)
@@ -23,17 +27,15 @@ function useCallTimer(active) {
     }
     return () => clearInterval(intervalRef.current)
   }, [active])
-
   const mm = String(Math.floor(seconds / 60)).padStart(2, '0')
   const ss = String(seconds % 60).padStart(2, '0')
   return `${mm}:${ss}`
 }
 
-// ─── Composant: panneau d'appel actif (style Zoom/WhatsApp) ──────────────────
-function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, canEnd, callTime }) {
+// ─── Panneau d'appel flottant ─────────────────────────────────────────────────
+function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, canEnd, callTime, isSharing, onShareToggle, isTuteur }) {
   return (
     <div className="fixed bottom-4 right-4 z-40 bg-ink-800 border border-emerald-500/30 rounded-2xl shadow-2xl p-4 w-72 flex flex-col gap-3">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -42,56 +44,51 @@ function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, ca
         <span className="text-xs font-mono text-slate-400 bg-ink-700 px-2 py-0.5 rounded-lg">{callTime}</span>
       </div>
 
-      {/* Participants dans l'appel */}
-      <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+      {/* Participants */}
+      <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto">
         {callParticipants.length === 0 ? (
           <p className="text-xs text-slate-500 text-center py-2">En attente de participants…</p>
-        ) : (
-          callParticipants.map(p => (
-            <div key={p.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl bg-ink-700">
-              <div className="w-7 h-7 rounded-full bg-violet-600/30 border border-violet-500/40 flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0">
-                {p.prenom?.[0]?.toUpperCase()}{p.nom?.[0]?.toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-200 truncate">
-                  {p.prenom} {p.nom}
-                  {p.isMe && <span className="text-violet-400 ml-1">(vous)</span>}
-                </p>
-              </div>
-              {/* Indicateur micro */}
-              <span className="text-xs flex-shrink-0">
-                {p.muted ? '🔇' : '🎙️'}
-              </span>
+        ) : callParticipants.map(p => (
+          <div key={p.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl bg-ink-700">
+            <div className="w-7 h-7 rounded-full bg-violet-600/30 border border-violet-500/40 flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0">
+              {p.prenom?.[0]?.toUpperCase()}{p.nom?.[0]?.toUpperCase()}
             </div>
-          ))
-        )}
+            <p className="text-xs font-semibold text-slate-200 flex-1 truncate">
+              {p.prenom} {p.nom}{p.isMe && <span className="text-violet-400 ml-1">(vous)</span>}
+            </p>
+            <span className="text-xs flex-shrink-0">{p.muted ? '🔇' : '🎙️'}</span>
+          </div>
+        ))}
       </div>
 
       {/* Contrôles */}
-      <div className="flex items-center gap-2 pt-1 border-t border-ink-600">
-        {/* Mute */}
-        <button
-          onClick={onToggleMute}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all
-            ${isMuted
-              ? 'bg-rose-500/20 border border-rose-500/40 text-rose-400 hover:bg-rose-500/30'
-              : 'bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600'
-            }`}>
-          {isMuted ? '🔇 Micro coupé' : '🎙️ Micro actif'}
+      <div className="flex gap-2 pt-1 border-t border-ink-600">
+        <button onClick={onToggleMute}
+          className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all
+            ${isMuted ? 'bg-rose-500/20 border border-rose-500/40 text-rose-400' : 'bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600'}`}>
+          {isMuted ? '🔇' : '🎙️'}
         </button>
 
-        {/* Terminer / Quitter */}
+        {/* Bouton partage d'écran — tuteur seulement */}
+        {isTuteur && (
+          <button onClick={onShareToggle}
+            className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all
+              ${isSharing
+                ? 'bg-violet-500/30 border border-violet-400/60 text-violet-300 animate-pulse'
+                : 'bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600'}`}>
+            {isSharing ? '⏹ Écran' : '🖥️ Écran'}
+          </button>
+        )}
+
         {canEnd ? (
-          <button
-            onClick={onEnd}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold bg-rose-500/20 border border-rose-500/40 text-rose-400 hover:bg-rose-500/30 transition-all">
-            📵 Terminer
+          <button onClick={onEnd}
+            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold bg-rose-500/20 border border-rose-500/40 text-rose-400 hover:bg-rose-500/30 transition-all">
+            📵
           </button>
         ) : (
-          <button
-            onClick={onLeave}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600 transition-all">
-            🚪 Quitter
+          <button onClick={onLeave}
+            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600 transition-all">
+            🚪
           </button>
         )}
       </div>
@@ -99,12 +96,197 @@ function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, ca
   )
 }
 
-// ─── Composant modal: inviter un tuteur ───────────────────────────────────────
+// ─── Fenêtre de partage d'écran (vue étudiant) ───────────────────────────────
+// ─── Fenêtre partage d'écran : 3 modes — plein écran / normal / minimisé ────
+// Fonctionne aussi bien côté tuteur (voir sa propre diffusion) que côté étudiant
+function ScreenShareViewer({ sharerNom, videoRef, onClose }) {
+  // 'fullscreen' | 'normal' | 'minimized'
+  const [mode, setMode] = useState('normal')
+  const containerRef    = useRef(null)
+
+  // Plein écran natif du navigateur
+  const enterFullscreen = () => {
+    containerRef.current?.requestFullscreen?.()
+    setMode('fullscreen')
+  }
+  const exitFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen()
+    setMode('normal')
+  }
+  useEffect(() => {
+    const handler = () => {
+      if (!document.fullscreenElement && mode === 'fullscreen') setMode('normal')
+    }
+    document.addEventListener('fullscreenchange', handler)
+    return () => document.removeEventListener('fullscreenchange', handler)
+  }, [mode])
+
+  // ── MODE MINIMISÉ : petite vignette draggable ──────────────────────────
+  const dragRef      = useRef(null)
+  const isDragging   = useRef(false)
+  const dragOffset   = useRef({ x: 0, y: 0 })
+  const [pos, setPos] = useState({ x: window.innerWidth - 340, y: window.innerHeight - 220 })
+
+  const onMouseDown = (e) => {
+    isDragging.current = true
+    dragOffset.current = {
+      x: e.clientX - pos.x,
+      y: e.clientY - pos.y,
+    }
+    e.preventDefault()
+  }
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!isDragging.current) return
+      setPos({
+        x: Math.max(0, Math.min(window.innerWidth  - 320, e.clientX - dragOffset.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - 200, e.clientY - dragOffset.current.y)),
+      })
+    }
+    const onUp = () => { isDragging.current = false }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup',   onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [])
+
+  // ── RENDU MINIMISÉ ─────────────────────────────────────────────────────
+  if (mode === 'minimized') {
+    return (
+      <div
+        ref={dragRef}
+        style={{ position: 'fixed', left: pos.x, top: pos.y, zIndex: 9998, width: 300 }}
+        className="rounded-2xl overflow-hidden shadow-2xl border-2 border-violet-500/50 bg-ink-900 select-none"
+      >
+        {/* Barre drag */}
+        <div
+          onMouseDown={onMouseDown}
+          className="flex items-center justify-between px-3 py-1.5 bg-ink-800 cursor-grab active:cursor-grabbing"
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+            <span className="text-xs font-semibold text-violet-300 truncate max-w-[140px]">
+              🖥️ {sharerNom}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Agrandir */}
+            <button
+              onClick={() => setMode('normal')}
+              title="Agrandir"
+              className="w-6 h-6 rounded-lg bg-ink-700 hover:bg-violet-600/30 text-slate-400 hover:text-violet-300 flex items-center justify-center text-xs transition-all">
+              ⛶
+            </button>
+            {/* Fermer vignette (remet en normal) */}
+            <button
+              onClick={onClose}
+              title="Fermer"
+              className="w-6 h-6 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 flex items-center justify-center text-xs transition-all">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Mini vidéo */}
+        <div className="relative bg-ink-950" style={{ height: 168 }}>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-contain"
+          />
+          {/* Overlay click pour agrandir */}
+          <div
+            onClick={() => setMode('normal')}
+            className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-all cursor-pointer group"
+          >
+            <span className="text-white text-2xl opacity-0 group-hover:opacity-100 transition-opacity">⛶</span>
+          </div>
+        </div>
+
+        {/* Hint bas */}
+        <div className="px-3 py-1 bg-ink-800 text-center">
+          <p className="text-xs text-slate-600">Glisser pour déplacer · Cliquer pour agrandir</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── RENDU NORMAL / PLEIN ÉCRAN ─────────────────────────────────────────
+  return (
+    <div
+      ref={containerRef}
+      className="fixed inset-0 flex flex-col bg-black/92"
+      style={{ zIndex: 9998 }}
+    >
+      {/* Barre du haut */}
+      <div className="flex items-center justify-between px-4 py-2 bg-ink-900/90 backdrop-blur-sm flex-shrink-0 border-b border-ink-700/50">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+          <span className="text-sm font-semibold text-white">
+            🖥️ Écran partagé par <span className="text-violet-400">{sharerNom}</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Minimiser → vignette draggable */}
+          <button
+            onClick={() => setMode('minimized')}
+            title="Minimiser — accéder au tableau blanc"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs hover:bg-amber-500/25 transition-all font-medium">
+            ▼ Minimiser
+          </button>
+          {/* Plein écran */}
+          {mode !== 'fullscreen' ? (
+            <button onClick={enterFullscreen}
+              className="px-3 py-1.5 rounded-lg bg-ink-700 text-slate-300 text-xs hover:bg-ink-600 transition-all">
+              ⛶ Plein écran
+            </button>
+          ) : (
+            <button onClick={exitFullscreen}
+              className="px-3 py-1.5 rounded-lg bg-ink-700 text-slate-300 text-xs hover:bg-ink-600 transition-all">
+              ⊡ Réduire
+            </button>
+          )}
+          {/* Fermer */}
+          <button onClick={onClose}
+            className="px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs hover:bg-rose-500/30 transition-all">
+            ✕ Fermer
+          </button>
+        </div>
+      </div>
+
+      {/* Vidéo principale */}
+      <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="max-w-full max-h-full rounded-xl shadow-2xl border border-ink-600/50 object-contain bg-ink-950"
+          style={{ width: '100%', height: '100%' }}
+        />
+      </div>
+
+      {/* Bas — info et accès tableau blanc */}
+      <div className="flex items-center justify-center gap-4 py-2 flex-shrink-0 border-t border-ink-700/30">
+        <p className="text-xs text-slate-600">Lecture seule</p>
+        <span className="text-slate-700">·</span>
+        <button
+          onClick={() => setMode('minimized')}
+          className="text-xs text-amber-400 hover:text-amber-300 transition-colors font-medium">
+          ▼ Minimiser pour accéder au tableau blanc
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Modal inviter tuteur ─────────────────────────────────────────────────────
 function InviteTuteurModal({ salleId, hasTuteur, onClose, onSuccess, onError }) {
-  const [tuteurs, setTuteurs]     = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [selected, setSelected]   = useState('')
-  const [sending, setSending]     = useState(false)
+  const [tuteurs, setTuteurs]   = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [selected, setSelected] = useState('')
+  const [sending, setSending]   = useState(false)
   const [confirmed, setConfirmed] = useState(false)
 
   useEffect(() => {
@@ -131,10 +313,10 @@ function InviteTuteurModal({ salleId, hasTuteur, onClose, onSuccess, onError }) 
   if (confirmed) return (
     <div className="flex flex-col gap-4">
       <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-4 flex gap-3">
-        <span className="text-xl flex-shrink-0">⚠️</span>
+        <span className="text-xl">⚠️</span>
         <div>
           <p className="text-sm font-semibold text-amber-400 mb-1">Cette salle a déjà un tuteur</p>
-          <p className="text-sm text-slate-400">L'ancien tuteur sera retiré dès que le nouveau accepte. Confirmer ?</p>
+          <p className="text-sm text-slate-400">L'ancien tuteur sera retiré dès que le nouveau accepte.</p>
         </div>
       </div>
       <div className="flex gap-3 justify-end">
@@ -160,7 +342,8 @@ function InviteTuteurModal({ salleId, hasTuteur, onClose, onSuccess, onError }) 
         <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
           {tuteurs.map(t => (
             <button key={t.id} type="button" onClick={() => setSelected(String(t.id))}
-              className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${selected === String(t.id) ? 'border-violet-500 bg-violet-600/10' : 'border-ink-600 hover:border-ink-500'}`}>
+              className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all
+                ${selected === String(t.id) ? 'border-violet-500 bg-violet-600/10' : 'border-ink-600 hover:border-ink-500'}`}>
               <div className="w-9 h-9 rounded-full bg-violet-600/20 flex items-center justify-center text-sm font-bold text-violet-400 flex-shrink-0">
                 {t.prenom?.[0]}{t.nom?.[0]}
               </div>
@@ -176,20 +359,21 @@ function InviteTuteurModal({ salleId, hasTuteur, onClose, onSuccess, onError }) 
       <div className="flex gap-3 justify-end pt-1 border-t border-ink-700">
         <Btn variant="secondary" onClick={onClose}>Annuler</Btn>
         <Btn onClick={handleSend} disabled={!selected || sending}>
-          {sending ? 'Envoi...' : hasTuteur ? '🔄 Remplacer le tuteur' : "✉️ Envoyer l'invitation"}
+          {sending ? 'Envoi...' : hasTuteur ? '🔄 Remplacer' : "✉️ Inviter"}
         </Btn>
       </div>
     </div>
   )
 }
 
-
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function Salle() {
   const { id }        = useParams()
   const { user }      = useAuth()
   const navigate      = useNavigate()
   const { toasts, success, error } = useToast()
 
+  // ── States ────────────────────────────────────────────────────────────────
   const [salle,            setSalle]           = useState(null)
   const [participants,     setParticipants]    = useState([])
   const [messages,         setMessages]        = useState([])
@@ -198,26 +382,37 @@ export default function Salle() {
   const [loading,          setLoading]         = useState(true)
   const [myRole,           setMyRole]          = useState(null)
   const [rightTab,         setRightTab]        = useState('participants')
-  const [activeCall,       setActiveCall]      = useState(null)   // sessionId | null
-  const [callParticipants, setCallParticipants]= useState([])     // [{ id, prenom, nom, muted, isMe }]
+
+  // Appel audio
+  const [activeCall,       setActiveCall]      = useState(null)
+  const [callParticipants, setCallParticipants]= useState([])
   const [isMuted,          setIsMuted]         = useState(false)
+  const [incomingCall,     setIncomingCall]    = useState(null)
+
+  // Partage d'écran
+  const [isSharing,        setIsSharing]       = useState(false)   // tuteur : je partage
+  const [screenShare,      setScreenShare]     = useState(null)    // étudiant : { sharerId, sharerNom }
+  const [screenStream,     setScreenStream]    = useState(null)    // stream local (tuteur)
+
+  // UI
   const [showPlan,         setShowPlan]        = useState(false)
   const [planForm,         setPlanForm]        = useState({ titre:'', matiere:'', dateDebut:'', duree:60 })
   const [showInviteTuteur, setShowInviteTuteur]= useState(false)
-  const [selectedTuteur,   setSelectedTuteur]  = useState('')
-  const [incomingCall,     setIncomingCall]    = useState(null)   // { sessionId, initiateurNom }
 
   const callTime = useCallTimer(!!activeCall)
 
   // ── Refs stables ──────────────────────────────────────────────────────────
-  const peersRef        = useRef({})
-  const streamRef       = useRef(null)
-  const sessionRef      = useRef(null)
-  const userRef         = useRef(null)
-  const participantsRef = useRef([])
-  const activeCallRef   = useRef(null)
-  const acceptCallRef   = useRef(null)
-  const refuseCallRef   = useRef(null)
+  const peersRef          = useRef({})   // audio WebRTC peers
+  const screenPeersRef    = useRef({})   // screen WebRTC peers (un par étudiant)
+  const streamRef         = useRef(null) // audio stream local
+  const screenStreamRef   = useRef(null) // screen stream local (tuteur)
+  const screenVideoRef    = useRef(null) // <video> pour afficher l'écran partagé (étudiant)
+  const sessionRef        = useRef(null)
+  const userRef           = useRef(null)
+  const participantsRef   = useRef([])
+  const activeCallRef     = useRef(null)
+  const acceptCallRef     = useRef(null)
+  const refuseCallRef     = useRef(null)
 
   useEffect(() => { userRef.current = user }, [user])
   useEffect(() => { participantsRef.current = participants }, [participants])
@@ -242,42 +437,27 @@ export default function Salle() {
     load()
   }, [id])
 
-  // ── WebRTC helpers ────────────────────────────────────────────────────────
+  // ── WebRTC Audio helpers ──────────────────────────────────────────────────
   const getLocalStream = async () => {
     if (streamRef.current && streamRef.current.active) return streamRef.current
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop())
-      streamRef.current = null
-    }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
     streamRef.current = stream
     return stream
   }
 
   const createPeerConnection = (targetUserId) => {
-    if (peersRef.current[targetUserId]) {
-      peersRef.current[targetUserId].close()
-      delete peersRef.current[targetUserId]
-    }
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-      ]
-    })
+    if (peersRef.current[targetUserId]) { peersRef.current[targetUserId].close(); delete peersRef.current[targetUserId] }
+    const pc = new RTCPeerConnection({ iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ]})
     pc.onicecandidate = (e) => { if (e.candidate) sendIce(targetUserId, e.candidate) }
     pc.oniceconnectionstatechange = () => { if (pc.iceConnectionState === 'failed') pc.restartIce() }
     pc.ontrack = (e) => {
       const audioId = `remote-audio-${targetUserId}`
       let audio = document.getElementById(audioId)
-      if (!audio) {
-        audio = document.createElement('audio')
-        audio.id = audioId
-        audio.autoplay = true
-        audio.setAttribute('playsinline', '')
-        document.body.appendChild(audio)
-      }
+      if (!audio) { audio = document.createElement('audio'); audio.id = audioId; audio.autoplay = true; audio.setAttribute('playsinline',''); document.body.appendChild(audio) }
       audio.srcObject = e.streams[0]
     }
     peersRef.current[targetUserId] = pc
@@ -296,21 +476,107 @@ export default function Salle() {
   }
 
   const stopCall = useCallback(() => {
-    Object.values(peersRef.current).forEach(pc => { try { pc.close() } catch (_) {} })
+    Object.values(peersRef.current).forEach(pc => { try { pc.close() } catch(_){} })
     peersRef.current = {}
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop())
-      streamRef.current = null
-    }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
     sessionRef.current = null
     setCallParticipants([])
     document.querySelectorAll('[id^="remote-audio-"]').forEach(el => el.remove())
   }, [])
 
-  // ── Helper: ajouter un participant à l'appel ──────────────────────────────
+  // ── WebRTC Screen sharing helpers ─────────────────────────────────────────
+
+  // Créer une PeerConnection dédiée au screen sharing vers un étudiant
+  const createScreenPeerConnection = (targetUserId) => {
+    if (screenPeersRef.current[targetUserId]) {
+      screenPeersRef.current[targetUserId].close()
+      delete screenPeersRef.current[targetUserId]
+    }
+    const pc = new RTCPeerConnection({ iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ]})
+    pc.onicecandidate = (e) => { if (e.candidate) sendScreenIce(targetUserId, e.candidate) }
+    // Côté étudiant — recevoir le stream vidéo de l'écran
+    pc.ontrack = (e) => {
+      if (screenVideoRef.current) {
+        screenVideoRef.current.srcObject = e.streams[0]
+      }
+    }
+    screenPeersRef.current[targetUserId] = pc
+    return pc
+  }
+
+  // Tuteur → envoyer l'écran à un étudiant spécifique
+  const shareScreenToPeer = async (targetUserId) => {
+    try {
+      const stream = screenStreamRef.current
+      if (!stream) return
+      const pc = createScreenPeerConnection(targetUserId)
+      stream.getTracks().forEach(t => pc.addTrack(t, stream))
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+      sendScreenOffer(targetUserId, offer)
+    } catch (err) { console.error('shareScreenToPeer error:', err) }
+  }
+
+  // Tuteur — démarrer le partage d'écran
+  const handleStartScreenShare = async () => {
+    try {
+      // Demander la capture d'écran au navigateur
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          frameRate: { ideal: 15, max: 30 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false, // pas d'audio système (évite les échos avec le micro)
+      })
+
+      screenStreamRef.current = stream
+      setScreenStream(stream)
+      setIsSharing(true)
+
+      // Notifier le backend que le partage commence
+      startScreenShare(id)
+
+      // Envoyer l'offre à tous les participants actuels dans l'appel
+      const myId = userRef.current?.id
+      const others = participantsRef.current.filter(p => String(p.id) !== String(myId))
+      for (const p of others) {
+        await shareScreenToPeer(p.id)
+      }
+
+      // Si le tuteur arrête le partage via le navigateur (bouton "Stop sharing")
+      stream.getVideoTracks()[0].addEventListener('ended', () => {
+        handleStopScreenShare()
+      })
+
+      success('Partage d\'écran démarré ! Les étudiants voient votre écran.')
+    } catch (err) {
+      if (err.name !== 'NotAllowedError') {
+        error('Impossible de partager l\'écran.')
+      }
+      // NotAllowedError = l'utilisateur a annulé → pas d'erreur
+    }
+  }
+
+  // Tuteur — arrêter le partage d'écran
+  const handleStopScreenShare = useCallback(() => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(t => t.stop())
+      screenStreamRef.current = null
+    }
+    setScreenStream(null)
+    setIsSharing(false)
+    Object.values(screenPeersRef.current).forEach(pc => { try { pc.close() } catch(_){} })
+    screenPeersRef.current = {}
+    stopScreenShare(id)
+    success('Partage d\'écran arrêté.')
+  }, [id])
+
   const addToCallParticipants = useCallback((userId, muted = false) => {
-    const allParticipants = participantsRef.current
-    const p = allParticipants.find(p => String(p.id) === String(userId))
+    const p = participantsRef.current.find(p => String(p.id) === String(userId))
     if (!p) return
     const isMe = String(userId) === String(userRef.current?.id)
     setCallParticipants(prev => {
@@ -326,69 +592,56 @@ export default function Salle() {
 
     joinSalle(id)
 
-    const handleMessage       = (msg) => setMessages(prev => [...prev, msg])
-    const handleJoin = ({ userId, prenom, nom }) => {
+    const handleMessage   = (msg) => setMessages(prev => [...prev, msg])
+    const handleJoin      = ({ userId, prenom, nom }) =>
       setParticipants(prev => prev.some(p => p.id === userId) ? prev : [...prev, { id: userId, prenom, nom }])
-    }
-    const handleLeave = ({ userId }) => {
+    const handleLeave     = ({ userId }) => {
       setParticipants(prev => prev.filter(p => p.id !== userId))
-      // Retirer aussi de l'appel si présent
       setCallParticipants(prev => prev.filter(p => String(p.id) !== String(userId)))
     }
-    const handleSeanceUpdated = ({ seanceId, statut }) => {
+    const handleSeanceUpdated = ({ seanceId, statut }) =>
       setSeances(prev => prev.map(s => s.id === seanceId ? { ...s, statut } : s))
-    }
 
-    socket.on('chat:message',      handleMessage)
-    socket.on('salle:user-joined', handleJoin)
-    socket.on('salle:user-left',   handleLeave)
-    socket.on('seance:updated',    handleSeanceUpdated)
+    socket.on('chat:message',       handleMessage)
+    socket.on('salle:user-joined',  handleJoin)
+    socket.on('salle:user-left',    handleLeave)
+    socket.on('seance:updated',     handleSeanceUpdated)
 
-    // Appel déjà actif à l'entrée dans la salle
-    const handleCallActive = ({ sessionId, initiateurNom }) => {
-      if (!sessionRef.current) {
-        setIncomingCall({ sessionId, initiateurNom: initiateurNom || 'Tuteur' })
-      }
-    }
-    socket.on('call:active', handleCallActive)
+    // ── Appel déjà actif à l'entrée ──
+    socket.on('call:active', ({ sessionId, initiateurNom }) => {
+      if (!sessionRef.current) setIncomingCall({ sessionId, initiateurNom: initiateurNom || 'Tuteur' })
+    })
 
-    // Appel démarré — l'initiateur s'ajoute à callParticipants, les autres voient la fiche
+    // ── Appel démarré ──
     const handleCallStarted = ({ sessionId, initiateur, initiateurNom }) => {
       const myUserId = userRef.current?.id
       const isInitiateur = myUserId != null && String(initiateur) === String(myUserId)
-
       if (isInitiateur) {
-        setActiveCall(sessionId)
-        sessionRef.current = sessionId
+        setActiveCall(sessionId); sessionRef.current = sessionId
         joinCall(id, sessionId)
-        // Ajouter l'initiateur à callParticipants (après que participantsRef soit à jour)
         setTimeout(() => addToCallParticipants(myUserId, false), 100)
-        getLocalStream().catch(err => {
-          console.error('getUserMedia error:', err)
-          error("Impossible d'accéder au microphone. Vérifiez les permissions.")
-        })
+        getLocalStream().catch(() => error("Impossible d'accéder au microphone."))
       } else {
-        if (!sessionRef.current) {
-          setIncomingCall({ sessionId, initiateurNom: initiateurNom || 'Tuteur' })
-        }
+        if (!sessionRef.current) setIncomingCall({ sessionId, initiateurNom: initiateurNom || 'Tuteur' })
       }
     }
 
-    // Un participant a accepté → l'initiateur lui envoie un offer + l'ajoute à la liste
+    // ── Un participant a accepté → l'initiateur lui envoie l'offer audio ──
     const handleCallUserJoined = async ({ userId }) => {
       if (!sessionRef.current) return
       const myId = userRef.current?.id
       if (!myId || String(myId) === String(userId)) return
       if (!activeCallRef.current) return
-
-      // Ajouter à la liste visuelle
       addToCallParticipants(userId, false)
-
       if (peersRef.current[userId]) return
       await callPeer(userId, sessionRef.current)
+      // Si on partage l'écran, envoyer aussi le stream vidéo au nouveau participant
+      if (screenStreamRef.current) {
+        await shareScreenToPeer(userId)
+      }
     }
 
-    // Recevoir un offer WebRTC
+    // ── WebRTC Audio signaling ──
     const handleOffer = async ({ fromUserId, offer, sessionId }) => {
       try {
         const stream = await getLocalStream()
@@ -404,9 +657,7 @@ export default function Salle() {
     const handleAnswer = async ({ fromUserId, answer }) => {
       try {
         const pc = peersRef.current[fromUserId]
-        if (pc && pc.signalingState !== 'stable') {
-          await pc.setRemoteDescription(new RTCSessionDescription(answer))
-        }
+        if (pc && pc.signalingState !== 'stable') await pc.setRemoteDescription(new RTCSessionDescription(answer))
       } catch (err) { console.error('handle answer error:', err) }
     }
 
@@ -417,88 +668,113 @@ export default function Salle() {
       } catch (err) { console.error('handle ice error:', err) }
     }
 
-    // Quelqu'un a coupé/activé son micro
-    const handleUserMuted = ({ userId, muted }) => {
-      setCallParticipants(prev => prev.map(p =>
-        String(p.id) === String(userId) ? { ...p, muted } : p
-      ))
+    // ── Screen sharing signaling ──────────────────────────────────────────
+
+    // Étudiant : le tuteur vient de démarrer le partage
+    const handleScreenStarted = ({ sharerId, sharerNom }) => {
+      const myId = userRef.current?.id
+      if (String(sharerId) === String(myId)) return // c'est moi le tuteur
+      setScreenShare({ sharerId, sharerNom })
     }
 
-    // Un participant quitte l'appel (pas toute la salle)
-    const handleUserDisconnected = ({ userId }) => {
+    // Étudiant : le tuteur a arrêté le partage
+    const handleScreenStopped = () => {
+      setScreenShare(null)
+      if (screenVideoRef.current) screenVideoRef.current.srcObject = null
+      // Fermer les PeerConnections screen côté étudiant
+      Object.values(screenPeersRef.current).forEach(pc => { try { pc.close() } catch(_){} })
+      screenPeersRef.current = {}
+    }
+
+    // Étudiant : recevoir l'offer vidéo du tuteur
+    const handleScreenOffer = async ({ fromUserId, offer }) => {
+      try {
+        const pc = createScreenPeerConnection(fromUserId)
+        await pc.setRemoteDescription(new RTCSessionDescription(offer))
+        const answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        sendScreenAnswer(fromUserId, answer)
+      } catch (err) { console.error('screen offer error:', err) }
+    }
+
+    // Tuteur : recevoir l'answer de l'étudiant
+    const handleScreenAnswer = async ({ fromUserId, answer }) => {
+      try {
+        const pc = screenPeersRef.current[fromUserId]
+        if (pc && pc.signalingState !== 'stable') await pc.setRemoteDescription(new RTCSessionDescription(answer))
+      } catch (err) { console.error('screen answer error:', err) }
+    }
+
+    // ICE candidates pour le screen sharing
+    const handleScreenIce = async ({ fromUserId, candidate }) => {
+      try {
+        const pc = screenPeersRef.current[fromUserId]
+        if (pc && candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate))
+      } catch (err) { console.error('screen ice error:', err) }
+    }
+
+    // ── Micro ──
+    const handleUserMuted = ({ userId, muted }) =>
+      setCallParticipants(prev => prev.map(p => String(p.id) === String(userId) ? { ...p, muted } : p))
+
+    const handleUserDisconnected = ({ userId }) =>
       setCallParticipants(prev => prev.filter(p => String(p.id) !== String(userId)))
-    }
 
-    const handleCallEnded = () => {
-      setActiveCall(null)
-      setIncomingCall(null)
-      stopCall()
-    }
-
-    const handleCallYouLeft = () => {
-      setActiveCall(null)
-      setIncomingCall(null)
-      stopCall()
-    }
+    // ── Fin d'appel ──
+    const handleCallEnded = () => { setActiveCall(null); setIncomingCall(null); stopCall(); handleStopScreenShare() }
+    const handleCallYouLeft = () => { setActiveCall(null); setIncomingCall(null); stopCall() }
 
     socket.on('call:started',           handleCallStarted)
     socket.on('call:user-joined',       handleCallUserJoined)
     socket.on('call:offer',             handleOffer)
     socket.on('call:answer',            handleAnswer)
     socket.on('call:ice-candidate',     handleIce)
+    socket.on('screen:started',         handleScreenStarted)
+    socket.on('screen:stopped',         handleScreenStopped)
+    socket.on('screen:offer',           handleScreenOffer)
+    socket.on('screen:answer',          handleScreenAnswer)
+    socket.on('screen:ice',             handleScreenIce)
     socket.on('call:user-muted',        handleUserMuted)
     socket.on('call:user-disconnected', handleUserDisconnected)
     socket.on('call:ended',             handleCallEnded)
     socket.on('call:you-left',          handleCallYouLeft)
 
-    // Handlers accepter/refuser via refs (évite les stale closures)
+    // Accepter / Refuser appel
     acceptCallRef.current = async (sessionId) => {
-      setIncomingCall(null)
-      setActiveCall(sessionId)
-      sessionRef.current = sessionId
+      setIncomingCall(null); setActiveCall(sessionId); sessionRef.current = sessionId
       joinCall(id, sessionId)
-      // S'ajouter soi-même à callParticipants
       const myId = userRef.current?.id
       if (myId) setTimeout(() => addToCallParticipants(myId, false), 100)
-      getSocket()?.emit('call:joined', { salleId: id, sessionId, userId: userRef.current?.id })
+      getSocket()?.emit('call:joined', { salleId: id, sessionId, userId: myId })
     }
-
     refuseCallRef.current = (sessionId) => {
       setIncomingCall(null)
       getSocket()?.emit('call:refused', { sessionId, userId: userRef.current?.id })
     }
 
     return () => {
-      leaveSalle(id)
-      stopCall()
-      socket.off('chat:message',           handleMessage)
-      socket.off('salle:user-joined',      handleJoin)
-      socket.off('salle:user-left',        handleLeave)
-      socket.off('seance:updated',         handleSeanceUpdated)
-      socket.off('call:active',            handleCallActive)
-      socket.off('call:started',           handleCallStarted)
-      socket.off('call:user-joined',       handleCallUserJoined)
-      socket.off('call:offer',             handleOffer)
-      socket.off('call:answer',            handleAnswer)
-      socket.off('call:ice-candidate',     handleIce)
-      socket.off('call:user-muted',        handleUserMuted)
-      socket.off('call:user-disconnected', handleUserDisconnected)
-      socket.off('call:ended',             handleCallEnded)
-      socket.off('call:you-left',          handleCallYouLeft)
+      leaveSalle(id); stopCall()
+      socket.off('chat:message');       socket.off('salle:user-joined')
+      socket.off('salle:user-left');    socket.off('seance:updated')
+      socket.off('call:active');        socket.off('call:started')
+      socket.off('call:user-joined');   socket.off('call:offer')
+      socket.off('call:answer');        socket.off('call:ice-candidate')
+      socket.off('screen:started');     socket.off('screen:stopped')
+      socket.off('screen:offer');       socket.off('screen:answer')
+      socket.off('screen:ice');         socket.off('call:user-muted')
+      socket.off('call:user-disconnected'); socket.off('call:ended')
+      socket.off('call:you-left')
     }
-  }, [id, stopCall, addToCallParticipants])
+  }, [id, stopCall, addToCallParticipants, handleStopScreenShare])
 
   // ── Handlers UI ───────────────────────────────────────────────────────────
   const handleQuitter = async () => {
-    const isAdmin = myRole === 'ADMIN'
-    const msg = isAdmin
-      ? 'Vous êtes admin. Quitter supprimera définitivement cette salle et toutes ses données. Confirmer ?'
+    const msg = myRole === 'ADMIN'
+      ? 'Vous êtes admin. Quitter supprimera définitivement cette salle. Confirmer ?'
       : 'Quitter cette salle ? Vous devrez demander une nouvelle invitation pour revenir.'
     if (!confirm(msg)) return
-    try {
-      await sallesAPI.quitter(id)
-      navigate('/dashboard')
-    } catch (err) { error(err.response?.data?.error || 'Erreur') }
+    try { await sallesAPI.quitter(id); navigate('/dashboard') }
+    catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 
   const uploadFichier = async (e) => {
@@ -506,8 +782,7 @@ export default function Salle() {
     const fd = new FormData(); fd.append('fichier', file)
     try {
       const { data } = await sallesAPI.uploadFichier(id, fd)
-      setFichiers(prev => [data, ...prev])
-      success('Fichier uploadé !')
+      setFichiers(prev => [data, ...prev]); success('Fichier uploadé !')
     } catch { error('Erreur upload') }
   }
 
@@ -515,17 +790,13 @@ export default function Salle() {
     e.preventDefault()
     try {
       const { data } = await seancesAPI.create({ ...planForm, salleId: id })
-      setSeances(prev => [...prev, data])
-      setShowPlan(false)
+      setSeances(prev => [...prev, data]); setShowPlan(false)
       success('Séance planifiée !')
-      const dateStr = new Date(planForm.dateDebut).toLocaleString('fr-FR', {
-        weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'
-      })
+      const dateStr = new Date(planForm.dateDebut).toLocaleString('fr-FR', { weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' })
       sendMessage(id, `📅 Séance planifiée : ${planForm.titre} le ${dateStr} (${planForm.duree} min).`)
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 
-  // Annuler une séance planifiée (tuteur uniquement)
   const handleAnnulerSeance = async (seanceId) => {
     if (!confirm('Annuler cette séance ? Cette action est irréversible.')) return
     try {
@@ -533,34 +804,31 @@ export default function Salle() {
       setSeances(prev => prev.map(s => s.id === seanceId ? { ...s, statut: 'ANNULEE' } : s))
       success('Séance annulée.')
       sendMessage(id, `❌ Séance annulée par le tuteur.`)
-    } catch (err) { error(err.response?.data?.error || 'Erreur lors de l\'annulation') }
+    } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 
   const handleToggleMute = () => {
     setIsMuted(m => {
       const newMuted = !m
       toggleMute(activeCall, newMuted)
-      // Mettre à jour son propre état dans callParticipants
       const myId = userRef.current?.id
-      if (myId) {
-        setCallParticipants(prev => prev.map(p =>
-          String(p.id) === String(myId) ? { ...p, muted: newMuted } : p
-        ))
-      }
+      if (myId) setCallParticipants(prev => prev.map(p => String(p.id) === String(myId) ? { ...p, muted: newMuted } : p))
       return newMuted
     })
   }
 
   const handleEndCall = () => {
-    endCall(id, activeCall)
-    setActiveCall(null)
-    stopCall()
+    endCall(id, activeCall); setActiveCall(null); stopCall()
+    if (isSharing) handleStopScreenShare()
   }
 
   const handleLeaveCall = () => {
-    getSocket()?.emit('call:leave', { sessionId: activeCall })
-    setActiveCall(null)
-    stopCall()
+    getSocket()?.emit('call:leave', { sessionId: activeCall }); setActiveCall(null); stopCall()
+  }
+
+  const handleShareToggle = () => {
+    if (isSharing) handleStopScreenShare()
+    else handleStartScreenShare()
   }
 
   // ── Rôles ─────────────────────────────────────────────────────────────────
@@ -569,21 +837,17 @@ export default function Salle() {
   const hasTuteur = salle?.statut === 'ACTIVE_AVEC_TUTEUR'
   const canCall   = isTuteur || (isAdmin && !hasTuteur)
 
-  const statutBadge = {
-    PLANIFIEE: 'warning', EN_COURS: 'primary', REALISEE: 'success', ANNULEE: 'danger'
-  }
+  const statutBadge = { PLANIFIEE:'warning', EN_COURS:'primary', REALISEE:'success', ANNULEE:'danger' }
 
   if (loading) return (
-    <div className="h-screen bg-ink-950 flex items-center justify-center">
-      <Spinner size="lg" />
-    </div>
+    <div className="h-screen bg-ink-950 flex items-center justify-center"><Spinner size="lg" /></div>
   )
 
   return (
     <div className="h-screen flex flex-col bg-ink-950 overflow-hidden">
       <ToastContainer toasts={toasts} />
 
-      {/* ── Panneau d'appel flottant (style Zoom/WhatsApp) ─────────────── */}
+      {/* ── Panneau d'appel flottant ────────────────────────────────────── */}
       {activeCall && (
         <CallPanel
           callParticipants={callParticipants}
@@ -593,46 +857,57 @@ export default function Salle() {
           onLeave={handleLeaveCall}
           canEnd={canCall}
           callTime={callTime}
+          isSharing={isSharing}
+          onShareToggle={handleShareToggle}
+          isTuteur={isTuteur}
         />
       )}
 
-      {/* Top bar — sans le badge "Appel en cours" (remplacé par le panneau flottant) */}
+      {/* ── Écran partagé — vue étudiant ────────────────────────────────── */}
+      {screenShare && (
+        <ScreenShareViewer
+          sharerNom={screenShare.sharerNom}
+          videoRef={screenVideoRef}
+          onClose={() => setScreenShare(null)}
+        />
+      )}
+
+      {/* Top bar */}
       <div className="h-12 flex-shrink-0 flex items-center justify-between px-4 bg-ink-900 border-b border-ink-700">
         <div className="flex items-center gap-3 overflow-hidden">
           <Btn variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>← Retour</Btn>
           <div className="w-px h-5 bg-ink-700" />
           <h2 className="font-display font-bold text-white text-sm truncate">{salle?.nom}</h2>
           {salle?.matiere && <span className="text-xs text-violet-400 hidden sm:block">📖 {salle.matiere}</span>}
-          <Badge variant={salle?.statut === 'ACTIVE_AVEC_TUTEUR' ? 'primary' : 'default'}>
-            {salle?.statut === 'ACTIVE_AVEC_TUTEUR' ? '👨‍🏫 Avec tuteur' : '📚 Sans tuteur'}
+          <Badge variant={hasTuteur ? 'primary' : 'default'}>
+            {hasTuteur ? '👨‍🏫 Avec tuteur' : '📚 Sans tuteur'}
           </Badge>
+          {/* Indicateur partage d'écran dans la top bar */}
+          {screenShare && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+              <span className="text-xs text-violet-400 font-medium">Écran partagé</span>
+            </div>
+          )}
         </div>
-
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Bouton Appel libre — visible uniquement si pas d'appel en cours */}
           {!activeCall && canCall && (
-            <Btn variant="success" size="sm" onClick={() => startCall(id, null)}>
-              📞 Appel
-            </Btn>
+            <Btn variant="success" size="sm" onClick={() => startCall(id, null)}>📞 Appel</Btn>
           )}
           <Btn variant="secondary" size="sm" onClick={handleQuitter}>🚪 Quitter</Btn>
         </div>
       </div>
 
-      {/* Body: 3 columns */}
+      {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Chat */}
         <div className="w-64 flex-shrink-0 border-r border-ink-700 flex flex-col">
           <Chat messages={messages} onSend={(c) => sendMessage(id, c)} currentUser={user} />
         </div>
-
-        {/* Center: Whiteboard */}
         <div className="flex-1 overflow-hidden">
           <Whiteboard salleId={id} isTuteur={isTuteur} />
         </div>
-
-        {/* Right: Tabs panel */}
         <div className="w-60 flex-shrink-0 border-l border-ink-700 flex flex-col bg-ink-900">
+          {/* Tabs */}
           <div className="flex border-b border-ink-700 flex-shrink-0">
             {[
               { id:'participants', icon:'👥', label:`${participants.length}` },
@@ -652,8 +927,7 @@ export default function Salle() {
           {rightTab === 'participants' && (
             <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
               {isAdmin && (
-                <Btn size="sm" variant="secondary" className="w-full justify-center mb-1"
-                  onClick={() => setShowInviteTuteur(true)}>
+                <Btn size="sm" variant="secondary" className="w-full justify-center mb-1" onClick={() => setShowInviteTuteur(true)}>
                   ➕ Inviter un tuteur
                 </Btn>
               )}
@@ -663,9 +937,7 @@ export default function Salle() {
                   <div key={p.id} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-ink-800 transition-colors">
                     <div className="relative flex-shrink-0">
                       <Avatar user={p} size="sm" />
-                      {inCall && (
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border border-ink-900" title="Dans l'appel" />
-                      )}
+                      {inCall && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border border-ink-900" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-slate-200 truncate">
@@ -706,9 +978,7 @@ export default function Salle() {
           {rightTab === 'seances' && (
             <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
               {isTuteur && (
-                <Btn size="sm" onClick={() => setShowPlan(true)} className="w-full justify-center">
-                  ➕ Planifier une séance
-                </Btn>
+                <Btn size="sm" onClick={() => setShowPlan(true)} className="w-full justify-center">➕ Planifier une séance</Btn>
               )}
               {seances.map(s => (
                 <div key={s.id} className="rounded-xl bg-ink-800 border border-ink-700 p-3 flex flex-col gap-1.5">
@@ -718,17 +988,12 @@ export default function Salle() {
                   </p>
                   <p className="text-xs text-slate-500">⏱ {s.duree} min</p>
                   <Badge variant={statutBadge[s.statut] || 'default'}>{s.statut}</Badge>
-
-                  {/* PLANIFIEE → tuteur peut annuler */}
                   {s.statut === 'PLANIFIEE' && isTuteur && (
-                    <button
-                      onClick={() => handleAnnulerSeance(s.id)}
+                    <button onClick={() => handleAnnulerSeance(s.id)}
                       className="mt-1 w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition-all">
                       ❌ Annuler la séance
                     </button>
                   )}
-
-                  {/* EN_COURS → indicateur + bouton terminer pour le tuteur */}
                   {s.statut === 'EN_COURS' && (
                     <div className="flex flex-col gap-1 mt-0.5">
                       <div className="flex items-center gap-1">
@@ -736,29 +1001,18 @@ export default function Salle() {
                         <p className="text-xs text-emerald-400">Séance en cours</p>
                       </div>
                       {isTuteur && activeCall && (
-                        <button
-                          onClick={handleEndCall}
+                        <button onClick={handleEndCall}
                           className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition-all">
                           ⏹ Terminer la séance
                         </button>
                       )}
                     </div>
                   )}
-
-                  {/* REALISEE */}
-                  {s.statut === 'REALISEE' && (
-                    <p className="text-xs text-emerald-500 mt-0.5">✅ Séance réalisée</p>
-                  )}
-
-                  {/* ANNULEE */}
-                  {s.statut === 'ANNULEE' && (
-                    <p className="text-xs text-rose-400 mt-0.5">❌ Séance annulée</p>
-                  )}
+                  {s.statut === 'REALISEE' && <p className="text-xs text-emerald-500 mt-0.5">✅ Séance réalisée</p>}
+                  {s.statut === 'ANNULEE'  && <p className="text-xs text-rose-400 mt-0.5">❌ Séance annulée</p>}
                 </div>
               ))}
-              {seances.length === 0 && (
-                <p className="text-xs text-slate-600 text-center py-4">Aucune séance planifiée</p>
-              )}
+              {seances.length === 0 && <p className="text-xs text-slate-600 text-center py-4">Aucune séance planifiée</p>}
             </div>
           )}
         </div>
@@ -769,9 +1023,7 @@ export default function Salle() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-ink-800 border border-ink-600 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-violet-600/20 border-2 border-violet-500 flex items-center justify-center text-3xl">
-                👨‍🏫
-              </div>
+              <div className="w-20 h-20 rounded-full bg-violet-600/20 border-2 border-violet-500 flex items-center justify-center text-3xl">👨‍🏫</div>
               <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-ink-800 animate-pulse" />
             </div>
             <div className="text-center">
@@ -780,41 +1032,34 @@ export default function Salle() {
               <p className="text-sm text-slate-500 mt-1">vous invite à rejoindre l'appel</p>
             </div>
             <div className="flex gap-4 mt-2">
-              <button
-                onClick={() => refuseCallRef.current?.(incomingCall.sessionId)}
+              <button onClick={() => refuseCallRef.current?.(incomingCall.sessionId)}
                 className="w-14 h-14 rounded-full bg-rose-500/20 border-2 border-rose-500 text-rose-400 text-2xl flex items-center justify-center hover:bg-rose-500/40 transition-all active:scale-95">
                 📵
               </button>
-              <button
-                onClick={() => acceptCallRef.current?.(incomingCall.sessionId)}
+              <button onClick={() => acceptCallRef.current?.(incomingCall.sessionId)}
                 className="w-14 h-14 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 text-2xl flex items-center justify-center hover:bg-emerald-500/40 transition-all active:scale-95">
                 📞
               </button>
             </div>
-            <p className="text-xs text-slate-600">
-              <span className="text-rose-400">📵 Refuser</span>
-              {' '}·{' '}
-              <span className="text-emerald-400">📞 Accepter</span>
-            </p>
           </div>
         </div>
       )}
 
-      {/* Modal planifier séance */}
+      {/* Modal planifier */}
       <Modal open={showPlan} onClose={() => setShowPlan(false)} title="📅 Planifier une séance">
         <form onSubmit={handlePlanifier} className="flex flex-col gap-4">
           <FormGroup label="Titre *">
-            <input required value={planForm.titre} onChange={e => setPlanForm(f => ({ ...f, titre: e.target.value }))} placeholder="ex: Cours d'Algèbre" />
+            <input required value={planForm.titre} onChange={e => setPlanForm(f => ({...f, titre:e.target.value}))} placeholder="ex: Cours d'Algèbre" />
           </FormGroup>
           <FormGroup label="Matière">
-            <input value={planForm.matiere} onChange={e => setPlanForm(f => ({ ...f, matiere: e.target.value }))} placeholder="ex: Mathématiques" />
+            <input value={planForm.matiere} onChange={e => setPlanForm(f => ({...f, matiere:e.target.value}))} placeholder="ex: Mathématiques" />
           </FormGroup>
           <div className="grid grid-cols-2 gap-3">
             <FormGroup label="Date et heure *">
-              <input type="datetime-local" required value={planForm.dateDebut} onChange={e => setPlanForm(f => ({ ...f, dateDebut: e.target.value }))} />
+              <input type="datetime-local" required value={planForm.dateDebut} onChange={e => setPlanForm(f => ({...f, dateDebut:e.target.value}))} />
             </FormGroup>
             <FormGroup label="Durée (min)">
-              <input type="number" min={15} max={480} value={planForm.duree} onChange={e => setPlanForm(f => ({ ...f, duree: Number(e.target.value) }))} />
+              <input type="number" min={15} max={480} value={planForm.duree} onChange={e => setPlanForm(f => ({...f, duree:Number(e.target.value)}))} />
             </FormGroup>
           </div>
           <div className="flex gap-3 justify-end pt-1">
@@ -824,16 +1069,11 @@ export default function Salle() {
         </form>
       </Modal>
 
-      {/* Modal inviter un tuteur */}
-      <Modal open={showInviteTuteur} onClose={() => { setShowInviteTuteur(false); setSelectedTuteur('') }}
-        title="👨‍🏫 Inviter un tuteur dans la salle">
-        <InviteTuteurModal
-          salleId={id}
-          hasTuteur={hasTuteur}
-          onClose={() => { setShowInviteTuteur(false); setSelectedTuteur('') }}
-          onSuccess={(msg) => success(msg)}
-          onError={(msg) => error(msg)}
-        />
+      {/* Modal inviter tuteur */}
+      <Modal open={showInviteTuteur} onClose={() => setShowInviteTuteur(false)} title="👨‍🏫 Inviter un tuteur">
+        <InviteTuteurModal salleId={id} hasTuteur={hasTuteur}
+          onClose={() => setShowInviteTuteur(false)}
+          onSuccess={msg => success(msg)} onError={msg => error(msg)} />
       </Modal>
     </div>
   )

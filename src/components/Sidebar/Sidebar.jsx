@@ -19,6 +19,8 @@ const navByRole = {
     { to: '/dashboard/tuteurs',     icon: '🔍',  label: 'Explorer'      },
     { to: '/dashboard/emploi',      icon: '📅',  label: 'Emploi du temps'},
     { to: '/dashboard/invitations', icon: '✉️',  label: 'Demandes'      },
+    { to: '/dashboard/mes-tarifs',  icon: '💰',  label: 'Mes tarifs'    },
+    { to: '/dashboard/mes-revenus', icon: '📈',  label: 'Mes revenus'   },
     { to: '/dashboard/parametres',  icon: '⚙️',  label: 'Paramètres'   },
   ],
   admin: [
@@ -27,6 +29,7 @@ const navByRole = {
     { to: '/admin/tuteurs',          icon: '👨‍🏫',label: 'Tuteurs'        },
     { to: '/admin/salles',           icon: '🚪', label: 'Salles'         },
     { to: '/admin/seances',          icon: '📅', label: 'Séances'        },
+    { to: '/admin/revenus',          icon: '💳', label: 'Revenus'        },
   ],
 }
 

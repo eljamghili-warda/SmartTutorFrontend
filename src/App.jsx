@@ -11,12 +11,15 @@ import Fichiers       from './pages/Dashboard/Fichiers'
 import Invitations    from './pages/Dashboard/Invitations'
 import EmploiDuTemps  from './pages/Dashboard/EmploiDuTemps'
 import Parametres     from './pages/Dashboard/Parameters'
+import MesRevenus     from './pages/Dashboard/MesRevenus'
+import MesTarifs      from './pages/Dashboard/MesTarifs'
 import Salle          from './pages/Salle/Salle'
-import AdminDashboard from './pages/Admin/AdminDashboard'
-import AdminUsers     from './pages/Admin/AdminUsers'
+import AdminDashboard from './pages/Admin/Admindashboard'
+import AdminUsers     from './pages/Admin/Adminusers'
 import AdminTuteurs   from './pages/Admin/AdminTuteurs'
 import AdminSalles    from './pages/Admin/AdminSalles'
 import AdminSeances   from './pages/Admin/AdminSeances'
+import AdminRevenus   from './pages/Admin/AdminRevenus'
 
  function App() {
   return (
@@ -39,6 +42,8 @@ import AdminSeances   from './pages/Admin/AdminSeances'
             <Route path="/dashboard/invitations"  element={<Invitations />} />
             <Route path="/dashboard/emploi"       element={<EmploiDuTemps />} />
             <Route path="/dashboard/parametres"   element={<Parametres />} />
+            <Route path="/dashboard/mes-revenus"  element={<MesRevenus />} />
+            <Route path="/dashboard/mes-tarifs"   element={<MesTarifs />} />
           </Route>
 
           {/* Admin */}
@@ -48,6 +53,7 @@ import AdminSeances   from './pages/Admin/AdminSeances'
             <Route path="/admin/tuteurs"          element={<AdminTuteurs />} />
             <Route path="/admin/salles"           element={<AdminSalles />} />
             <Route path="/admin/seances"          element={<AdminSeances />} />
+            <Route path="/admin/revenus"          element={<AdminRevenus />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/auth" replace />} />
@@ -56,4 +62,5 @@ import AdminSeances   from './pages/Admin/AdminSeances'
     </AuthProvider>
   )
 }
-export default App;
+
+export default App

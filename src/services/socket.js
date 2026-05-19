@@ -39,3 +39,10 @@ export const sendOffer    = (to, offer, sid) => socket?.emit('call:offer',      
 export const sendAnswer   = (to, answer, sid) => socket?.emit('call:answer',        { targetUserId: to, answer, sessionId: sid })
 export const sendIce      = (to, candidate) => socket?.emit('call:ice-candidate',   { targetUserId: to, candidate })
 export const toggleMute   = (sid, muted) => socket?.emit('call:mute', { sessionId: sid, muted })
+
+// ── Screen sharing ───────────────────────────────────────────────────────────
+export const startScreenShare  = (salleId) => socket?.emit('screen:start',  { salleId })
+export const stopScreenShare   = (salleId) => socket?.emit('screen:stop',   { salleId })
+export const sendScreenOffer   = (to, offer)   => socket?.emit('screen:offer',   { targetUserId: to, offer })
+export const sendScreenAnswer  = (to, answer)  => socket?.emit('screen:answer',  { targetUserId: to, answer })
+export const sendScreenIce     = (to, candidate) => socket?.emit('screen:ice',   { targetUserId: to, candidate })

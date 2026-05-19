@@ -6,6 +6,7 @@ import { Btn, Modal, FormGroup, Badge, Spinner, ToastContainer } from '../../com
 import { useToast } from '../../hooks/useToast'
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import PaiementModal from '../Paiement/PaiementModal'
 
 const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
 
@@ -26,6 +27,7 @@ export default function EmploiDuTemps() {
   const [form, setForm]           = useState({ salleId:'', titre:'', matiere:'', dateDebut:'', duree:60 })
   const [loading, setLoading]     = useState(true)
   const { toasts, success, error } = useToast()
+  const [paiementSeanceId, setPaiementSeanceId] = useState(null)
 
   const loadSeances = () => {
     const debut = format(weekStart, "yyyy-MM-dd'T'00:00:00")
@@ -123,6 +125,17 @@ export default function EmploiDuTemps() {
                           {isTuteur && s.statut === 'PLANIFIEE' && (
                             <p className="text-xs text-violet-400 mt-1">📞 Appel = séance lancée</p>
                           )}
+                          {!isTuteur && s.statut === 'PLANIFIEE' && s.statut_paiement !== 'PAYE' && (
+                            <button
+                              onClick={() => setPaiementSeanceId(s.id)}
+                              className="mt-1 w-full text-xs font-bold py-1 px-2 rounded-md bg-violet-600/80 hover:bg-violet-600 text-white transition-colors"
+                            >
+                              💳 Payer
+                            </button>
+                          )}
+                          {s.statut_paiement === 'PAYE' && (
+                            <span className="text-xs font-semibold text-emerald-400 mt-1">✅ Payée</span>
+                          )}
                         </div>
                       )
                     })}
@@ -162,6 +175,14 @@ export default function EmploiDuTemps() {
           </div>
         </form>
       </Modal>
+
+      {paiementSeanceId && (
+        <PaiementModal
+          seanceId={paiementSeanceId}
+          onClose={() => setPaiementSeanceId(null)}
+          onSuccess={() => { setPaiementSeanceId(null); success('Paiement effectué ! La séance est confirmée.'); loadSeances() }}
+        />
+      )}
     </>
   )
 }

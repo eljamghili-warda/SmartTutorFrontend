@@ -75,6 +75,21 @@ export const evaluationsAPI = {
   getByTuteur: (id)  => api.get(`/evaluations/tuteur/${id}`),
 }
 
+export const tarifsAPI = {
+  getMesTarifs:  ()              => api.get('/tarifs/mes-tarifs'),
+  getByTuteur:   (tuteurId)      => api.get(`/tarifs/${tuteurId}`),
+  upsert:        (d)             => api.post('/tarifs', d),
+  delete:        (id)            => api.delete(`/tarifs/${id}`),
+}
+
+export const paiementsAPI = {
+  getInfoSeance:  (seanceId)    => api.get(`/paiements/seance/${seanceId}`),
+  payer:          (d)           => api.post('/paiements', d),
+  rembourser:     (id)          => api.post(`/paiements/${id}/rembourser`),
+  getMesPaiements:()            => api.get('/paiements/mes-paiements'),
+  getMesRevenus:  ()            => api.get('/paiements/mes-revenus'),
+}
+
 export const adminAPI = {
   getStats:        ()          => api.get('/admin/stats'),
   getUtilisateurs: (p)         => api.get('/admin/utilisateurs', { params: p }),
@@ -85,6 +100,8 @@ export const adminAPI = {
   getSalles:       ()          => api.get('/admin/salles'),
   fermerSalle:     (id)        => api.put(`/admin/salles/${id}/fermer`),
   getSeances:      (p)         => api.get('/admin/seances', { params: p }),
+  getRevenus:      ()          => api.get('/admin/revenus'),
+  getPaiements:    (p)         => api.get('/admin/paiements', { params: p }),
 }
 
 export default api
