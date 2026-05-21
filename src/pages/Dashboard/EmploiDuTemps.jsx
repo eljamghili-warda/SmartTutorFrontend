@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import Header from '../../components/Header/Header'
 import { Btn, Modal, FormGroup, Badge, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
+import { useNavigate } from 'react-router-dom'
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import PaiementModal from '../Paiement/PaiementModal'
@@ -19,7 +20,8 @@ const statutConfig = {
 
 export default function EmploiDuTemps() {
   const { user } = useAuth()
-  const isTuteur = user?.role === 'tuteur'
+  const isTuteur  = user?.role === 'tuteur'
+  const navigate   = useNavigate()
   const [seances, setSeances]     = useState([])
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [showCreate, setCreate]   = useState(false)
@@ -81,7 +83,14 @@ export default function EmploiDuTemps() {
               Aujourd'hui
             </Btn>
           </div>
-          {isTuteur && <Btn size="sm" onClick={() => setCreate(true)}>➕ Planifier</Btn>}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {isTuteur && (
+              <Btn size="sm" variant="secondary" onClick={() => navigate('/dashboard/disponibilites')}>
+                🗓️ Mes disponibilités
+              </Btn>
+            )}
+            {isTuteur && <Btn size="sm" onClick={() => setCreate(true)}>➕ Planifier</Btn>}
+          </div>
         </div>
 
         {/* Legend */}

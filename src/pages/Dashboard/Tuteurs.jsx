@@ -1,55 +1,105 @@
 import React, { useEffect, useState } from 'react'
-import { tuteursAPI, evaluationsAPI } from '../../services/api'
+import { tuteursAPI, evaluationsAPI, tarifsAPI } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import Header from '../../components/Header/Header'
 import { Btn, Badge, Card, Avatar, Stars, Modal, FormGroup, EmptyState, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
-// Carte tuteur pour étudiant (bouton Évaluer uniquement — l'invitation se fait depuis la salle)
-const TuteurCardEtudiant = ({ t, onEval }) => (
-  <Card className="flex flex-col gap-4">
-    <div className="flex items-center gap-3">
-      <Avatar user={t} size="lg" />
-      <div className="flex-1 min-w-0">
-        <p className="font-display font-bold text-white truncate">{t.prenom} {t.nom}</p>
-        <Stars note={t.note_moyenne || 0} />
-      </div>
-    </div>
-    <div className="flex flex-wrap gap-1.5">
-      {(t.specialites || []).map(s => <Badge key={s} variant="primary">{s}</Badge>)}
-    </div>
-    {t.biographie && (
-      <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">{t.biographie}</p>
-    )}
-    <div className="flex gap-2 pt-2 border-t border-ink-700 mt-auto">
-      <Btn size="sm" variant="secondary" onClick={() => onEval(t)} className="w-full justify-center">⭐ Évaluer</Btn>
-    </div>
-  </Card>
-)
+// Carte tuteur pour étudiant — avec tarifs
+const TuteurCardEtudiant = ({ t, onEval }) => {
+  const [tarifs, setTarifs] = React.useState([])
+  React.useEffect(() => {
+    tarifsAPI.getByTuteur(t.id).then(({ data }) => setTarifs(data)).catch(() => {})
+  }, [t.id])
 
-// Carte tuteur pour tuteur (vue simple, sans actions)
-const TuteurCardTuteur = ({ t }) => (
-  <Card className="flex flex-col gap-4">
-    <div className="flex items-center gap-3">
-      <Avatar user={t} size="lg" />
-      <div className="flex-1 min-w-0">
-        <p className="font-display font-bold text-white truncate">{t.prenom} {t.nom}</p>
-        <Stars note={t.note_moyenne || 0} />
+  return (
+    <Card className="flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <Avatar user={t} size="lg" />
+        <div className="flex-1 min-w-0">
+          <p className="font-display font-bold text-white truncate">{t.prenom} {t.nom}</p>
+          <Stars note={t.note_moyenne || 0} />
+          <p className="text-xs text-slate-500 mt-0.5">
+            ⭐ {t.note_moyenne ? Number(t.note_moyenne).toFixed(1) : 'Non évalué'}
+          </p>
+        </div>
       </div>
-    </div>
-    <div className="flex flex-wrap gap-1.5">
-      {(t.specialites || []).map(s => <Badge key={s} variant="primary">{s}</Badge>)}
-    </div>
-    {t.biographie && (
-      <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">{t.biographie}</p>
-    )}
-    <div className="pt-2 border-t border-ink-700 mt-auto">
-      <p className="text-xs text-slate-600 text-center">
-        ⭐ {t.note_moyenne ? Number(t.note_moyenne).toFixed(1) : 'Pas encore évalué'}
-      </p>
-    </div>
-  </Card>
-)
+
+      {/* Spécialités */}
+      <div className="flex flex-wrap gap-1.5">
+        {(t.specialites || []).map(s => <Badge key={s} variant="primary">{s}</Badge>)}
+      </div>
+
+      {/* Biographie */}
+      {t.biographie && (
+        <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">{t.biographie}</p>
+      )}
+
+      {/* ── Tarifs ── */}
+      {tarifs.length > 0 ? (
+        <div className="bg-ink-700/50 rounded-xl p-3 flex flex-col gap-2">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">💰 Tarifs</p>
+          <div className="flex flex-col gap-1.5">
+            {tarifs.map(tarif => (
+              <div key={tarif.id} className="flex items-center justify-between">
+                <span className="text-xs text-slate-300">{tarif.matiere}</span>
+                <span className="text-xs font-bold text-violet-400">{Number(tarif.tarif_heure).toLocaleString('fr-FR')} DH/h</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-ink-700/30 rounded-xl p-2.5 text-center">
+          <p className="text-xs text-slate-600">Tarifs non renseignés</p>
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-2 border-t border-ink-700 mt-auto">
+        <Btn size="sm" variant="secondary" onClick={() => onEval(t)} className="w-full justify-center">⭐ Évaluer</Btn>
+      </div>
+    </Card>
+  )
+}
+
+// Carte tuteur pour tuteur (vue simple, avec tarifs)
+const TuteurCardTuteur = ({ t }) => {
+  const [tarifs, setTarifs] = React.useState([])
+  React.useEffect(() => {
+    tarifsAPI.getByTuteur(t.id).then(({ data }) => setTarifs(data)).catch(() => {})
+  }, [t.id])
+
+  return (
+    <Card className="flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <Avatar user={t} size="lg" />
+        <div className="flex-1 min-w-0">
+          <p className="font-display font-bold text-white truncate">{t.prenom} {t.nom}</p>
+          <Stars note={t.note_moyenne || 0} />
+          <p className="text-xs text-slate-500 mt-0.5">
+            ⭐ {t.note_moyenne ? Number(t.note_moyenne).toFixed(1) : 'Non évalué'}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {(t.specialites || []).map(s => <Badge key={s} variant="primary">{s}</Badge>)}
+      </div>
+      {t.biographie && (
+        <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">{t.biographie}</p>
+      )}
+      {tarifs.length > 0 && (
+        <div className="bg-ink-700/50 rounded-xl p-3 flex flex-col gap-2">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">💰 Tarifs</p>
+          {tarifs.map(tarif => (
+            <div key={tarif.id} className="flex items-center justify-between">
+              <span className="text-xs text-slate-300">{tarif.matiere}</span>
+              <span className="text-xs font-bold text-violet-400">{Number(tarif.tarif_heure).toLocaleString('fr-FR')} DH/h</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
 
 export default function Tuteurs() {
   const { user } = useAuth()

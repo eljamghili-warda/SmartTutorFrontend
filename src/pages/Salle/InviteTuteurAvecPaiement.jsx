@@ -45,7 +45,7 @@ export default function InviteTuteurAvecPaiement({ salleId, hasTuteur, invitatio
   useEffect(() => {
     if (!tuteur) return
     setTarifs([]); setMatiere('')
-    API.get(`/tuteurs/${tuteur.id}/tarifs`).then(({ data }) => setTarifs(data))
+    API.get(`/tarifs/${tuteur.id}`).then(({ data }) => setTarifs(data))
   }, [tuteur])
 
   // ── Étape 1 : Choisir tuteur ──────────────────────────────────────────────

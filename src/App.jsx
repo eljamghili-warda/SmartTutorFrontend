@@ -12,7 +12,8 @@ import Invitations    from './pages/Dashboard/Invitations'
 import EmploiDuTemps  from './pages/Dashboard/EmploiDuTemps'
 import Parametres     from './pages/Dashboard/Parameters'
 import MesRevenus     from './pages/Dashboard/MesRevenus'
-import MesTarifs      from './pages/Dashboard/MesTarifs'
+import MesTarifs          from './pages/Dashboard/MesTarifs'
+import MesDisponibilites  from './pages/Dashboard/MesDisponibilites'
 import Salle          from './pages/Salle/Salle'
 import AdminDashboard from './pages/Admin/Admindashboard'
 import AdminUsers     from './pages/Admin/Adminusers'
@@ -43,7 +44,8 @@ import AdminRevenus   from './pages/Admin/AdminRevenus'
             <Route path="/dashboard/emploi"       element={<EmploiDuTemps />} />
             <Route path="/dashboard/parametres"   element={<Parametres />} />
             <Route path="/dashboard/mes-revenus"  element={<MesRevenus />} />
-            <Route path="/dashboard/mes-tarifs"   element={<MesTarifs />} />
+            <Route path="/dashboard/mes-tarifs"        element={<MesTarifs />} />
+            <Route path="/dashboard/disponibilites"    element={<MesDisponibilites />} />
           </Route>
 
           {/* Admin */}

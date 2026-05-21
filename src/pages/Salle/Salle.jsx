@@ -608,8 +608,11 @@ export default function Salle() {
     socket.on('seance:updated',     handleSeanceUpdated)
 
     // ── Appel déjà actif à l'entrée ──
-    socket.on('call:active', ({ sessionId, initiateurNom }) => {
-      if (!sessionRef.current) setIncomingCall({ sessionId, initiateurNom: initiateurNom || 'Tuteur' })
+    // On ne montre PAS la fiche "appel entrant" : ce n'est pas un nouvel appel,
+    // l'utilisateur vient juste d'arriver dans la salle. Il peut rejoindre via le bouton.
+    socket.on('call:active', ({ sessionId }) => {
+      // stocke le sessionId disponible pour rejoindre manuellement si besoin
+      // mais ne déclenche PAS setIncomingCall
     })
 
     // ── Appel démarré ──
@@ -837,7 +840,8 @@ export default function Salle() {
   const hasTuteur = salle?.statut === 'ACTIVE_AVEC_TUTEUR'
   const canCall   = isTuteur || (isAdmin && !hasTuteur)
 
-  const statutBadge = { PLANIFIEE:'warning', EN_COURS:'primary', REALISEE:'success', ANNULEE:'danger' }
+  const statutBadge = { PLANIFIEE:'warning', EN_ATTENTE_PAIEMENT:'warning', CONFIRMEE:'primary', EN_COURS:'primary', REALISEE:'success', ANNULEE:'danger' }
+  const statutLabel  = { PLANIFIEE:'Planifiée', EN_ATTENTE_PAIEMENT:'⏳ En attente paiement', CONFIRMEE:'✅ Confirmée', EN_COURS:'🔴 En cours', REALISEE:'✅ Réalisée', ANNULEE:'❌ Annulée' }
 
   if (loading) return (
     <div className="h-screen bg-ink-950 flex items-center justify-center"><Spinner size="lg" /></div>
@@ -987,8 +991,19 @@ export default function Salle() {
                     {new Date(s.date_debut).toLocaleString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}
                   </p>
                   <p className="text-xs text-slate-500">⏱ {s.duree} min</p>
-                  <Badge variant={statutBadge[s.statut] || 'default'}>{s.statut}</Badge>
-                  {s.statut === 'PLANIFIEE' && isTuteur && (
+                  <Badge variant={statutBadge[s.statut] || 'default'}>{statutLabel[s.statut] || s.statut}</Badge>
+                  {/* Montant si disponible */}
+                  {s.montant_total > 0 && (
+                    <p className="text-xs text-violet-400 font-semibold">💰 {s.montant_total} DH</p>
+                  )}
+                  {/* Statut EN_ATTENTE_PAIEMENT → admin doit payer */}
+                  {s.statut === 'EN_ATTENTE_PAIEMENT' && isAdmin && (
+                    <div className="mt-1 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <p className="text-xs text-amber-400 mb-1.5">⚠️ En attente de votre paiement</p>
+                    </div>
+                  )}
+                  {/* Annuler si PLANIFIEE ou EN_ATTENTE_PAIEMENT ou CONFIRMEE */}
+                  {(s.statut === 'PLANIFIEE' || s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut === 'CONFIRMEE') && isTuteur && (
                     <button onClick={() => handleAnnulerSeance(s.id)}
                       className="mt-1 w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition-all">
                       ❌ Annuler la séance

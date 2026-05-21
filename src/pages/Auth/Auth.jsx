@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { tarifsAPI } from '../../services/api'
 import { Btn, FormGroup, Spinner } from '../../components/UI'
 
 const NIVEAUX = ['Licence 1','Licence 2','Licence 3','Master 1','Master 2','Doctorat','BTS','BUT','Prépa']
@@ -30,7 +31,15 @@ export default function Auth() {
           payload.specialites = (form.specialites || '').split(',').map(s => s.trim()).filter(Boolean)
         }
         const data = await register(payload)
-        if (role === 'tuteur') { setPending(true) } else { navigate('/dashboard') }
+        if (role === 'tuteur') {
+          // Si le tuteur a renseigné un tarif à l'inscription, on l'enregistre
+          if (data.token && form.tarifHeure && form.matiereprincipale) {
+            try {
+              await tarifsAPI.upsert({ matiere: form.matiereprincipale, tarifHeure: parseFloat(form.tarifHeure) })
+            } catch (e) { /* non bloquant */ }
+          }
+          setPending(true)
+        } else { navigate('/dashboard') }
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Une erreur est survenue')
@@ -144,6 +153,14 @@ export default function Auth() {
                   <FormGroup label="Biographie">
                     <textarea rows={3} placeholder="Décrivez votre expertise..." onChange={set('biographie')} />
                   </FormGroup>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormGroup label="Matière principale" hint="Votre premier tarif">
+                      <input placeholder="ex: Mathématiques" onChange={set('matiereprincipale')} />
+                    </FormGroup>
+                    <FormGroup label="Tarif (DH/h)" hint="Modifiable depuis profil">
+                      <input type="number" min="10" step="10" placeholder="ex: 150" onChange={set('tarifHeure')} />
+                    </FormGroup>
+                  </div>
                 </>
               )}
 

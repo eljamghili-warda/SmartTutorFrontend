@@ -62,7 +62,8 @@ export const seancesAPI = {
   terminer:          (id)  => api.post(`/seances/${id}/terminer`),
   annuler:           (id)  => api.put(`/seances/${id}/annuler`),
   getDisponibilites: (tid) => api.get('/seances/disponibilites', { params: { tuteurId: tid } }),
-  setDisponibilite:  (d)   => api.post('/seances/disponibilites', d),
+  setDisponibilite:    (d)   => api.post('/seances/disponibilites', d),
+  deleteDisponibilite: (id)  => api.delete(`/seances/disponibilites/${id}`),
 }
 
 export const tuteursAPI = {
