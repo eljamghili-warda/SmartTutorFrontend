@@ -19,6 +19,8 @@ export default function Parametres() {
     etablissement:user?.etablissement|| '',
     specialites:  (user?.specialites || []).join(', '),
     biographie:   user?.biographie   || '',
+    rib:          user?.rib          || '',
+    nomBanque:    user?.nom_banque   || '',
   })
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -94,6 +96,54 @@ export default function Parametres() {
                 <FormGroup label="Biographie">
                   <textarea rows={4} value={form.biographie} onChange={set('biographie')} placeholder="Décrivez votre expertise..." />
                 </FormGroup>
+
+                {/* Section coordonnées bancaires */}
+                <div style={{ borderTop: '1px solid var(--color-border-tertiary)', paddingTop: 16, marginTop: 4 }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span style={{ fontSize: 16 }}>🏦</span>
+                    <h4 className="font-display font-bold text-white text-sm">Coordonnées bancaires</h4>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginLeft: 4 }}>pour recevoir vos paiements</span>
+                  </div>
+
+                  {(!form.rib) && (
+                    <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#fbbf24' }}>
+                      ⚠️ Sans RIB, vous ne recevrez pas les virements automatiques après paiement.
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormGroup label="RIB (24 chiffres)" hint="ex: MA76 0000 0000 0000 0000 0000">
+                      <input
+                        value={form.rib}
+                        onChange={set('rib')}
+                        placeholder="MA76000000000000000000000"
+                        maxLength={34}
+                        style={{ fontFamily: 'monospace', letterSpacing: 1 }}
+                      />
+                    </FormGroup>
+                    <FormGroup label="Banque">
+                      <select value={form.nomBanque} onChange={set('nomBanque')}>
+                        <option value="">— Sélectionner —</option>
+                        <option value="CIH Bank">CIH Bank</option>
+                        <option value="Attijariwafa Bank">Attijariwafa Bank</option>
+                        <option value="Banque Populaire">Banque Populaire</option>
+                        <option value="BMCE Bank">BMCE Bank (Bank of Africa)</option>
+                        <option value="BMCI">BMCI</option>
+                        <option value="Société Générale Maroc">Société Générale Maroc</option>
+                        <option value="Crédit Agricole du Maroc">Crédit Agricole du Maroc</option>
+                        <option value="Al Barid Bank">Al Barid Bank</option>
+                        <option value="CFG Bank">CFG Bank</option>
+                        <option value="Autre">Autre</option>
+                      </select>
+                    </FormGroup>
+                  </div>
+
+                  {form.rib && (
+                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 6, fontFamily: 'monospace' }}>
+                      Aperçu : {form.rib.slice(0, 4)} **** **** {form.rib.slice(-4)} {form.nomBanque && `· ${form.nomBanque}`}
+                    </div>
+                  )}
+                </div>
               </>
             )}
 

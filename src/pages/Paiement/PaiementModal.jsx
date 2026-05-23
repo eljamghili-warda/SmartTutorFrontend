@@ -195,6 +195,36 @@ export default function PaiementModal({ seanceId, onClose, onSuccess }) {
                 ))}
               </div>
 
+              {/* Carte bénéficiaire tuteur */}
+              <div style={{ background: '#0f0f1a', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginBottom: 10, letterSpacing: 0.5 }}>BÉNÉFICIAIRE DU PAIEMENT</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                    👨‍🏫
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, color: '#fff', fontSize: 14 }}>{info.seance.tuteur_prenom} {info.seance.tuteur_nom}</div>
+                    {info.seance.tuteur_rib ? (
+                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3, fontFamily: 'monospace' }}>
+                        RIB : {info.seance.tuteur_rib.slice(0, 4)} **** **** {info.seance.tuteur_rib.slice(-4)}
+                        {info.seance.tuteur_nom_banque && (
+                          <span style={{ marginLeft: 8, fontFamily: 'inherit', color: '#64748b' }}>· {info.seance.tuteur_nom_banque}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: '#f87171', marginTop: 3 }}>
+                        ⚠️ RIB non configuré — le tuteur ne recevra pas le virement automatique
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>Reçoit</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#a78bfa' }}>{info.tarif.gainTuteur} DH</div>
+                    <div style={{ fontSize: 10, color: '#64748b' }}>85% du total</div>
+                  </div>
+                </div>
+              </div>
+
               {/* Récap financier */}
               <div style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(79,70,229,0.12))', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -482,6 +512,23 @@ export default function PaiementModal({ seanceId, onClose, onSuccess }) {
                 La séance est maintenant <span style={{ color: '#34d399', fontWeight: 700 }}>confirmée</span>.<br/>
                 Un email de confirmation vous a été envoyé.
               </div>
+
+              {/* Virement tuteur */}
+              {paiement && (
+                <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, textAlign: 'left' }}>
+                  <div style={{ fontSize: 12, color: '#f59e0b', fontWeight: 700, marginBottom: 4 }}>VIREMENT AU TUTEUR</div>
+                  <div style={{ fontSize: 13, color: '#e2e8f0' }}>
+                    <span style={{ color: '#a78bfa', fontWeight: 700 }}>{paiement.gain_tuteur} DH</span> virés automatiquement à {info?.seance.tuteur_prenom} {info?.seance.tuteur_nom}
+                  </div>
+                  {info?.seance.tuteur_rib ? (
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 3, fontFamily: 'monospace' }}>
+                      RIB : {info.seance.tuteur_rib.slice(0, 4)} **** **** {info.seance.tuteur_rib.slice(-4)}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: '#f87171', marginTop: 3 }}>Virement en attente — tuteur sans RIB</div>
+                  )}
+                </div>
+              )}
 
               <div style={{ background: '#0f0f1a', border: '1px solid #2d2d4a', borderRadius: 12, padding: 16, marginBottom: 20, textAlign: 'left' }}>
                 {[

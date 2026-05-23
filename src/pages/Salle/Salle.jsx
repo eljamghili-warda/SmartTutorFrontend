@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { sallesAPI, seancesAPI, tuteursAPI, invitationsAPI } from '../../services/api'
+import { sallesAPI, seancesAPI, tuteursAPI, invitationsAPI, tarifsAPI } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import {
   getSocket, joinSalle, leaveSalle, sendMessage,
@@ -12,6 +12,7 @@ import Chat from '../../components/Chat/Chat'
 import Whiteboard from '../../components/Whiteboard/Whiteboard'
 import { Avatar, Badge, Btn, Spinner, Modal, FormGroup, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
+import PaiementModal from '../Paiement/PaiementModal'
 
 // ─── Hook: timer ──────────────────────────────────────────────────────────────
 function useCallTimer(active) {
@@ -397,7 +398,10 @@ export default function Salle() {
   // UI
   const [showPlan,         setShowPlan]        = useState(false)
   const [planForm,         setPlanForm]        = useState({ titre:'', matiere:'', dateDebut:'', duree:60 })
+  const [mesTarifs,        setMesTarifs]       = useState([])   // matières du tuteur
+  const [mesDispos,        setMesDispos]       = useState([])   // disponibilités tuteur
   const [showInviteTuteur, setShowInviteTuteur]= useState(false)
+  const [paiementSeanceId, setPaiementSeanceId]= useState(null)   // id séance à payer
 
   const callTime = useCallTimer(!!activeCall)
 
@@ -796,7 +800,8 @@ export default function Salle() {
       setSeances(prev => [...prev, data]); setShowPlan(false)
       success('Séance planifiée !')
       const dateStr = new Date(planForm.dateDebut).toLocaleString('fr-FR', { weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' })
-      sendMessage(id, `📅 Séance planifiée : ${planForm.titre} le ${dateStr} (${planForm.duree} min).`)
+      // On encode le seance_id dans le message pour que l'admin puisse cliquer "Payer"
+      sendMessage(id, `📅 Séance planifiée : ${planForm.titre} le ${dateStr} (${planForm.duree} min). seance_id:${data.id}`)
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 
@@ -905,7 +910,13 @@ export default function Salle() {
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
         <div className="w-64 flex-shrink-0 border-r border-ink-700 flex flex-col">
-          <Chat messages={messages} onSend={(c) => sendMessage(id, c)} currentUser={user} />
+          <Chat
+            messages={messages}
+            onSend={(c) => sendMessage(id, c)}
+            currentUser={user}
+            isAdmin={isAdmin}
+            onPayer={(seanceId) => setPaiementSeanceId(seanceId)}
+          />
         </div>
         <div className="flex-1 overflow-hidden">
           <Whiteboard salleId={id} isTuteur={isTuteur} />
@@ -982,7 +993,18 @@ export default function Salle() {
           {rightTab === 'seances' && (
             <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
               {isTuteur && (
-                <Btn size="sm" onClick={() => setShowPlan(true)} className="w-full justify-center">➕ Planifier une séance</Btn>
+                <Btn size="sm" onClick={async () => {
+                  setShowPlan(true)
+                  try {
+                    const [tarifsRes, disposRes] = await Promise.all([
+                      tarifsAPI.getMesTarifs(),
+                      seancesAPI.getDisponibilites(),
+                    ])
+                    setMesTarifs(tarifsRes.data)
+                    setMesDispos(disposRes.data)
+                    if (tarifsRes.data.length === 1) setPlanForm(f => ({ ...f, matiere: tarifsRes.data[0].matiere }))
+                  } catch { setMesTarifs([]); setMesDispos([]) }
+                }} className="w-full justify-center">➕ Planifier une séance</Btn>
               )}
               {seances.map(s => (
                 <div key={s.id} className="rounded-xl bg-ink-800 border border-ink-700 p-3 flex flex-col gap-1.5">
@@ -1000,6 +1022,19 @@ export default function Salle() {
                   {s.statut === 'EN_ATTENTE_PAIEMENT' && isAdmin && (
                     <div className="mt-1 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                       <p className="text-xs text-amber-400 mb-1.5">⚠️ En attente de votre paiement</p>
+                      <button
+                        onClick={() => setPaiementSeanceId(s.id)}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all"
+                        style={{
+                          background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                          color: '#fff',
+                          border: 'none',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 12px rgba(124,58,237,0.4)',
+                        }}
+                      >
+                        💳 Payer maintenant
+                      </button>
                     </div>
                   )}
                   {/* Annuler si PLANIFIEE ou EN_ATTENTE_PAIEMENT ou CONFIRMEE */}
@@ -1061,22 +1096,125 @@ export default function Salle() {
       )}
 
       {/* Modal planifier */}
-      <Modal open={showPlan} onClose={() => setShowPlan(false)} title="📅 Planifier une séance">
+      <Modal open={showPlan} onClose={() => { setShowPlan(false); setPlanForm({ titre:'', matiere:'', dateDebut:'', duree:60 }); setMesTarifs([]); setMesDispos([]) }} title="📅 Planifier une séance">
         <form onSubmit={handlePlanifier} className="flex flex-col gap-4">
           <FormGroup label="Titre *">
             <input required value={planForm.titre} onChange={e => setPlanForm(f => ({...f, titre:e.target.value}))} placeholder="ex: Cours d'Algèbre" />
           </FormGroup>
           <FormGroup label="Matière">
-            <input value={planForm.matiere} onChange={e => setPlanForm(f => ({...f, matiere:e.target.value}))} placeholder="ex: Mathématiques" />
+            {mesTarifs.length > 0 ? (
+              <select
+                value={planForm.matiere}
+                onChange={e => setPlanForm(f => ({ ...f, matiere: e.target.value }))}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, background: '#1a1a2e', border: '1px solid #2d2d4a', color: planForm.matiere ? '#e2e8f0' : '#64748b', fontSize: 14 }}
+              >
+                <option value="">— Choisir une matière —</option>
+                {mesTarifs.map(t => (
+                  <option key={t.id} value={t.matiere}>
+                    {t.matiere} — {t.tarif_heure} DH/h
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div>
+                <input
+                  value={planForm.matiere}
+                  onChange={e => setPlanForm(f => ({ ...f, matiere: e.target.value }))}
+                  placeholder="ex: Mathématiques"
+                />
+                <p className="text-xs text-amber-400 mt-1">
+                  ⚠️ Aucun tarif configuré. <a href="/dashboard/mes-tarifs" className="underline">Configurer mes tarifs</a> pour un calcul automatique du montant.
+                </p>
+              </div>
+            )}
           </FormGroup>
-          <div className="grid grid-cols-2 gap-3">
-            <FormGroup label="Date et heure *">
-              <input type="datetime-local" required value={planForm.dateDebut} onChange={e => setPlanForm(f => ({...f, dateDebut:e.target.value}))} />
-            </FormGroup>
-            <FormGroup label="Durée (min)">
-              <input type="number" min={15} max={480} value={planForm.duree} onChange={e => setPlanForm(f => ({...f, duree:Number(e.target.value)}))} />
-            </FormGroup>
-          </div>
+          {/* Sélecteur de créneaux basé sur les disponibilités */}
+          <FormGroup label="Créneau *">
+            {mesDispos.length === 0 ? (
+              <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3">
+                <p className="text-xs text-amber-400">
+                  ⚠️ Vous n'avez pas encore configuré vos disponibilités.
+                </p>
+                <a href="/dashboard/mes-disponibilites" className="text-xs text-amber-300 underline mt-1 block">
+                  → Configurer mes disponibilités
+                </a>
+              </div>
+            ) : (
+              (() => {
+                const JOURS = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+                // Générer tous les créneaux des 4 prochaines semaines à partir d'aujourd'hui
+                const creneaux = []
+                const now = new Date()
+                for (let semaine = 0; semaine < 4; semaine++) {
+                  for (const dispo of mesDispos) {
+                    // jour_semaine: 1=Lundi ... 7=Dimanche (ISO)
+                    const jourISO = dispo.jour_semaine
+                    const today = new Date(now)
+                    today.setHours(0,0,0,0)
+                    // Trouver la prochaine occurrence de ce jour dans la semaine actuelle + offset
+                    const todayISO = today.getDay() === 0 ? 7 : today.getDay() // 1=Lundi
+                    let diff = jourISO - todayISO + semaine * 7
+                    if (semaine === 0 && diff < 0) diff += 7
+                    const date = new Date(today)
+                    date.setDate(today.getDate() + diff)
+                    // Ajouter l'heure de début
+                    const [h, m] = dispo.heure_debut.split(':').map(Number)
+                    date.setHours(h, m, 0, 0)
+                    // Ne pas afficher les créneaux passés
+                    if (date <= now) continue
+                    const iso = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}T${dispo.heure_debut}`
+                    creneaux.push({
+                      iso,
+                      label: `${JOURS[jourISO]} ${date.getDate()}/${date.getMonth()+1} — ${dispo.heure_debut} → ${dispo.heure_fin}`,
+                      heureFin: dispo.heure_fin,
+                      heureDebut: dispo.heure_debut,
+                    })
+                  }
+                }
+                // Trier par date
+                creneaux.sort((a, b) => a.iso.localeCompare(b.iso))
+                // Calculer durée auto depuis heure_debut / heure_fin quand on sélectionne
+                const handleSelect = (iso) => {
+                  const cr = creneaux.find(c => c.iso === iso)
+                  if (!cr) return
+                  const [hd, md] = cr.heureDebut.split(':').map(Number)
+                  const [hf, mf] = cr.heureFin.split(':').map(Number)
+                  const dureeAuto = (hf * 60 + mf) - (hd * 60 + md)
+                  setPlanForm(f => ({ ...f, dateDebut: iso, duree: dureeAuto > 0 ? dureeAuto : f.duree }))
+                }
+                return (
+                  <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto pr-1">
+                    {creneaux.length === 0 ? (
+                      <p className="text-xs text-slate-500">Aucun créneau disponible dans les 4 prochaines semaines.</p>
+                    ) : creneaux.map(cr => (
+                      <button
+                        key={cr.iso}
+                        type="button"
+                        onClick={() => handleSelect(cr.iso)}
+                        className="w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all"
+                        style={{
+                          background: planForm.dateDebut === cr.iso
+                            ? 'linear-gradient(135deg, #7c3aed22, #4f46e522)'
+                            : 'var(--color-background-secondary)',
+                          border: planForm.dateDebut === cr.iso
+                            ? '1.5px solid #7c3aed'
+                            : '1px solid var(--color-border-tertiary)',
+                          color: planForm.dateDebut === cr.iso ? '#a78bfa' : 'var(--color-text-secondary)',
+                          fontWeight: planForm.dateDebut === cr.iso ? 600 : 400,
+                        }}
+                      >
+                        {planForm.dateDebut === cr.iso && <span className="mr-1.5">✓</span>}
+                        {cr.label}
+                      </button>
+                    ))}
+                  </div>
+                )
+              })()
+            )}
+          </FormGroup>
+          <FormGroup label="Durée (min)">
+            <input type="number" min={15} max={480} value={planForm.duree} onChange={e => setPlanForm(f => ({...f, duree:Number(e.target.value)}))} />
+          </FormGroup>
           <div className="flex gap-3 justify-end pt-1">
             <Btn variant="secondary" onClick={() => setShowPlan(false)}>Annuler</Btn>
             <Btn type="submit">Planifier</Btn>
@@ -1090,6 +1228,22 @@ export default function Salle() {
           onClose={() => setShowInviteTuteur(false)}
           onSuccess={msg => success(msg)} onError={msg => error(msg)} />
       </Modal>
+
+      {/* Modal paiement séance */}
+      {paiementSeanceId && (
+        <PaiementModal
+          seanceId={paiementSeanceId}
+          onClose={() => setPaiementSeanceId(null)}
+          onSuccess={(paiement) => {
+            setPaiementSeanceId(null)
+            // Mettre à jour le statut de la séance localement → CONFIRMEE
+            setSeances(prev => prev.map(s =>
+              s.id === paiementSeanceId ? { ...s, statut: 'CONFIRMEE', statut_paiement: 'PAYE' } : s
+            ))
+            success('✅ Paiement confirmé — séance confirmée !')
+          }}
+        />
+      )}
     </div>
   )
 }

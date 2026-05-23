@@ -1,6 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react'
 
-const Chat = ({ messages, onSend, currentUser }) => {
+// Détecte si un message est une notification de séance planifiée
+// Format attendu: "📅 Séance planifiée : <titre> le <date> (<duree> min). seance_id:<id>"
+const parseSeanceMessage = (contenu) => {
+  const match = contenu.match(/seance_id:(\d+)/)
+  if (!match) return null
+  return { seanceId: parseInt(match[1]) }
+}
+
+const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer }) => {
   const [text, setText]   = useState('')
   const bottomRef         = useRef(null)
 
@@ -18,6 +26,11 @@ const Chat = ({ messages, onSend, currentUser }) => {
 
   const fmt = (ts) => new Date(ts).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
 
+  // Affiche le contenu du message — si c'est une notif séance, masque le seance_id
+  const renderContenu = (contenu) => {
+    return contenu.replace(/\s*seance_id:\d+/, '').trim()
+  }
+
   return (
     <div className="flex flex-col h-full bg-ink-950">
       {/* Header */}
@@ -33,21 +46,55 @@ const Chat = ({ messages, onSend, currentUser }) => {
             <p className="text-xs text-slate-700 text-center">Aucun message.<br />Soyez le premier à écrire !</p>
           </div>
         )}
-        {messages.map(msg => (
-          <div key={msg.id} className={`flex flex-col gap-0.5 ${isMine(msg) ? 'items-end' : 'items-start'}`}>
-            {!isMine(msg) && (
-              <span className="text-xs text-slate-600 px-1 font-medium">{msg.expediteur_nom}</span>
-            )}
-            <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed break-words
-              ${isMine(msg)
-                ? 'bg-violet-600 text-white rounded-br-sm'
-                : 'bg-ink-700 text-slate-200 rounded-bl-sm border border-ink-600'
-              }`}>
-              {msg.contenu}
+        {messages.map(msg => {
+          const seanceInfo = parseSeanceMessage(msg.contenu)
+          const isSeanceMsg = !!seanceInfo
+          const mine = isMine(msg)
+
+          return (
+            <div key={msg.id} className={`flex flex-col gap-0.5 ${mine ? 'items-end' : 'items-start'}`}>
+              {!mine && (
+                <span className="text-xs text-slate-600 px-1 font-medium">{msg.expediteur_nom}</span>
+              )}
+              <div className={`max-w-[85%] rounded-2xl text-sm leading-relaxed break-words overflow-hidden
+                ${mine
+                  ? 'bg-violet-600 text-white rounded-br-sm'
+                  : 'bg-ink-700 text-slate-200 rounded-bl-sm border border-ink-600'
+                }`}>
+                <div className="px-3 py-2">
+                  {renderContenu(msg.contenu)}
+                </div>
+
+                {/* Bouton Payer — visible uniquement pour l'admin et sur un message de séance */}
+                {isSeanceMsg && isAdmin && onPayer && (
+                  <div className="px-3 pb-2.5 pt-0">
+                    <button
+                      onClick={() => onPayer(seanceInfo.seanceId)}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all"
+                      style={{
+                        background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                        color: '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 12px rgba(124,58,237,0.4)',
+                      }}
+                    >
+                      💳 Payer cette séance
+                    </button>
+                  </div>
+                )}
+
+                {/* Badge info pour les non-admins */}
+                {isSeanceMsg && !isAdmin && (
+                  <div className="px-3 pb-2">
+                    <span className="text-xs text-amber-400 opacity-75">⏳ En attente de paiement</span>
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] text-slate-700 px-1">{fmt(msg.horodatage)}</span>
             </div>
-            <span className="text-[10px] text-slate-700 px-1">{fmt(msg.horodatage)}</span>
-          </div>
-        ))}
+          )
+        })}
         <div ref={bottomRef} />
       </div>
 
