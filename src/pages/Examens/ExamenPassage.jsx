@@ -77,11 +77,26 @@ export default function ExamenPassage() {
 
   const handleDemarrer = async () => {
     try {
-      const { data } = await examensAPI.demarrer(id)
-      setTentative({ ...data.tentative, expiresAt: data.expiresAt })
-      // Recharger l'examen avec questions mélangées
+      // 1. Créer la tentative
+      const { data: tentData } = await examensAPI.demarrer(id)
+      const tent = tentData.tentative || tentData
+      const expiresAt = tentData.expiresAt || tent.expires_at
+
+      // 2. Charger les questions APRÈS création de la tentative
       const { data: examData } = await examensAPI.getById(id)
-      setQuestions(examData.questions || [])
+      const qs = examData.questions || []
+
+      console.log('📋 Questions chargées:', qs.length, qs)
+
+      if (!qs.length) {
+        setError(`Cet examen ne contient aucune question (0 reçues). Vérifiez que des questions ont été ajoutées avant la publication.`)
+        return
+      }
+
+      // 3. Tout setter en une fois avant de changer de phase
+      setTentative({ ...tent, expiresAt })
+      setQuestions(qs)
+      setCurrentIdx(0)
       setPhase('examen')
     } catch (err) {
       setError(err.response?.data?.error || 'Impossible de démarrer l\'examen.')
@@ -97,7 +112,7 @@ export default function ExamenPassage() {
         questionId: parseInt(questionId),
         reponseId: parseInt(reponseId),
       }))
-      const { data } = await examensAPI.soumettre(tentative.id, { reponses: reponsesArr })
+      const { data } = await examensAPI.soumettre(tentative.id, reponsesArr)
       setResult(data)
       setPhase('result')
     } catch (err) {
@@ -266,14 +281,18 @@ export default function ExamenPassage() {
           <div className="max-w-2xl mx-auto p-4 flex flex-col gap-4">
             <ProgressBar current={currentIdx + 1} total={questions.length} />
 
-            {question && (
+            {questions.length === 0 ? (
+              <div className="bg-ink-800 border border-rose-500/30 rounded-2xl p-6 text-center">
+                <p className="text-rose-400 text-sm">Aucune question chargée. Rechargez la page.</p>
+              </div>
+            ) : question ? (
               <QuestionBlock
                 key={question.id}
                 question={question}
                 idx={currentIdx}
                 selected={reponses[question.id]}
                 onSelect={(rId) => selectReponse(question.id, rId)} />
-            )}
+            ) : null}
 
             <div className="flex justify-between gap-3 mt-2">
               <Btn variant="ghost" disabled={currentIdx === 0}

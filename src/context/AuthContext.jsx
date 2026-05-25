@@ -4,7 +4,7 @@ import { initSocket, disconnectSocket } from '../services/socket'
 
 const AuthContext = createContext(null)
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
   )
 }
 
-export const useAuth = () => {
+export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be inside AuthProvider')
   return ctx
