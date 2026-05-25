@@ -106,3 +106,25 @@ export const adminAPI = {
 }
 
 export default api
+export const examensAPI = {
+  // Tuteur
+  getMesExamens:    ()              => api.get('/examens/mes-examens'),
+  create:           (d)             => api.post('/examens', d),
+  update:           (id, d)         => api.put(`/examens/${id}`, d),
+  publier:          (id)            => api.put(`/examens/${id}/publier`),
+  archiver:         (id)            => api.put(`/examens/${id}/archiver`),
+  addQuestion:      (id, d)         => api.post(`/examens/${id}/questions`, d),
+  updateQuestion:   (examId, qId, d)=> api.put(`/examens/${examId}/questions/${qId}`, d),
+  deleteQuestion:   (examId, qId)   => api.delete(`/examens/${examId}/questions/${qId}`),
+  // Partagé
+  getBySalle:       (salleId)       => api.get(`/examens/salle/${salleId}`),
+  getById:          (id)            => api.get(`/examens/${id}`),
+  // Étudiant
+  getMesExamensEtudiant: ()         => api.get('/examens/mes-examens-etudiant'),
+  demarrer:         (id)            => api.post(`/examens/${id}/tentatives`),
+  soumettre:        (tentativeId, d)=> api.put(`/tentatives/${tentativeId}/soumettre`, d),
+  getResultats:     (tentativeId)   => api.get(`/tentatives/${tentativeId}/resultats`),
+  // Certificats
+  mesCertificats:   ()              => api.get('/certificats/mes-certificats'),
+  verifierCertificat:(numero)       => api.get(`/certificats/verifier/${numero}`),
+}

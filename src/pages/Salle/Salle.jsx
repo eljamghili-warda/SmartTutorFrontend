@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { sallesAPI, seancesAPI, tuteursAPI, invitationsAPI, tarifsAPI } from '../../services/api'
+import { sallesAPI, seancesAPI, tuteursAPI, invitationsAPI, tarifsAPI, examensAPI } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import {
   getSocket, joinSalle, leaveSalle, sendMessage,
@@ -383,6 +383,22 @@ export default function Salle() {
   const [loading,          setLoading]         = useState(true)
   const [myRole,           setMyRole]          = useState(null)
   const [rightTab,         setRightTab]        = useState('participants')
+
+  // Examens
+  const [examens,          setExamens]         = useState([])
+  const [examensLoaded,    setExamensLoaded]   = useState(false)
+  // Vue tuteur — création/édition examen
+  const [showCreateExamen, setShowCreateExamen]= useState(false)
+  const [examForm,         setExamForm]        = useState({ titre:'', description:'', notePassage:70, dureeMinutes:30, maxTentatives:'', dateDebut:'', dateLimite:'', dateAffichageResultats:'', modeAffichage:'UNE_PAR_UNE' })
+  const [editingExamen,    setEditingExamen]   = useState(null)  // examen en cours d'édition (questions)
+  const [questionForm,     setQuestionForm]    = useState({ texte:'', type:'QCM', points:1, reponses:[{texte:'',estCorrecte:false},{texte:'',estCorrecte:false}] })
+  const [savingExamen,     setSavingExamen]    = useState(false)
+  // Vue étudiant — passage examen
+  const [tentativeActive,  setTentativeActive] = useState(null)  // { tentative, examen, questions, currentIdx }
+  const [reponsesEnCours,  setReponsesEnCours] = useState({})    // { questionId: reponseId }
+  const [resultats,        setResultats]       = useState(null)  // résultat après soumission
+  const [showConfirmSoum,  setShowConfirmSoum] = useState(false)
+  const [timerLeft,        setTimerLeft]       = useState(null)
 
   // Appel audio
   const [activeCall,       setActiveCall]      = useState(null)
@@ -793,6 +809,152 @@ export default function Salle() {
     } catch { error('Erreur upload') }
   }
 
+  // ── Examens : charger ──────────────────────────────────────────────────────
+  const loadExamens = useCallback(async () => {
+    try {
+      const { data } = await examensAPI.getBySalle(id)
+      setExamens(data)
+      setExamensLoaded(true)
+    } catch { setExamensLoaded(true) }
+  }, [id])
+
+  // ── Examens : créer / modifier ─────────────────────────────────────────────
+  const handleSaveExamen = async (e) => {
+    e.preventDefault()
+    setSavingExamen(true)
+    try {
+      if (editingExamen && editingExamen.statut === 'BROUILLON' && editingExamen.id) {
+        // Modifier
+        const { data } = await examensAPI.update(editingExamen.id, { ...examForm })
+        setExamens(prev => prev.map(ex => ex.id === editingExamen.id ? { ...ex, ...data } : ex))
+        setEditingExamen({ ...editingExamen, ...data })
+        success('Examen mis à jour')
+      } else {
+        // Créer
+        const { data } = await examensAPI.create({ ...examForm, salleId: id })
+        setExamens(prev => [data, ...prev])
+        setEditingExamen(data)
+        setShowCreateExamen(false)
+        success('Examen créé — ajoutez vos questions')
+      }
+    } catch (err) { error(err.response?.data?.error || 'Erreur') }
+    setSavingExamen(false)
+  }
+
+  const handleDeleteExamen = async (examenId) => {
+    if (!confirm('Supprimer cet examen ?')) return
+    try {
+      await examensAPI.delete(examenId)
+      setExamens(prev => prev.filter(ex => ex.id !== examenId))
+      if (editingExamen?.id === examenId) setEditingExamen(null)
+      success('Examen supprimé')
+    } catch (err) { error(err.response?.data?.error || 'Erreur') }
+  }
+
+  const handlePublierExamen = async (examenId) => {
+    try {
+      await examensAPI.publier(examenId)
+      setExamens(prev => prev.map(ex => ex.id === examenId ? { ...ex, statut: 'PUBLIE' } : ex))
+      if (editingExamen?.id === examenId) setEditingExamen(prev => ({ ...prev, statut: 'PUBLIE' }))
+      success('🚀 Examen publié — visible par les étudiants !')
+    } catch (err) { error(err.response?.data?.error || 'Erreur') }
+  }
+
+  // ── Questions ──────────────────────────────────────────────────────────────
+  const handleAddQuestion = async (e) => {
+    e.preventDefault()
+    if (!editingExamen?.id) return
+    const hasCorrect = questionForm.reponses.some(r => r.estCorrecte)
+    if (!hasCorrect) { error('Cochez au moins une bonne réponse'); return }
+    const reponsesFilled = questionForm.reponses.filter(r => r.texte.trim())
+    if (reponsesFilled.length < 2) { error('Ajoutez au moins 2 réponses'); return }
+    try {
+      const { data } = await examensAPI.addQuestion(editingExamen.id, {
+        texte: questionForm.texte, type: questionForm.type,
+        points: questionForm.points, reponses: reponsesFilled
+      })
+      setEditingExamen(prev => ({ ...prev, questions: [...(prev.questions || []), data] }))
+      setExamens(prev => prev.map(ex => ex.id === editingExamen.id ? { ...ex, nb_questions: (ex.nb_questions||0)+1 } : ex))
+      setQuestionForm({ texte:'', type:'QCM', points:1, reponses:[{texte:'',estCorrecte:false},{texte:'',estCorrecte:false}] })
+      success('Question ajoutée')
+    } catch (err) { error(err.response?.data?.error || 'Erreur') }
+  }
+
+  const handleDeleteQuestion = async (qid) => {
+    try {
+      await examensAPI.deleteQuestion(editingExamen.id, qid)
+      setEditingExamen(prev => ({ ...prev, questions: prev.questions.filter(q => q.id !== qid) }))
+      setExamens(prev => prev.map(ex => ex.id === editingExamen.id ? { ...ex, nb_questions: Math.max(0,(ex.nb_questions||1)-1) } : ex))
+    } catch (err) { error(err.response?.data?.error || 'Erreur') }
+  }
+
+  // ── Étudiant : démarrer examen ─────────────────────────────────────────────
+  const handleDemarrerExamen = async (examenId) => {
+    try {
+      const { data } = await examensAPI.demarrer(examenId)
+      const questions = data.examen.questions || []
+      setTentativeActive({
+        tentative: data.tentative,
+        examen: data.examen,
+        questions,
+        currentIdx: 0,
+        expiresAt: new Date(data.tentative.expires_at),
+      })
+      setReponsesEnCours({})
+      setResultats(null)
+      // Démarrer le timer
+      const msLeft = new Date(data.tentative.expires_at) - Date.now()
+      setTimerLeft(Math.max(0, Math.floor(msLeft / 1000)))
+    } catch (err) { error(err.response?.data?.error || 'Erreur') }
+  }
+
+  // Timer décompte
+  useEffect(() => {
+    if (timerLeft === null) return
+    if (timerLeft <= 0) {
+      // Temps écoulé → soumettre automatiquement
+      handleSoumettreExamen(true)
+      return
+    }
+    const t = setTimeout(() => setTimerLeft(s => s - 1), 1000)
+    return () => clearTimeout(t)
+  }, [timerLeft])
+
+  const fmtTimer = (s) => {
+    if (s === null) return ''
+    const m = Math.floor(s / 60); const sec = s % 60
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+  }
+
+  const handleSelectReponse = (questionId, reponseId) => {
+    setReponsesEnCours(prev => ({ ...prev, [questionId]: reponseId }))
+    // Auto-save
+    examensAPI.sauvegarder(tentativeActive.tentative.id, {
+      reponses: [{ questionId, reponseId }]
+    }).catch(() => {})
+  }
+
+  const handleSoumettreExamen = async (autoExpire = false) => {
+    if (!tentativeActive) return
+    try {
+      const reponses = Object.entries(reponsesEnCours).map(([questionId, reponseId]) => ({
+        questionId: parseInt(questionId), reponseId: parseInt(reponseId)
+      }))
+      const { data } = await examensAPI.soumettre(tentativeActive.tentative.id, { reponses })
+      setResultats(data)
+      setTentativeActive(null)
+      setTimerLeft(null)
+      setShowConfirmSoum(false)
+      // Recharger les examens pour màj statut
+      await loadExamens()
+      if (data.reussi && data.certificat) {
+        success('🏆 Félicitations ! Certificat généré !')
+      } else {
+        error(`Score : ${data.pourcentage}% — Note de passage : ${data.notePassage}%`)
+      }
+    } catch (err) { error(err.response?.data?.error || 'Erreur') }
+  }
+
   const handlePlanifier = async (e) => {
     e.preventDefault()
     try {
@@ -928,6 +1090,7 @@ export default function Salle() {
               { id:'participants', icon:'👥', label:`${participants.length}` },
               { id:'fichiers',     icon:'📁', label:`${fichiers.length}` },
               { id:'seances',      icon:'📅', label:`${seances.length}` },
+              { id:'examens',      icon:'📝', label:`${examens.length}` },
             ].map(t => (
               <button key={t.id} onClick={() => setRightTab(t.id)}
                 className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-xs transition-all border-b-2
@@ -1063,6 +1226,443 @@ export default function Salle() {
                 </div>
               ))}
               {seances.length === 0 && <p className="text-xs text-slate-600 text-center py-4">Aucune séance planifiée</p>}
+            </div>
+          )}
+
+          {/* ── ONGLET EXAMENS ────────────────────────────────────────── */}
+          {rightTab === 'examens' && (
+            <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+
+              {/* === VUE PLEIN ÉCRAN : PASSAGE D'EXAMEN === */}
+              {tentativeActive && (
+                <div className="fixed inset-0 z-[100] bg-ink-950 flex flex-col overflow-hidden">
+                  {/* Header timer */}
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-ink-700 bg-ink-900 flex-shrink-0">
+                    <div>
+                      <p className="text-xs text-slate-500">Examen en cours</p>
+                      <p className="font-bold text-white text-sm">{tentativeActive.examen.titre}</p>
+                    </div>
+                    <div className={`text-xl font-mono font-bold px-4 py-1.5 rounded-xl ${timerLeft < 60 ? 'text-rose-400 bg-rose-500/10 animate-pulse' : 'text-violet-400 bg-violet-500/10'}`}>
+                      ⏱ {fmtTimer(timerLeft)}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {Object.keys(reponsesEnCours).length}/{tentativeActive.questions.length} répondues
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="h-1 bg-ink-800 flex-shrink-0">
+                    <div className="h-1 bg-violet-500 transition-all duration-500"
+                      style={{ width: `${(Object.keys(reponsesEnCours).length / tentativeActive.questions.length) * 100}%` }} />
+                  </div>
+
+                  {/* Question courante */}
+                  <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-6">
+                    {(() => {
+                      const q = tentativeActive.questions[tentativeActive.currentIdx]
+                      if (!q) return null
+                      return (
+                        <div className="w-full max-w-xl flex flex-col gap-5">
+                          <div className="flex items-start gap-3">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-violet-600/20 border border-violet-500/50 flex items-center justify-center text-xs font-bold text-violet-400">
+                              {tentativeActive.currentIdx + 1}
+                            </span>
+                            <p className="text-white font-semibold text-base leading-relaxed">{q.texte}</p>
+                          </div>
+                          <div className="flex flex-col gap-2.5">
+                            {(q.reponses || []).map(r => {
+                              const selected = reponsesEnCours[q.id] === r.id
+                              return (
+                                <button key={r.id} onClick={() => handleSelectReponse(q.id, r.id)}
+                                  className="w-full text-left px-4 py-3 rounded-xl transition-all text-sm"
+                                  style={{
+                                    background: selected ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.03)',
+                                    border: selected ? '1.5px solid #7c3aed' : '1px solid rgba(255,255,255,0.08)',
+                                    color: selected ? '#c4b5fd' : '#94a3b8',
+                                    fontWeight: selected ? 600 : 400,
+                                  }}>
+                                  {selected && <span className="mr-2">✓</span>}
+                                  {r.texte}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+
+                  {/* Navigation */}
+                  <div className="flex items-center justify-between px-5 py-3 border-t border-ink-700 bg-ink-900 flex-shrink-0 gap-3">
+                    <button
+                      onClick={() => setTentativeActive(prev => ({ ...prev, currentIdx: Math.max(0, prev.currentIdx - 1) }))}
+                      disabled={tentativeActive.currentIdx === 0}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 disabled:opacity-30 hover:bg-ink-600 transition-all">
+                      ← Précédent
+                    </button>
+
+                    {/* Pastilles questions */}
+                    <div className="flex gap-1 flex-wrap justify-center flex-1">
+                      {tentativeActive.questions.map((q, i) => (
+                        <button key={q.id} onClick={() => setTentativeActive(prev => ({ ...prev, currentIdx: i }))}
+                          className="w-6 h-6 rounded-md text-[10px] font-bold transition-all"
+                          style={{
+                            background: reponsesEnCours[q.id] ? '#7c3aed' : tentativeActive.currentIdx === i ? '#312e81' : '#1e1b4b',
+                            color: reponsesEnCours[q.id] || tentativeActive.currentIdx === i ? '#fff' : '#6b7280',
+                            border: tentativeActive.currentIdx === i ? '1px solid #7c3aed' : '1px solid transparent',
+                          }}>
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
+
+                    {tentativeActive.currentIdx < tentativeActive.questions.length - 1 ? (
+                      <button
+                        onClick={() => setTentativeActive(prev => ({ ...prev, currentIdx: prev.currentIdx + 1 }))}
+                        className="px-4 py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 hover:bg-ink-600 transition-all">
+                        Suivant →
+                      </button>
+                    ) : (
+                      <button onClick={() => setShowConfirmSoum(true)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                        style={{ background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                        ✅ Terminer et envoyer
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Popup confirmation soumission */}
+                  {showConfirmSoum && (
+                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
+                      <div className="bg-ink-800 border border-ink-600 rounded-2xl p-6 max-w-sm w-full mx-4 flex flex-col gap-4">
+                        <p className="font-bold text-white text-center">Soumettre l'examen ?</p>
+                        <p className="text-xs text-slate-400 text-center">
+                          {Object.keys(reponsesEnCours).length}/{tentativeActive.questions.length} questions répondues.<br/>
+                          Après validation, vous ne pourrez plus modifier vos réponses.
+                        </p>
+                        <div className="flex gap-3">
+                          <button onClick={() => setShowConfirmSoum(false)}
+                            className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 hover:bg-ink-600">
+                            Annuler
+                          </button>
+                          <button onClick={() => handleSoumettreExamen(false)}
+                            className="flex-1 py-2.5 rounded-xl text-xs font-bold"
+                            style={{ background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                            Confirmer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* === RÉSULTATS === */}
+              {resultats && !tentativeActive && (
+                <div className={`rounded-xl p-4 border flex flex-col gap-3 ${resultats.reussi ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
+                  <div className="text-center">
+                    <div className="text-3xl mb-1">{resultats.reussi ? '🏆' : '😞'}</div>
+                    <p className="font-bold text-white">{resultats.reussi ? 'Félicitations !' : 'Pas encore...'}</p>
+                    <p className={`text-2xl font-mono font-bold mt-1 ${resultats.reussi ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {resultats.pourcentage}%
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {resultats.scoreObtenu}/{resultats.scoreMax} pts — passage à {resultats.notePassage}%
+                    </p>
+                  </div>
+                  {resultats.reussi && resultats.certificat && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
+                      <p className="text-xs font-bold text-amber-400">🎓 Certificat généré !</p>
+                      <p className="text-xs text-slate-400 mt-1 font-mono">{resultats.certificat.numero_certificat}</p>
+                      <p className="text-xs text-slate-500 mt-1">Vérifiable sur SmartTutor</p>
+                    </div>
+                  )}
+                  <button onClick={() => setResultats(null)}
+                    className="w-full py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 hover:bg-ink-600">
+                    Retour aux examens
+                  </button>
+                </div>
+              )}
+
+              {/* === LISTE EXAMENS (quand pas de tentative ni résultat) === */}
+              {!tentativeActive && !resultats && (() => {
+                if (!examensLoaded) return (
+                  <button onClick={loadExamens} className="w-full py-3 rounded-xl text-xs text-slate-500 bg-ink-800 border border-ink-700 hover:border-violet-500/50 hover:text-violet-400 transition-all">
+                    📝 Charger les examens
+                  </button>
+                )
+                return (
+                  <>
+                    {/* Bouton créer — tuteur seulement */}
+                    {isTuteur && (
+                      <Btn size="sm" onClick={() => { setShowCreateExamen(true); setEditingExamen(null); setExamForm({ titre:'', description:'', notePassage:70, dureeMinutes:30, maxTentatives:'', dateDebut:'', dateLimite:'', dateAffichageResultats:'', modeAffichage:'UNE_PAR_UNE' }) }}
+                        className="w-full justify-center">
+                        ➕ Créer un examen
+                      </Btn>
+                    )}
+
+                    {/* Formulaire création/édition (tuteur) */}
+                    {showCreateExamen && !editingExamen?.statut && (
+                      <div className="rounded-xl bg-ink-800 border border-violet-500/30 p-3 flex flex-col gap-2">
+                        <p className="text-xs font-bold text-violet-400">Nouvel examen</p>
+                        <form onSubmit={handleSaveExamen} className="flex flex-col gap-2">
+                          <input required value={examForm.titre} onChange={e => setExamForm(f => ({...f, titre:e.target.value}))}
+                            placeholder="Titre de l'examen *"
+                            className="w-full px-3 py-2 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600" />
+                          <textarea value={examForm.description} onChange={e => setExamForm(f => ({...f, description:e.target.value}))}
+                            placeholder="Description (optionnel)" rows={2}
+                            className="w-full px-3 py-2 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600 resize-none" />
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-slate-500">Note de passage (%)</label>
+                              <input type="number" min={0} max={100} value={examForm.notePassage}
+                                onChange={e => setExamForm(f => ({...f, notePassage:Number(e.target.value)}))}
+                                className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-slate-500">Durée (min)</label>
+                              <input type="number" min={5} max={180} value={examForm.dureeMinutes}
+                                onChange={e => setExamForm(f => ({...f, dureeMinutes:Number(e.target.value)}))}
+                                className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-slate-500">Max tentatives</label>
+                              <input type="number" min={1} value={examForm.maxTentatives} placeholder="illimité"
+                                onChange={e => setExamForm(f => ({...f, maxTentatives:e.target.value}))}
+                                className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600" />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-slate-500">Mode</label>
+                              <select value={examForm.modeAffichage} onChange={e => setExamForm(f => ({...f, modeAffichage:e.target.value}))}
+                                className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs">
+                                <option value="UNE_PAR_UNE">Une par une</option>
+                                <option value="LISTE">Liste complète</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500">Date de début (optionnel)</label>
+                            <input type="datetime-local" value={examForm.dateDebut}
+                              onChange={e => setExamForm(f => ({...f, dateDebut:e.target.value}))}
+                              className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500">Date limite (optionnel)</label>
+                            <input type="datetime-local" value={examForm.dateLimite}
+                              onChange={e => setExamForm(f => ({...f, dateLimite:e.target.value}))}
+                              className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500">Date affichage résultats (optionnel)</label>
+                            <input type="datetime-local" value={examForm.dateAffichageResultats}
+                              onChange={e => setExamForm(f => ({...f, dateAffichageResultats:e.target.value}))}
+                              className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                          </div>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => setShowCreateExamen(false)}
+                              className="flex-1 py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-400 hover:bg-ink-600">Annuler</button>
+                            <button type="submit" disabled={savingExamen}
+                              className="flex-1 py-2 rounded-xl text-xs font-bold"
+                              style={{ background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                              {savingExamen ? '...' : '💾 Enregistrer brouillon'}
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Vue gestion questions d'un brouillon (tuteur) */}
+                    {editingExamen && editingExamen.statut === 'BROUILLON' && (
+                      <div className="rounded-xl bg-ink-800 border border-violet-500/40 p-3 flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-white">{editingExamen.titre}</p>
+                            <p className="text-[10px] text-slate-500">{(editingExamen.questions||[]).length} question(s) — {editingExamen.note_passage}% requis — {editingExamen.duree_minutes} min</p>
+                          </div>
+                          <button onClick={() => setEditingExamen(null)} className="text-slate-600 hover:text-slate-400 text-xs">✕</button>
+                        </div>
+
+                        {/* Questions existantes */}
+                        {(editingExamen.questions || []).map((q, qi) => (
+                          <div key={q.id} className="bg-ink-700 rounded-xl p-3 flex flex-col gap-1.5 border border-ink-600">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-xs text-white flex-1 leading-relaxed">
+                                <span className="text-violet-400 font-bold mr-1">Q{qi+1}.</span>{q.texte}
+                              </p>
+                              <button onClick={() => handleDeleteQuestion(q.id)}
+                                className="text-rose-400/60 hover:text-rose-400 text-xs flex-shrink-0">🗑</button>
+                            </div>
+                            {(q.reponses||[]).map(r => (
+                              <div key={r.id} className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-lg ${r.est_correcte ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-500'}`}>
+                                <span>{r.est_correcte ? '✓' : '○'}</span>
+                                <span>{r.texte}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+
+                        {/* Formulaire nouvelle question */}
+                        <div className="border-t border-ink-600 pt-3 flex flex-col gap-2">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ajouter une question</p>
+                          <select value={questionForm.type} onChange={e => setQuestionForm(f => ({
+                            ...f, type:e.target.value,
+                            reponses: e.target.value === 'VRAI_FAUX'
+                              ? [{texte:'Vrai',estCorrecte:false},{texte:'Faux',estCorrecte:false}]
+                              : [{texte:'',estCorrecte:false},{texte:'',estCorrecte:false}]
+                          }))}
+                            className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs">
+                            <option value="QCM">QCM</option>
+                            <option value="VRAI_FAUX">Vrai / Faux</option>
+                          </select>
+                          <textarea value={questionForm.texte} onChange={e => setQuestionForm(f => ({...f, texte:e.target.value}))}
+                            placeholder="Texte de la question *" rows={2}
+                            className="w-full px-3 py-2 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600 resize-none" />
+                          <div className="flex items-center gap-2">
+                            <label className="text-[10px] text-slate-500">Points :</label>
+                            <input type="number" min={0.5} step={0.5} value={questionForm.points}
+                              onChange={e => setQuestionForm(f => ({...f, points:Number(e.target.value)}))}
+                              className="w-16 px-2 py-1 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                          </div>
+                          {/* Réponses */}
+                          <div className="flex flex-col gap-1.5">
+                            {questionForm.reponses.map((r, ri) => (
+                              <div key={ri} className="flex items-center gap-2">
+                                <input type="checkbox" checked={r.estCorrecte}
+                                  onChange={e => setQuestionForm(f => ({
+                                    ...f, reponses: f.reponses.map((rr, i) => i === ri ? {...rr, estCorrecte:e.target.checked} : rr)
+                                  }))}
+                                  className="w-3.5 h-3.5 accent-violet-500 flex-shrink-0" />
+                                <input value={r.texte}
+                                  readOnly={questionForm.type === 'VRAI_FAUX'}
+                                  onChange={e => setQuestionForm(f => ({
+                                    ...f, reponses: f.reponses.map((rr, i) => i === ri ? {...rr, texte:e.target.value} : rr)
+                                  }))}
+                                  placeholder={`Réponse ${ri+1}`}
+                                  className="flex-1 px-2 py-1 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600" />
+                                {questionForm.type === 'QCM' && ri > 1 && (
+                                  <button type="button" onClick={() => setQuestionForm(f => ({...f, reponses: f.reponses.filter((_,i) => i !== ri)}))}
+                                    className="text-rose-400/60 hover:text-rose-400 text-xs">✕</button>
+                                )}
+                              </div>
+                            ))}
+                            {questionForm.type === 'QCM' && questionForm.reponses.length < 6 && (
+                              <button type="button"
+                                onClick={() => setQuestionForm(f => ({...f, reponses:[...f.reponses, {texte:'',estCorrecte:false}]}))}
+                                className="text-[10px] text-violet-400 hover:text-violet-300 text-left mt-0.5">
+                                + Ajouter une réponse
+                              </button>
+                            )}
+                          </div>
+                          <button onClick={handleAddQuestion}
+                            className="w-full py-2 rounded-xl text-xs font-bold mt-1"
+                            style={{ background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                            + Enregistrer la question
+                          </button>
+                        </div>
+
+                        {/* Actions examen */}
+                        <div className="flex gap-2 border-t border-ink-600 pt-3">
+                          <button onClick={() => handleDeleteExamen(editingExamen.id)}
+                            className="flex-1 py-2 rounded-xl text-xs font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20">
+                            🗑 Supprimer
+                          </button>
+                          <button onClick={() => handlePublierExamen(editingExamen.id)}
+                            disabled={(editingExamen.questions||[]).length === 0}
+                            className="flex-1 py-2 rounded-xl text-xs font-bold disabled:opacity-40"
+                            style={{ background:'linear-gradient(135deg,#059669,#047857)', color:'#fff' }}>
+                            🚀 Publier l'examen
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Liste des examens */}
+                    {examens.map(ex => {
+                      const estTuteurExamen = ex.tuteur_id === user?.id
+                      const now = new Date()
+                      const apresDebut = !ex.date_debut || now >= new Date(ex.date_debut)
+                      const avantLimite = !ex.date_limite || now <= new Date(ex.date_limite)
+                      const peutPasser  = ex.statut === 'PUBLIE' && apresDebut && avantLimite && !ex.deja_reussi && !isTuteur
+                      const tentativesRestantes = ex.max_tentatives ? ex.max_tentatives - (ex.nb_tentatives_faites||0) : null
+
+                      return (
+                        <div key={ex.id} className={`rounded-xl border p-3 flex flex-col gap-2 ${ex.statut === 'PUBLIE' ? 'bg-ink-800 border-ink-700' : 'bg-ink-800/60 border-dashed border-ink-600'}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                  ex.statut === 'BROUILLON' ? 'bg-amber-500/20 text-amber-400' :
+                                  ex.statut === 'PUBLIE'    ? 'bg-emerald-500/20 text-emerald-400' :
+                                  'bg-slate-500/20 text-slate-500'
+                                }`}>{ex.statut}</span>
+                                {ex.deja_reussi > 0 && <span className="text-[10px] text-amber-400">🏆 Réussi</span>}
+                              </div>
+                              <p className="text-xs font-bold text-white truncate">{ex.titre}</p>
+                              <p className="text-[10px] text-slate-500 mt-0.5">
+                                {ex.nb_questions||0} questions · {ex.duree_minutes} min · {ex.note_passage}% requis
+                              </p>
+                              {tentativesRestantes !== null && (
+                                <p className="text-[10px] text-slate-600 mt-0.5">
+                                  {ex.deja_reussi ? '' : `${tentativesRestantes} tentative(s) restante(s)`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Actions tuteur sur brouillon */}
+                          {estTuteurExamen && ex.statut === 'BROUILLON' && (
+                            <button onClick={async () => {
+                              const { data } = await examensAPI.getById(ex.id)
+                              setEditingExamen(data)
+                              setShowCreateExamen(false)
+                            }}
+                              className="w-full py-1.5 rounded-xl text-xs font-semibold bg-violet-600/15 border border-violet-500/30 text-violet-400 hover:bg-violet-600/25 transition-all">
+                              ✏️ Gérer les questions
+                            </button>
+                          )}
+
+                          {/* Action étudiant */}
+                          {!isTuteur && ex.statut === 'PUBLIE' && (
+                            <>
+                              {peutPasser && (tentativesRestantes === null || tentativesRestantes > 0) ? (
+                                <button onClick={() => handleDemarrerExamen(ex.id)}
+                                  className="w-full py-2 rounded-xl text-xs font-bold transition-all"
+                                  style={{ background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                                  ▶ Commencer l'examen
+                                </button>
+                              ) : ex.deja_reussi ? (
+                                <div className="text-center py-1.5 rounded-xl text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                                  ✅ Examen réussi — certificat disponible
+                                </div>
+                              ) : !avantLimite ? (
+                                <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">
+                                  ❌ Période de passage terminée
+                                </div>
+                              ) : !apresDebut ? (
+                                <div className="text-center py-1.5 rounded-xl text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20">
+                                  ⏳ Pas encore disponible — {new Date(ex.date_debut).toLocaleDateString('fr-FR')}
+                                </div>
+                              ) : (
+                                <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">
+                                  ❌ Nombre maximum de tentatives atteint
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {examens.length === 0 && (
+                      <p className="text-xs text-slate-600 text-center py-4">
+                        {isTuteur ? 'Aucun examen créé. Cliquez sur ➕ pour commencer.' : 'Aucun examen disponible dans cette salle.'}
+                      </p>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           )}
         </div>
