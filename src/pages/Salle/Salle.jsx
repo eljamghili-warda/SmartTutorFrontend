@@ -891,19 +891,33 @@ export default function Salle() {
   // ── Étudiant : démarrer examen ─────────────────────────────────────────────
   const handleDemarrerExamen = async (examenId) => {
     try {
+      // 1. Créer la tentative
       const { data } = await examensAPI.demarrer(examenId)
-      const questions = data.examen.questions || []
+      const tentative = data.tentative
+      const examen    = data.examen
+
+      // 2. Charger les questions via getById (demarrer ne les inclut pas)
+      const { data: examDetail } = await examensAPI.getById(examenId)
+      const questions = (examDetail.questions || []).map(q => ({
+        ...q,
+        reponses: (q.reponses || []).map(r => ({ ...r, id: Number(r.id) })),
+      }))
+
+      if (!questions.length) {
+        error('Cet examen ne contient aucune question.')
+        return
+      }
+
       setTentativeActive({
-        tentative: data.tentative,
-        examen: data.examen,
+        tentative,
+        examen: { ...examen, mode_affichage: examDetail.mode_affichage },
         questions,
         currentIdx: 0,
-        expiresAt: new Date(data.tentative.expires_at),
+        expiresAt: new Date(tentative.expires_at),
       })
       setReponsesEnCours({})
       setResultats(null)
-      // Démarrer le timer
-      const msLeft = new Date(data.tentative.expires_at) - Date.now()
+      const msLeft = new Date(tentative.expires_at) - Date.now()
       setTimerLeft(Math.max(0, Math.floor(msLeft / 1000)))
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
@@ -927,11 +941,7 @@ export default function Salle() {
   }
 
   const handleSelectReponse = (questionId, reponseId) => {
-    setReponsesEnCours(prev => ({ ...prev, [questionId]: reponseId }))
-    // Auto-save
-    examensAPI.sauvegarder(tentativeActive.tentative.id, {
-      reponses: [{ questionId, reponseId }]
-    }).catch(() => {})
+    setReponsesEnCours(prev => ({ ...prev, [String(questionId)]: Number(reponseId) }))
   }
 
   const handleSoumettreExamen = async (autoExpire = false) => {
@@ -940,7 +950,7 @@ export default function Salle() {
       const reponses = Object.entries(reponsesEnCours).map(([questionId, reponseId]) => ({
         questionId: parseInt(questionId), reponseId: parseInt(reponseId)
       }))
-      const { data } = await examensAPI.soumettre(tentativeActive.tentative.id, { reponses })
+      const { data } = await examensAPI.soumettre(tentativeActive.tentative.id, reponses)
       setResultats(data)
       setTentativeActive(null)
       setTimerLeft(null)
@@ -1271,7 +1281,7 @@ export default function Salle() {
                           </div>
                           <div className="flex flex-col gap-2.5">
                             {(q.reponses || []).map(r => {
-                              const selected = reponsesEnCours[q.id] === r.id
+                              const selected = reponsesEnCours[String(q.id)] === Number(r.id)
                               return (
                                 <button key={r.id} onClick={() => handleSelectReponse(q.id, r.id)}
                                   className="w-full text-left px-4 py-3 rounded-xl transition-all text-sm"
@@ -1307,8 +1317,8 @@ export default function Salle() {
                         <button key={q.id} onClick={() => setTentativeActive(prev => ({ ...prev, currentIdx: i }))}
                           className="w-6 h-6 rounded-md text-[10px] font-bold transition-all"
                           style={{
-                            background: reponsesEnCours[q.id] ? '#7c3aed' : tentativeActive.currentIdx === i ? '#312e81' : '#1e1b4b',
-                            color: reponsesEnCours[q.id] || tentativeActive.currentIdx === i ? '#fff' : '#6b7280',
+                            background: reponsesEnCours[String(q.id)] ? '#7c3aed' : tentativeActive.currentIdx === i ? '#312e81' : '#1e1b4b',
+                            color: reponsesEnCours[String(q.id)] || tentativeActive.currentIdx === i ? '#fff' : '#6b7280',
                             border: tentativeActive.currentIdx === i ? '1px solid #7c3aed' : '1px solid transparent',
                           }}>
                           {i + 1}

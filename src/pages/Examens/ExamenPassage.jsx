@@ -5,7 +5,8 @@ import { Btn, Spinner } from '../../components/UI'
 
 // ─── Timer ────────────────────────────────────────────────────────────────────
 function useCountdown(expiresAt) {
-  const [remaining, setRemaining] = useState(0)
+  const [remaining, setRemaining] = useState(null)
+
   useEffect(() => {
     if (!expiresAt) return
     const tick = () => {
@@ -16,8 +17,11 @@ function useCountdown(expiresAt) {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [expiresAt])
-  const mins = Math.floor(remaining / 60000)
-  const secs = Math.floor((remaining % 60000) / 1000)
+
+  if (remaining === null) return { mins: 0, secs: 0, isUrgent: false, expired: false, remaining: null }
+
+  const mins     = Math.floor(remaining / 60000)
+  const secs     = Math.floor((remaining % 60000) / 1000)
   const isUrgent = remaining < 5 * 60 * 1000 && remaining > 0
   const expired  = remaining === 0
   return { mins, secs, isUrgent, expired, remaining }
@@ -42,67 +46,89 @@ export default function ExamenPassage() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  // États principaux
-  const [phase, setPhase]     = useState('loading') // loading | confirm | examen | result
-  const [examen, setExamen]   = useState(null)
-  const [tentative, setTentative] = useState(null)
-  const [questions, setQuestions] = useState([])
-  const [reponses, setReponses]   = useState({})   // { questionId: reponseId }
-  const [currentIdx, setCurrentIdx] = useState(0)
-  const [result, setResult]   = useState(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [confirmEnd, setConfirmEnd] = useState(false)
-  const [error, setError]     = useState('')
+  // Un seul objet d'état pour éviter les renders partiels
+  const [state, setState] = useState({
+    phase:      'loading', // loading | confirm | examen | result
+    examen:     null,
+    tentative:  null,
+    questions:  [],
+    result:     null,
+    error:      '',
+  })
 
-  const { mins, secs, isUrgent, expired } = useCountdown(tentative?.expiresAt)
+  const [reponses,    setReponses]    = useState({}) // { questionId: reponseId }
+  const [currentIdx,  setCurrentIdx]  = useState(0)
+  const [confirmEnd,  setConfirmEnd]  = useState(false)
+  const [submitting,  setSubmitting]  = useState(false)
+
+  const { mins, secs, isUrgent, expired } = useCountdown(state.tentative?.expiresAt)
 
   // Auto-soumettre si temps écoulé
   const autoSubmittedRef = useRef(false)
   useEffect(() => {
-    if (expired && phase === 'examen' && !autoSubmittedRef.current) {
+    if (expired && state.phase === 'examen' && !autoSubmittedRef.current) {
       autoSubmittedRef.current = true
       handleSoumettre(true)
     }
-  }, [expired, phase])
+  }, [expired, state.phase])
 
   // Charger l'examen au départ
   useEffect(() => {
     examensAPI.getById(id)
       .then(({ data }) => {
-        setExamen(data)
-        setPhase('confirm')
+        setState(s => ({ ...s, examen: data, phase: 'confirm' }))
       })
-      .catch(() => setError('Examen introuvable ou non disponible.'))
+      .catch(() => setState(s => ({ ...s, error: 'Examen introuvable ou non disponible.', phase: 'loading' })))
   }, [id])
 
+  // ─── Démarrer ─────────────────────────────────────────────────────────────
   const handleDemarrer = async () => {
+    setState(s => ({ ...s, error: '' }))
     try {
       // 1. Créer la tentative
       const { data: tentData } = await examensAPI.demarrer(id)
-      const tent = tentData.tentative || tentData
+      const tent      = tentData.tentative || tentData
       const expiresAt = tentData.expiresAt || tent.expires_at
 
-      // 2. Charger les questions APRÈS création de la tentative
+      // 2. Charger les questions (après création tentative pour avoir les droits)
       const { data: examData } = await examensAPI.getById(id)
-      const qs = examData.questions || []
+      const qs = (examData.questions || []).map(q => ({
+        ...q,
+        // Garantir que chaque réponse a un id numérique
+        reponses: (q.reponses || []).map(r => ({
+          ...r,
+          id: Number(r.id),
+        })),
+      }))
 
-      console.log('📋 Questions chargées:', qs.length, qs)
+      console.log(`📋 Questions reçues: ${qs.length}`)
+      if (qs.length > 0) {
+        console.log(`   Q1: "${qs[0].texte}" → ${qs[0].reponses.length} réponses`)
+      }
 
       if (!qs.length) {
-        setError(`Cet examen ne contient aucune question (0 reçues). Vérifiez que des questions ont été ajoutées avant la publication.`)
+        setState(s => ({ ...s, error: 'Cet examen ne contient aucune question.' }))
         return
       }
 
-      // 3. Tout setter en une fois avant de changer de phase
-      setTentative({ ...tent, expiresAt })
-      setQuestions(qs)
+      // 3. Tout en un seul setState atomique → un seul re-render
+      setState(s => ({
+        ...s,
+        tentative: { ...tent, expiresAt },
+        questions: qs,
+        phase: 'examen',
+        error: '',
+      }))
       setCurrentIdx(0)
-      setPhase('examen')
+      setReponses({})
+
     } catch (err) {
-      setError(err.response?.data?.error || 'Impossible de démarrer l\'examen.')
+      const msg = err.response?.data?.error || 'Impossible de démarrer l\'examen.'
+      setState(s => ({ ...s, error: msg }))
     }
   }
 
+  // ─── Soumettre ────────────────────────────────────────────────────────────
   const handleSoumettre = useCallback(async (auto = false) => {
     if (submitting) return
     setSubmitting(true)
@@ -110,30 +136,30 @@ export default function ExamenPassage() {
     try {
       const reponsesArr = Object.entries(reponses).map(([questionId, reponseId]) => ({
         questionId: parseInt(questionId),
-        reponseId: parseInt(reponseId),
+        reponseId:  parseInt(reponseId),
       }))
-      const { data } = await examensAPI.soumettre(tentative.id, reponsesArr)
-      setResult(data)
-      setPhase('result')
+      const { data } = await examensAPI.soumettre(state.tentative.id, reponsesArr)
+      setState(s => ({ ...s, result: data, phase: 'result' }))
     } catch (err) {
-      setError(err.response?.data?.error || 'Erreur lors de la soumission.')
+      setState(s => ({ ...s, error: err.response?.data?.error || 'Erreur lors de la soumission.' }))
     } finally {
       setSubmitting(false)
     }
-  }, [reponses, tentative, submitting])
+  }, [reponses, state.tentative, submitting])
 
   const selectReponse = (questionId, reponseId) => {
-    setReponses(r => ({ ...r, [questionId]: reponseId }))
+    setReponses(r => ({ ...r, [String(questionId)]: Number(reponseId) }))
   }
 
+  const { phase, examen, tentative, questions, result, error } = state
   const questionsRepondues = Object.keys(reponses).length
-  const question = questions[currentIdx]
+  const question           = questions[currentIdx]
 
-  // ─── Écran de chargement ──────────────────────────────────────────────────
+  // ─── Écran de chargement / erreur ─────────────────────────────────────────
   if (phase === 'loading') return (
     <div className="min-h-screen bg-ink-950 flex items-center justify-center">
       {error ? (
-        <div className="text-center">
+        <div className="text-center p-8">
           <p className="text-rose-400 text-lg mb-4">{error}</p>
           <Btn variant="ghost" onClick={() => navigate(-1)}>← Retour</Btn>
         </div>
@@ -141,7 +167,7 @@ export default function ExamenPassage() {
     </div>
   )
 
-  // ─── Écran de confirmation avant démarrage ────────────────────────────────
+  // ─── Confirmation avant démarrage ─────────────────────────────────────────
   if (phase === 'confirm') return (
     <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
       <div className="bg-ink-800 border border-ink-600 rounded-3xl p-8 max-w-md w-full">
@@ -151,14 +177,18 @@ export default function ExamenPassage() {
           <p className="text-sm text-slate-400 mt-1">{examen?.description}</p>
         </div>
 
-        {error && <p className="text-rose-400 text-sm text-center mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">{error}</p>}
+        {error && (
+          <p className="text-rose-400 text-sm text-center mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">
+            {error}
+          </p>
+        )}
 
         <div className="grid grid-cols-2 gap-3 mb-6">
           {[
-            { icon: '⏱', label: 'Durée', value: `${examen?.duree_minutes} min` },
-            { icon: '🎯', label: 'Pour réussir', value: `${examen?.note_passage}%` },
-            { icon: '❓', label: 'Questions', value: examen?.questions?.length || '—' },
-            { icon: '🔁', label: 'Tentatives max', value: examen?.max_tentatives || 'Illimité' },
+            { icon: '⏱', label: 'Durée',         value: `${examen?.duree_minutes} min` },
+            { icon: '🎯', label: 'Pour réussir',  value: `${examen?.note_passage}%` },
+            { icon: '❓', label: 'Questions',     value: examen?.questions?.length ?? '—' },
+            { icon: '🔁', label: 'Tentatives max',value: examen?.max_tentatives || 'Illimité' },
           ].map(({ icon, label, value }) => (
             <div key={label} className="bg-ink-700 rounded-2xl p-3 text-center">
               <p className="text-lg">{icon}</p>
@@ -169,18 +199,18 @@ export default function ExamenPassage() {
         </div>
 
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-6 text-xs text-amber-400">
-          ⚠️ Une fois démarré, le chronomètre ne peut pas être mis en pause. Assurez-vous d'être prêt !
+          ⚠️ Une fois démarré, le chronomètre ne peut pas être mis en pause.
         </div>
 
         <div className="flex gap-3">
           <Btn variant="ghost" onClick={() => navigate(-1)} className="flex-1">Annuler</Btn>
-          <Btn onClick={handleDemarrer} className="flex-1">▶ Commencer l'examen</Btn>
+          <Btn onClick={handleDemarrer} className="flex-1">▶ Commencer</Btn>
         </div>
       </div>
     </div>
   )
 
-  // ─── Écran de résultat ────────────────────────────────────────────────────
+  // ─── Résultat ─────────────────────────────────────────────────────────────
   if (phase === 'result') return (
     <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
       <div className="bg-ink-800 border border-ink-600 rounded-3xl p-8 max-w-md w-full text-center">
@@ -196,7 +226,7 @@ export default function ExamenPassage() {
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-ink-700 rounded-2xl p-3">
-            <p className="text-xl font-bold text-slate-100">{result?.scoreObtenu}</p>
+            <p className="text-xl font-bold text-slate-100">{result?.scoreObtenu ?? '—'}</p>
             <p className="text-xs text-slate-500">Points obtenus</p>
           </div>
           <div className="bg-ink-700 rounded-2xl p-3">
@@ -204,7 +234,7 @@ export default function ExamenPassage() {
             <p className="text-xs text-slate-500">Score</p>
           </div>
           <div className="bg-ink-700 rounded-2xl p-3">
-            <p className="text-xl font-bold text-slate-100">{result?.scoreMax}</p>
+            <p className="text-xl font-bold text-slate-100">{result?.scoreMax ?? '—'}</p>
             <p className="text-xs text-slate-500">Points max</p>
           </div>
         </div>
@@ -217,9 +247,9 @@ export default function ExamenPassage() {
           </div>
         )}
 
-        {!result?.resultatsVisibles && (
+        {result?.resultatsVisibles === false && (
           <div className="bg-ink-700 rounded-xl p-3 mb-4 text-xs text-slate-400">
-            ⏳ Le corrigé détaillé sera disponible le {' '}
+            ⏳ Le corrigé sera disponible le{' '}
             {new Date(result?.dateAffichageResultats).toLocaleDateString('fr-FR', {
               day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit'
             })}
@@ -238,12 +268,13 @@ export default function ExamenPassage() {
     </div>
   )
 
-  // ─── Écran examen ─────────────────────────────────────────────────────────
+  // ─── Examen en cours ──────────────────────────────────────────────────────
   const isListeComplete = examen?.mode_affichage === 'LISTE_COMPLETE'
 
   return (
     <div className="min-h-screen bg-ink-950 flex flex-col">
-      {/* Header barre fixe */}
+
+      {/* Barre fixe */}
       <div className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 border-b
         ${isUrgent ? 'bg-rose-950 border-rose-800' : 'bg-ink-900 border-ink-700'}`}>
         <div className="flex items-center gap-3">
@@ -254,11 +285,14 @@ export default function ExamenPassage() {
           </div>
         </div>
 
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono font-bold text-sm
-          ${isUrgent ? 'text-rose-400 bg-rose-500/20 border border-rose-500/30 animate-pulse'
-                     : 'text-slate-200 bg-ink-800 border border-ink-600'}`}>
-          ⏱ {String(mins).padStart(2,'0')}:{String(secs).padStart(2,'0')}
-        </div>
+        {tentative?.expiresAt && (
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono font-bold text-sm
+            ${isUrgent
+              ? 'text-rose-400 bg-rose-500/20 border border-rose-500/30 animate-pulse'
+              : 'text-slate-200 bg-ink-800 border border-ink-600'}`}>
+            ⏱ {String(mins).padStart(2,'0')}:{String(secs).padStart(2,'0')}
+          </div>
+        )}
 
         <Btn size="sm" onClick={() => setConfirmEnd(true)} disabled={submitting}>
           {submitting ? '…' : '✅ Terminer'}
@@ -267,60 +301,78 @@ export default function ExamenPassage() {
 
       {/* Contenu */}
       <div className="flex-1 pt-16 pb-8 overflow-y-auto">
-        {isListeComplete ? (
-          /* Mode liste complète */
-          <div className="max-w-2xl mx-auto p-4 flex flex-col gap-6">
-            <ProgressBar current={questionsRepondues} total={questions.length} />
-            {questions.map((q, idx) => (
-              <QuestionBlock key={q.id} question={q} idx={idx} selected={reponses[q.id]}
-                onSelect={(rId) => selectReponse(q.id, rId)} />
-            ))}
+
+        {/* Garde-fou : aucune question chargée */}
+        {questions.length === 0 && (
+          <div className="max-w-2xl mx-auto p-8 text-center">
+            <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-6">
+              <p className="text-rose-400 text-sm font-semibold">Aucune question chargée.</p>
+              <p className="text-slate-500 text-xs mt-1">Rechargez la page ou contactez votre tuteur.</p>
+            </div>
           </div>
-        ) : (
-          /* Mode question par question */
-          <div className="max-w-2xl mx-auto p-4 flex flex-col gap-4">
-            <ProgressBar current={currentIdx + 1} total={questions.length} />
+        )}
 
-            {questions.length === 0 ? (
-              <div className="bg-ink-800 border border-rose-500/30 rounded-2xl p-6 text-center">
-                <p className="text-rose-400 text-sm">Aucune question chargée. Rechargez la page.</p>
+        {questions.length > 0 && (
+          isListeComplete ? (
+            /* ── Mode liste complète ── */
+            <div className="max-w-2xl mx-auto p-4 flex flex-col gap-6">
+              <ProgressBar current={questionsRepondues} total={questions.length} />
+              {questions.map((q, idx) => (
+                <QuestionBlock
+                  key={q.id}
+                  question={q}
+                  idx={idx}
+                  selected={reponses[String(q.id)]}
+                  onSelect={(rId) => selectReponse(q.id, rId)}
+                />
+              ))}
+            </div>
+          ) : (
+            /* ── Mode une par une ── */
+            <div className="max-w-2xl mx-auto p-4 flex flex-col gap-4">
+              <ProgressBar current={currentIdx + 1} total={questions.length} />
+
+              {question && (
+                <QuestionBlock
+                  key={question.id}
+                  question={question}
+                  idx={currentIdx}
+                  selected={reponses[String(question.id)]}
+                  onSelect={(rId) => selectReponse(question.id, rId)}
+                />
+              )}
+
+              {/* Navigation */}
+              <div className="flex justify-between gap-3 mt-2">
+                <Btn variant="ghost" disabled={currentIdx === 0}
+                  onClick={() => setCurrentIdx(i => i - 1)}>
+                  ← Précédent
+                </Btn>
+                {currentIdx < questions.length - 1 ? (
+                  <Btn onClick={() => setCurrentIdx(i => i + 1)}>Suivant →</Btn>
+                ) : (
+                  <Btn onClick={() => setConfirmEnd(true)}>✅ Terminer et envoyer</Btn>
+                )}
               </div>
-            ) : question ? (
-              <QuestionBlock
-                key={question.id}
-                question={question}
-                idx={currentIdx}
-                selected={reponses[question.id]}
-                onSelect={(rId) => selectReponse(question.id, rId)} />
-            ) : null}
 
-            <div className="flex justify-between gap-3 mt-2">
-              <Btn variant="ghost" disabled={currentIdx === 0}
-                onClick={() => setCurrentIdx(i => i - 1)}>
-                ← Précédent
-              </Btn>
-              {currentIdx < questions.length - 1 ? (
-                <Btn onClick={() => setCurrentIdx(i => i + 1)}>Suivant →</Btn>
-              ) : (
-                <Btn onClick={() => setConfirmEnd(true)}>✅ Terminer</Btn>
+              {/* Points de navigation */}
+              {questions.length > 1 && (
+                <div className="flex flex-wrap gap-1.5 justify-center mt-2">
+                  {questions.map((q, i) => (
+                    <button key={q.id} onClick={() => setCurrentIdx(i)}
+                      className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all
+                        ${i === currentIdx
+                          ? 'bg-violet-600 text-white'
+                          : reponses[String(q.id)]
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-ink-700 text-slate-400 hover:bg-ink-600'}`}>
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-
-            {/* Navigation dots */}
-            {questions.length > 1 && (
-              <div className="flex flex-wrap gap-1.5 justify-center mt-2">
-                {questions.map((q, i) => (
-                  <button key={i} onClick={() => setCurrentIdx(i)}
-                    className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all
-                      ${i === currentIdx ? 'bg-violet-600 text-white' :
-                        reponses[q.id] ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                        'bg-ink-700 text-slate-400 hover:bg-ink-600'}`}>
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          )
         )}
       </div>
 
@@ -330,14 +382,17 @@ export default function ExamenPassage() {
           <div className="bg-ink-800 border border-ink-600 rounded-3xl p-6 max-w-sm w-full">
             <h3 className="text-lg font-bold text-slate-100 mb-2">Terminer l'examen ?</h3>
             <p className="text-sm text-slate-400 mb-1">
-              Vous avez répondu à <strong className="text-slate-200">{questionsRepondues}/{questions.length}</strong> questions.
+              Vous avez répondu à{' '}
+              <strong className="text-slate-200">{questionsRepondues}/{questions.length}</strong> questions.
             </p>
             {questionsRepondues < questions.length && (
               <p className="text-xs text-amber-400 mb-4">
                 ⚠️ {questions.length - questionsRepondues} question(s) sans réponse.
               </p>
             )}
-            <p className="text-xs text-slate-500 mb-5">Après validation, vous ne pourrez plus modifier vos réponses.</p>
+            <p className="text-xs text-slate-500 mb-5">
+              Après validation, vous ne pourrez plus modifier vos réponses.
+            </p>
             <div className="flex gap-3">
               <Btn variant="ghost" onClick={() => setConfirmEnd(false)} className="flex-1">Annuler</Btn>
               <Btn onClick={() => handleSoumettre(false)} disabled={submitting} className="flex-1">
@@ -351,41 +406,58 @@ export default function ExamenPassage() {
   )
 }
 
-// ─── Bloc question ────────────────────────────────────────────────────────────
+// ─── Bloc question + réponses ─────────────────────────────────────────────────
 function QuestionBlock({ question, idx, selected, onSelect }) {
+  if (!question) return null
+  const reponses = question.reponses || []
+
   return (
     <div className="bg-ink-800 border border-ink-600 rounded-2xl p-5">
+      {/* En-tête question */}
       <div className="flex items-start gap-3 mb-4">
         <span className="flex-shrink-0 w-7 h-7 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-violet-400">
           {idx + 1}
         </span>
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className={`text-xs px-1.5 py-0.5 rounded font-semibold
               ${question.type === 'QCM' ? 'bg-violet-500/20 text-violet-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
               {question.type}
             </span>
-            <span className="text-xs text-amber-400">{question.points} pt{question.points > 1 ? 's' : ''}</span>
+            <span className="text-xs text-amber-400">
+              {question.points} pt{question.points > 1 ? 's' : ''}
+            </span>
           </div>
           <p className="text-sm font-medium text-slate-100 leading-relaxed">{question.texte}</p>
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {(question.reponses || []).map((r) => (
-          <button key={r.id} onClick={() => onSelect(r.id)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all border
-              ${selected === r.id
-                ? 'bg-violet-600/20 border-violet-500/50 text-violet-300'
-                : 'bg-ink-700 border-ink-600 text-slate-300 hover:bg-ink-600 hover:border-slate-500'}`}>
-            <span className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
-              ${selected === r.id ? 'bg-violet-500 border-violet-500' : 'border-slate-600'}`}>
-              {selected === r.id && <span className="w-2 h-2 rounded-full bg-white" />}
-            </span>
-            {r.texte}
-          </button>
-        ))}
-      </div>
+      {/* Réponses */}
+      {reponses.length === 0 ? (
+        <p className="text-xs text-rose-400 pl-10">⚠️ Aucune réponse disponible pour cette question.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {reponses.map((r) => {
+            const rId     = Number(r.id)
+            const isChosen = selected === rId
+            return (
+              <button
+                key={rId}
+                onClick={() => onSelect(rId)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all border w-full
+                  ${isChosen
+                    ? 'bg-violet-600/20 border-violet-500/50 text-violet-300'
+                    : 'bg-ink-700 border-ink-600 text-slate-300 hover:bg-ink-600 hover:border-slate-500'}`}>
+                <span className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
+                  ${isChosen ? 'bg-violet-500 border-violet-500' : 'border-slate-600'}`}>
+                  {isChosen && <span className="w-2 h-2 rounded-full bg-white" />}
+                </span>
+                <span className="flex-1">{r.texte}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
