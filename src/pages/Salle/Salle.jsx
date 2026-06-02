@@ -1088,6 +1088,7 @@ export default function Salle() {
             currentUser={user}
             isAdmin={isAdmin}
             onPayer={(seanceId) => setPaiementSeanceId(seanceId)}
+            seances={seances}
           />
         </div>
         <div className="flex-1 overflow-hidden">

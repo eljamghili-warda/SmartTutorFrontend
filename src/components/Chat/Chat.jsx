@@ -8,7 +8,8 @@ const parseSeanceMessage = (contenu) => {
   return { seanceId: parseInt(match[1]) }
 }
 
-const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer }) => {
+// seances = liste des séances de la salle (pour vérifier le statut de paiement)
+const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] }) => {
   const [text, setText]   = useState('')
   const bottomRef         = useRef(null)
 
@@ -26,9 +27,16 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer }) => {
 
   const fmt = (ts) => new Date(ts).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
 
-  // Affiche le contenu du message — si c'est une notif séance, masque le seance_id
+  // Affiche le contenu du message — masque le seance_id technique
   const renderContenu = (contenu) => {
     return contenu.replace(/\s*seance_id:\d+/, '').trim()
+  }
+
+  // Vérifie si une séance est déjà payée/confirmée
+  const isSeancePaye = (seanceId) => {
+    const s = seances.find(s => s.id === seanceId || String(s.id) === String(seanceId))
+    if (!s) return false
+    return s.statut_paiement === 'PAYE' || s.statut === 'CONFIRMEE' || s.statut === 'REALISEE' || s.statut === 'EN_COURS'
   }
 
   return (
@@ -47,9 +55,10 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer }) => {
           </div>
         )}
         {messages.map(msg => {
-          const seanceInfo = parseSeanceMessage(msg.contenu)
+          const seanceInfo  = parseSeanceMessage(msg.contenu)
           const isSeanceMsg = !!seanceInfo
-          const mine = isMine(msg)
+          const mine        = isMine(msg)
+          const paye        = isSeanceMsg && isSeancePaye(seanceInfo?.seanceId)
 
           return (
             <div key={msg.id} className={`flex flex-col gap-0.5 ${mine ? 'items-end' : 'items-start'}`}>
@@ -65,8 +74,8 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer }) => {
                   {renderContenu(msg.contenu)}
                 </div>
 
-                {/* Bouton Payer — visible uniquement pour l'admin et sur un message de séance */}
-                {isSeanceMsg && isAdmin && onPayer && (
+                {/* Bouton Payer — admin seulement, séance pas encore payée */}
+                {isSeanceMsg && isAdmin && onPayer && !paye && (
                   <div className="px-3 pb-2.5 pt-0">
                     <button
                       onClick={() => onPayer(seanceInfo.seanceId)}
@@ -84,10 +93,31 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer }) => {
                   </div>
                 )}
 
-                {/* Badge info pour les non-admins */}
+                {/* Bouton désactivé — séance déjà payée */}
+                {isSeanceMsg && isAdmin && paye && (
+                  <div className="px-3 pb-2.5 pt-0">
+                    <button
+                      disabled
+                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold"
+                      style={{
+                        background: '#0f2a1a',
+                        color: '#4ade80',
+                        border: '1px solid #166534',
+                        cursor: 'not-allowed',
+                        opacity: 0.85,
+                      }}
+                    >
+                      ✅ Séance payée
+                    </button>
+                  </div>
+                )}
+
+                {/* Badge pour les non-admins */}
                 {isSeanceMsg && !isAdmin && (
                   <div className="px-3 pb-2">
-                    <span className="text-xs text-amber-400 opacity-75">⏳ En attente de paiement</span>
+                    <span className={`text-xs font-semibold ${paye ? 'text-emerald-400' : 'text-amber-400 opacity-75'}`}>
+                      {paye ? '✅ Séance confirmée' : '⏳ En attente de paiement'}
+                    </span>
                   </div>
                 )}
               </div>
