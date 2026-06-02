@@ -125,6 +125,8 @@ export const examensAPI = {
     { reponses }
   ),
   getResultats:          (tentativeId)    => api.get(`/tentatives/${tentativeId}/resultats`),
+  getStats:              (id)             => api.get(`/examens/${id}/stats`),
+  getMaDerniereTentative:(id)             => api.get(`/examens/${id}/ma-derniere-tentative`),
   // Certificats
   mesCertificats:        ()               => api.get('/certificats/mes-certificats'),
   verifierCertificat:    (numero)         => api.get(`/certificats/verifier/${numero}`),

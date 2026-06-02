@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import Header from '../../components/Header/Header'
 import { Btn, Modal, FormGroup, Badge, Spinner, EmptyState, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
+import PanelDetailsExamen from './PanelDetailsExamen'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const statutConfig = {
@@ -236,7 +237,7 @@ function FormQuestion({ onSave, onClose, initial = null }) {
 }
 
 // ─── Carte examen tuteur ──────────────────────────────────────────────────────
-function ExamenCardTuteur({ examen, onEdit, onManage, onPublier, onArchiver }) {
+function ExamenCardTuteur({ examen, onEdit, onManage, onVoirDetails, onPublier, onArchiver }) {
   const cfg = statutConfig[examen.statut] || statutConfig.BROUILLON
   return (
     <div className={`bg-ink-800 border ${cfg.border} rounded-2xl p-5 flex flex-col gap-3 hover:border-violet-500/30 transition-all`}>
@@ -280,12 +281,12 @@ function ExamenCardTuteur({ examen, onEdit, onManage, onPublier, onArchiver }) {
         )}
         {examen.statut === 'PUBLIE' && (
           <>
-            <Btn size="sm" variant="ghost" onClick={() => onManage(examen)}>📊 Voir détails</Btn>
+            <Btn size="sm" variant="ghost" onClick={() => onVoirDetails(examen)}>📊 Voir détails</Btn>
             <Btn size="sm" variant="danger" onClick={() => onArchiver(examen)}>📦 Archiver</Btn>
           </>
         )}
         {examen.statut === 'ARCHIVE' && (
-          <Btn size="sm" variant="ghost" onClick={() => onManage(examen)}>📊 Statistiques</Btn>
+          <Btn size="sm" variant="ghost" onClick={() => onVoirDetails(examen)}>📊 Statistiques</Btn>
         )}
       </div>
     </div>
@@ -513,6 +514,7 @@ export default function Examens() {
   const [showCreate, setShowCreate]     = useState(false)
   const [editExamen, setEditExamen]     = useState(null)
   const [manageExamen, setManageExamen] = useState(null)
+  const [detailsExamen, setDetailsExamen] = useState(null)
   const { toasts, success, error } = useToast()
 
   const loadExamens = async () => {
@@ -623,6 +625,7 @@ export default function Examens() {
                     <ExamenCardTuteur key={e.id} examen={e}
                       onEdit={setEditExamen}
                       onManage={setManageExamen}
+                      onVoirDetails={setDetailsExamen}
                       onPublier={handlePublier}
                       onArchiver={handleArchiver} />
                   ))}
@@ -639,6 +642,7 @@ export default function Examens() {
                     <ExamenCardTuteur key={e.id} examen={e}
                       onEdit={setEditExamen}
                       onManage={setManageExamen}
+                      onVoirDetails={setDetailsExamen}
                       onPublier={handlePublier}
                       onArchiver={handleArchiver} />
                   ))}
@@ -655,6 +659,7 @@ export default function Examens() {
                     <ExamenCardTuteur key={e.id} examen={e}
                       onEdit={setEditExamen}
                       onManage={setManageExamen}
+                      onVoirDetails={setDetailsExamen}
                       onPublier={handlePublier}
                       onArchiver={handleArchiver} />
                   ))}
@@ -702,6 +707,23 @@ export default function Examens() {
               </div>
               <div className="px-6 py-5">
                 <FormExamen initial={editExamen} salles={salles} onSave={handleEdit} onClose={() => setEditExamen(null)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay plein écran — Détails examen (publiés/archivés) */}
+      {!!detailsExamen && (
+        <div className="fixed inset-0 z-50 bg-ink-950/95 overflow-y-auto">
+          <div className="min-h-screen flex items-start justify-center p-6">
+            <div className="w-full max-w-3xl bg-ink-800 border border-ink-600 rounded-2xl shadow-2xl my-8">
+              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-ink-700">
+                <h2 className="font-bold text-lg text-white">📊 {detailsExamen.titre}</h2>
+                <button onClick={() => setDetailsExamen(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-ink-700 text-slate-400 hover:text-white transition-colors">✕</button>
+              </div>
+              <div className="px-6 py-5">
+                <PanelDetailsExamen examen={detailsExamen} onClose={() => setDetailsExamen(null)} />
               </div>
             </div>
           </div>

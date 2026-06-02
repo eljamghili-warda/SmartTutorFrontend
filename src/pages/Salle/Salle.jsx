@@ -1191,23 +1191,48 @@ export default function Salle() {
                   {s.montant_total > 0 && (
                     <p className="text-xs text-violet-400 font-semibold">💰 {s.montant_total} DH</p>
                   )}
-                  {/* Statut EN_ATTENTE_PAIEMENT → admin doit payer */}
-                  {s.statut === 'EN_ATTENTE_PAIEMENT' && isAdmin && (
-                    <div className="mt-1 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                      <p className="text-xs text-amber-400 mb-1.5">⚠️ En attente de votre paiement</p>
-                      <button
-                        onClick={() => setPaiementSeanceId(s.id)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all"
-                        style={{
-                          background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                          color: '#fff',
-                          border: 'none',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 12px rgba(124,58,237,0.4)',
-                        }}
-                      >
-                        💳 Payer maintenant
-                      </button>
+                  {/* Statut paiement → admin */}
+                  {isAdmin && (s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut_paiement === 'PAYE' || s.statut === 'CONFIRMEE') && (
+                    <div className={`mt-1 p-2 rounded-lg border ${
+                      s.statut_paiement === 'PAYE' || s.statut === 'CONFIRMEE'
+                        ? 'bg-emerald-500/10 border-emerald-500/20'
+                        : 'bg-amber-500/10 border-amber-500/20'
+                    }`}>
+                      {s.statut_paiement === 'PAYE' || s.statut === 'CONFIRMEE' ? (
+                        <>
+                          <p className="text-xs text-emerald-400 mb-1.5">✅ Séance payée</p>
+                          <button
+                            disabled
+                            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold"
+                            style={{
+                              background: '#1a2e1a',
+                              color: '#4ade80',
+                              border: '1px solid #166534',
+                              cursor: 'not-allowed',
+                              opacity: 0.7,
+                            }}
+                          >
+                            ✅ Payé
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs text-amber-400 mb-1.5">⚠️ En attente de votre paiement</p>
+                          <button
+                            onClick={() => setPaiementSeanceId(s.id)}
+                            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all"
+                            style={{
+                              background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                              color: '#fff',
+                              border: 'none',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 12px rgba(124,58,237,0.4)',
+                            }}
+                          >
+                            💳 Payer maintenant
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                   {/* Annuler si PLANIFIEE ou EN_ATTENTE_PAIEMENT ou CONFIRMEE */}

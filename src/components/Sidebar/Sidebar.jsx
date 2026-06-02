@@ -47,10 +47,13 @@ const Sidebar = () => {
   return (
     <aside className="w-56 flex-shrink-0 h-screen flex flex-col bg-ink-900 border-r border-ink-700">
       {/* Brand */}
-      <div className="px-5 py-5 border-b border-ink-700">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-500 flex items-center justify-center text-sm">🎓</div>
-          <span className="font-display font-bold text-base text-white">SmartTutor</span>
+      <div className="px-4 py-4 border-b border-ink-700">
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="SmartEdu" className="w-10 h-10 object-contain rounded-xl" />
+          <div className="flex flex-col leading-tight">
+            <span className="font-display font-bold text-sm text-white">SmartEdu</span>
+            <span className="text-xs text-slate-500">Apprendre Ensemble</span>
+          </div>
         </div>
       </div>
 
