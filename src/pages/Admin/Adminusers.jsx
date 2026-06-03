@@ -45,7 +45,7 @@ export default function AdminUsers() {
   )
 
   return (
-    <>
+    <div className="flex flex-col flex-1 min-h-0">
       <Header title="Utilisateurs" onSearch={load} />
       <ToastContainer toasts={toasts} />
       <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
@@ -111,6 +111,6 @@ export default function AdminUsers() {
           </div>
         )}
       </div>
-    </>
+    </div>
   )
 }

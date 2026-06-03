@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { adminAPI } from '../../services/api'
 import { Spinner } from '../../components/UI'
+import Header from '../../components/Header/Header'
 
 const BAR_COLORS = ['#7c3aed','#4f46e5','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6']
 
@@ -16,9 +17,17 @@ export default function AdminRevenus() {
   }, [])
 
   if (loading) return (
-    <div className="flex justify-center items-center py-24"><Spinner /></div>
+    <>
+      <Header title="Revenus" />
+      <div className="flex-1 flex justify-center items-center py-24"><Spinner /></div>
+    </>
   )
-  if (!data) return <p style={{ color: '#f87171', textAlign: 'center' }}>Erreur de chargement</p>
+  if (!data) return (
+    <>
+      <Header title="Revenus" />
+      <p style={{ color: '#f87171', textAlign: 'center', padding: 24 }}>Erreur de chargement</p>
+    </>
+  )
 
   const { totaux, parMois, parMethode, topTuteurs, parMatiere } = data
 
@@ -26,7 +35,9 @@ export default function AdminRevenus() {
   const maxMois = Math.max(...parMois.map(m => parseFloat(m.commissions || 0)), 1)
 
   return (
-    <div style={{ padding: '0' }}>
+    <>
+      <Header title="Revenus" />
+      <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: 0 }}>
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontWeight: 900, fontSize: 22, color: '#fff', marginBottom: 4 }}>📊 Revenus & Statistiques</h2>
         <p style={{ color: '#64748b', fontSize: 13 }}>Vue financière complète de la plateforme</p>
@@ -194,6 +205,7 @@ export default function AdminRevenus() {
           })}
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }

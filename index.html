@@ -1,44 +1,299 @@
 <!DOCTYPE html>
-<html lang="fr" class="dark">
+<html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SmartTutor</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
-          fontFamily: { display: ['Syne','sans-serif'], body: ['DM Sans','sans-serif'] },
-          colors: {
-            ink: { 950:'#080A12',900:'#0D0F1C',800:'#141625',700:'#1C1F35',600:'#252847',500:'#2E3258' }
+          fontFamily: {
+            display: ['Plus Jakarta Sans','sans-serif'],
+            serif:   ['Playfair Display','serif'],
+            body:    ['Plus Jakarta Sans','sans-serif'],
           },
-          boxShadow: { glow:'0 0 24px rgba(139,92,246,0.35)', 'glow-sm':'0 0 10px rgba(139,92,246,0.2)' },
-          animation: { 'fade-in':'fadeIn 0.3s ease forwards', 'slide-up':'slideUp 0.35s ease forwards' },
+          colors: {
+            // ── Bleus Navy (remplace ink-*) ──────────────────────────────
+            ink: {
+              950: '#060D18',
+              900: '#0A1628',
+              800: '#0F2040',
+              700: '#162B55',
+              600: '#1E3A6E',
+              500: '#2C5282',
+            },
+            // ── Bleus clairs ─────────────────────────────────────────────
+            blue: {
+              400: '#4A90E2',
+              300: '#74ACEC',
+              200: '#A8C9F3',
+              100: '#D6E6F5',
+              50:  '#EEF5FC',
+            },
+            // ── Dorés (remplace violet/amber pour accents) ───────────────
+            gold: {
+              900: '#5C3D0A',
+              700: '#8B6914',
+              500: '#C5A059',
+              400: '#D4B06A',
+              300: '#E8D5A3',
+              200: '#F2E8CC',
+              100: '#FAF4E4',
+              50:  '#FDF9F0',
+            },
+            // ── Fond ivoire ──────────────────────────────────────────────
+            ivory: {
+              900: '#D4C9A8',
+              800: '#E0D5B8',
+              700: '#EAE0CC',
+              600: '#F0E8D8',
+              500: '#F5F0E6',
+              400: '#F8F4EE',
+              300: '#FBF8F3',
+              200: '#FDFCF9',
+              100: '#FEFEFE',
+            },
+            // ── violet remappé → navy (compatibilité pages existantes) ───
+            violet: {
+              600: '#162B55',
+              500: '#1E3A6E',
+              400: '#4A90E2',
+              300: '#74ACEC',
+            },
+            // ── amber remappé → gold ─────────────────────────────────────
+            amber: {
+              500: '#C5A059',
+              400: '#D4B06A',
+              300: '#E8D5A3',
+              200: '#F2E8CC',
+              100: '#FAF4E4',
+            },
+            // ── emerald / rose conservés (statuts) ───────────────────────
+            emerald: {
+              500: '#059669', 400: '#10B981', 300: '#34D399',
+              50: '#ECFDF5',
+            },
+            rose: {
+              500: '#EF4444', 400: '#F87171',
+              50: '#FEF2F2',
+            },
+            slate: {
+              100: '#F1F5F9', 200: '#E2E8F0', 300: '#CBD5E1',
+              400: '#94A3B8', 500: '#64748B', 600: '#475569',
+              700: '#334155', 800: '#1E293B', 900: '#0F172A',
+            },
+          },
+          boxShadow: {
+            'glow':     '0 0 24px rgba(197,160,89,0.3)',
+            'glow-sm':  '0 0 10px rgba(197,160,89,0.2)',
+            'gold':     '0 4px 20px rgba(197,160,89,0.25)',
+            'gold-lg':  '0 8px 32px rgba(197,160,89,0.35)',
+            'navy':     '0 4px 20px rgba(10,22,40,0.3)',
+            'navy-lg':  '0 8px 40px rgba(10,22,40,0.4)',
+            'card':     '0 2px 12px rgba(10,22,40,0.08)',
+            'card-lg':  '0 8px 32px rgba(10,22,40,0.12)',
+          },
+          animation: {
+            'fade-in':  'fadeIn 0.3s ease forwards',
+            'slide-up': 'slideUp 0.35s ease forwards',
+          },
           keyframes: {
-            fadeIn:{ from:{opacity:0}, to:{opacity:1} },
-            slideUp:{ from:{transform:'translateY(14px)',opacity:0}, to:{transform:'translateY(0)',opacity:1} }
-          }
+            fadeIn:  { from:{ opacity:0 },                               to:{ opacity:1 } },
+            slideUp: { from:{ transform:'translateY(14px)', opacity:0 }, to:{ transform:'translateY(0)', opacity:1 } },
+          },
         }
       }
     }
   </script>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'DM Sans',sans-serif;background:#080A12;color:#E2E8F0;overflow:hidden;height:100vh}
-    #root{height:100vh;display:flex;flex-direction:column}
-    ::-webkit-scrollbar{width:4px;height:4px}
-    ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:#252847;border-radius:2px}
-    ::-webkit-scrollbar-thumb:hover{background:#8B5CF6}
-    .font-display{font-family:'Syne',sans-serif}
-    input,textarea,select{font-family:'DM Sans',sans-serif;background:#0D0F1C;border:1px solid #252847;color:#E2E8F0;border-radius:10px;padding:10px 14px;width:100%;font-size:14px;transition:border-color .2s,box-shadow .2s;outline:none}
-    input:focus,textarea:focus,select:focus{border-color:#8B5CF6;box-shadow:0 0 0 3px rgba(139,92,246,.12)}
-    input:disabled,textarea:disabled{opacity:.45;cursor:not-allowed}
-    textarea{resize:vertical}
-    select option{background:#0D0F1C}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #F5F0E6;
+      color: #0A1628;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #root { height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Scrollbar dorée ─────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #F0E8D8; }
+    ::-webkit-scrollbar-thumb { background: #C5A059; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #8B6914; }
+
+    /* ── Inputs globaux — fond blanc, bordure or ─────────── */
+    input, textarea, select {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #FFFFFF;
+      border: 1.5px solid #E8D5A3;
+      color: #0A1628;
+      border-radius: 10px;
+      padding: 10px 14px;
+      width: 100%;
+      font-size: 14px;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: #C5A059;
+      box-shadow: 0 0 0 3px rgba(197,160,89,0.15);
+    }
+    input:disabled, textarea:disabled, select:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      background: #F5F0E6;
+    }
+    textarea { resize: vertical; }
+    select option { background: #FFFFFF; color: #0A1628; }
+    input::placeholder, textarea::placeholder { color: #94A3B8; }
+
+    /* ── Overrides clés pour classes ink-* utilisées partout ─ */
+    /* bg-ink-950 → fond ivoire profond */
+    .bg-ink-950 { background-color: #F5F0E6 !important; }
+    /* bg-ink-900 → blanc cassé */
+    .bg-ink-900 { background-color: #FDFCF9 !important; }
+    /* bg-ink-800 → blanc pur */
+    .bg-ink-800 { background-color: #FFFFFF !important; }
+    /* bg-ink-700 → ivoire clair */
+    .bg-ink-700 { background-color: #FAF4E4 !important; }
+    /* bg-ink-600 → gold-100 */
+    .bg-ink-600 { background-color: #F2E8CC !important; }
+
+    /* border-ink-* → bordures dorées */
+    .border-ink-700 { border-color: #E8D5A3 !important; }
+    .border-ink-600 { border-color: #E0D0A0 !important; }
+
+    /* text-white → navy foncé dans les contenus clairs */
+    /* (on ne touche pas text-white global, seulement pour la sidebar via inline styles) */
+
+    /* text-slate-* → navy */
+    .text-slate-100 { color: #0A1628 !important; }
+    .text-slate-200 { color: #1E3A6E !important; }
+    .text-slate-300 { color: #4A6080 !important; }
+    .text-slate-400 { color: #64748B !important; }
+    .text-slate-500 { color: #94A3B8 !important; }
+
+    /* violet → navy/blue */
+    .bg-violet-600 { background-color: #162B55 !important; }
+    .bg-violet-500 { background-color: #1E3A6E !important; }
+    .text-violet-400 { color: #4A90E2 !important; }
+    .border-violet-500 { border-color: #1E3A6E !important; }
+    .border-violet-600 { border-color: #162B55 !important; }
+
+    /* Accent or pour les éléments actifs violet */
+    .bg-violet-600\/15, [class*="bg-violet-600/"] { background-color: rgba(197,160,89,0.10) !important; }
+    .bg-violet-600\/10 { background-color: rgba(197,160,89,0.08) !important; }
+    .bg-violet-600\/5  { background-color: rgba(197,160,89,0.05) !important; }
+    .border-violet-600\/25 { border-color: rgba(197,160,89,0.25) !important; }
+    .border-violet-500\/20 { border-color: rgba(197,160,89,0.20) !important; }
+    .text-violet-400 { color: #8B6914 !important; }
+
+    /* Hover states */
+    .hover\:bg-ink-700:hover { background-color: #FAF4E4 !important; }
+    .hover\:bg-ink-600:hover { background-color: #F2E8CC !important; }
+    .hover\:border-violet-600\/50:hover { border-color: rgba(197,160,89,0.5) !important; }
+    .hover\:border-violet-500\/30:hover { border-color: rgba(197,160,89,0.35) !important; }
+    .hover\:text-slate-200:hover { color: #0A1628 !important; }
+
+    /* Shadow glow → gold glow */
+    .shadow-glow    { box-shadow: 0 0 24px rgba(197,160,89,0.3) !important; }
+    .shadow-glow-sm { box-shadow: 0 0 10px rgba(197,160,89,0.2) !important; }
+
+    /* Spinner border */
+    .border-t-violet-500 { border-top-color: #162B55 !important; }
+    .border-ink-600.border-t-violet-500 { border-color: #E8D5A3 !important; border-top-color: #162B55 !important; }
+
+    /* Accent emerald (succès) et rose (erreur) conservés */
+    .text-emerald-400 { color: #059669 !important; }
+    .bg-emerald-500\/15 { background-color: rgba(5,150,105,0.1) !important; }
+    .border-emerald-500\/25 { border-color: rgba(5,150,105,0.25) !important; }
+    .bg-emerald-400\/10 { background-color: rgba(5,150,105,0.08) !important; }
+    .border-emerald-400\/25 { border-color: rgba(5,150,105,0.25) !important; }
+    .text-rose-400 { color: #DC2626 !important; }
+    .bg-rose-500\/10 { background-color: rgba(220,38,38,0.08) !important; }
+    .border-rose-500\/30 { border-color: rgba(220,38,38,0.25) !important; }
+    .bg-rose-400\/10 { background-color: rgba(220,38,38,0.08) !important; }
+    .border-rose-400\/25 { border-color: rgba(220,38,38,0.25) !important; }
+
+    /* amber → gold */
+    .text-amber-400 { color: #C5A059 !important; }
+    .bg-amber-400\/10 { background-color: rgba(197,160,89,0.08) !important; }
+    .border-amber-400\/25 { border-color: rgba(197,160,89,0.25) !important; }
+    .text-amber-400\/80 { color: rgba(197,160,89,0.8) !important; }
+
+    /* cyan → blue */
+    .text-cyan-400 { color: #4A90E2 !important; }
+    .bg-cyan-500\/20 { background-color: rgba(74,144,226,0.12) !important; }
+
+    /* font-display */
+    .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+    /* ── Text-white fix: inside white cards/modals → navy ───── */
+    /* Cards and content areas — sauf la sidebar qui utilise des styles inline */
+    .bg-ink-800 .text-white,
+    .bg-ink-800 h3.text-white,
+    .bg-ink-800 h2.text-white,
+    .bg-ink-800 .font-bold.text-white,
+    .bg-ink-800 .font-semibold.text-white { color: #0A1628 !important; }
+
+    .bg-ink-700\/40 .text-slate-200,
+    .bg-ink-700\/50 .text-slate-200 { color: #1E3A6E !important; }
+
+    /* Headings navy dans main seulement (pas dans la sidebar) */
+    main h1, main h2, main h3 { color: #0A1628; }
+
+    /* Accent purple classes used in exams/badges → gold */
+    .bg-violet-500\/20 { background-color: rgba(197,160,89,0.12) !important; }
+    .text-violet-400 { color: #8B6914 !important; }
+
+    /* Input .input class override */
+    .input {
+      background: #FFFFFF !important;
+      border: 1.5px solid #E8D5A3 !important;
+      color: #0A1628 !important;
+      border-radius: 10px !important;
+    }
+    .input:focus {
+      border-color: #C5A059 !important;
+      box-shadow: 0 0 0 3px rgba(197,160,89,0.15) !important;
+    }
+
+    /* Accent border on active nav */
+    .accent-violet-500 { accent-color: #C5A059 !important; }
+
+    /* ── Fix text-white sur fonds clairs (bg-ink-800 = white dans nouveau thème) ── */
+    /* Textes dans main seulement (la sidebar a ses styles inline) */
+    main h1, main h2, main h3, main h4 { color: #0A1628; }
+
+    /* Sauf dans les toasts et badges qui ont leur propre couleur */
+    main .text-emerald-400 { color: #059669 !important; }
+    main .text-rose-400    { color: #DC2626 !important; }
+    main .text-amber-400   { color: #C5A059 !important; }
+    main .text-blue-400,
+    main .text-violet-400  { color: #1E3A6E !important; }
+
+    /* Surcharge: bg-ink-900 = fond page ivory */
+    .flex-1.overflow-y-auto { background: #F5F0E6 !important; }
+
+    /* Les badges de rôle */
+    .from-violet-600.to-indigo-500 {
+      background: linear-gradient(135deg, #162B55, #1E3A6E) !important;
+    }
+    .bg-gradient-to-br.from-violet-600 {
+      background: linear-gradient(135deg, #162B55, #4A90E2) !important;
+    }
+
+    /* Progress bar fill */
+    .bg-violet-500 { background-color: #1E3A6E !important; }
+
+    /* Border active nav */
+    .border-violet-600\/25 { border-color: rgba(197,160,89,0.3) !important; }
+    .bg-violet-600\/15     { background-color: rgba(197,160,89,0.10) !important; }
   </style>
 </head>
 <body>

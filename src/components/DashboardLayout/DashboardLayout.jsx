@@ -8,8 +8,11 @@ const DashboardLayout = ({ adminOnly = false }) => {
   const { user, loading } = useAuth()
 
   if (loading) return (
-    <div className="h-screen flex items-center justify-center bg-ink-950">
-      <Spinner size="lg" />
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F0E6' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        <Spinner size="lg" />
+        <p style={{ color: '#8B6914', fontSize: 13, fontWeight: 500 }}>Chargement…</p>
+      </div>
     </div>
   )
 
@@ -18,9 +21,9 @@ const DashboardLayout = ({ adminOnly = false }) => {
   if (!adminOnly && user.role === 'admin') return <Navigate to="/admin" replace />
 
   return (
-    <div className="flex h-screen overflow-hidden bg-ink-950">
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F0E6' }}>
       <Sidebar />
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Outlet />
       </main>
     </div>

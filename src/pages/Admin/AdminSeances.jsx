@@ -30,7 +30,7 @@ export default function AdminSeances() {
   }
 
   return (
-    <>
+    <div className="flex flex-col flex-1 min-h-0">
       <Header title="Séances" />
       <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
 
@@ -92,6 +92,6 @@ export default function AdminSeances() {
           </div>
         )}
       </div>
-    </>
+    </div>
   )
 }
