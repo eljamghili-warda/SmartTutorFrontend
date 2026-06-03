@@ -21,9 +21,14 @@ const DashboardLayout = ({ adminOnly = false }) => {
   if (!adminOnly && user.role === 'admin') return <Navigate to="/admin" replace />
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F0E6' }}>
+    <div style={{
+      display: 'flex', height: '100vh', overflow: 'hidden',
+      background: user?.role === 'admin' ? '#0F1117' : '#F5F0E6',
+    }}>
       <Sidebar />
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <main
+        className={user?.role === 'admin' ? 'admin-dark' : ''}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
         <Outlet />
       </main>
     </div>
