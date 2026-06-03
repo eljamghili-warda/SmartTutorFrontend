@@ -52,7 +52,7 @@ export default function Parametres() {
           <div className="bg-ink-800 border border-ink-700 rounded-2xl p-5 flex items-center gap-4">
             <Avatar user={user} size="xl" />
             <div>
-              <p className="font-display font-bold text-lg text-white">{user?.prenom} {user?.nom}</p>
+              <p className="font-display font-bold text-lg text-ink-800">{user?.prenom} {user?.nom}</p>
               <p className="text-sm text-slate-400 capitalize mt-0.5">{user?.role}</p>
               <p className="text-xs text-slate-600 mt-0.5">{user?.email}</p>
             </div>
@@ -60,7 +60,7 @@ export default function Parametres() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="bg-ink-800 border border-ink-700 rounded-2xl p-6 flex flex-col gap-4">
-            <h3 className="font-display font-bold text-white mb-1">Informations personnelles</h3>
+            <h3 className="font-display font-bold text-ink-800 mb-1">Informations personnelles</h3>
 
             <div className="grid grid-cols-2 gap-3">
               <FormGroup label="Prénom"><input value={form.prenom} onChange={set('prenom')} /></FormGroup>
@@ -101,7 +101,7 @@ export default function Parametres() {
                 <div style={{ borderTop: '1px solid var(--color-border-tertiary)', paddingTop: 16, marginTop: 4 }}>
                   <div className="flex items-center gap-2 mb-3">
                     <span style={{ fontSize: 16 }}>🏦</span>
-                    <h4 className="font-display font-bold text-white text-sm">Coordonnées bancaires</h4>
+                    <h4 className="font-display font-bold text-ink-800 text-sm">Coordonnées bancaires</h4>
                     <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginLeft: 4 }}>pour recevoir vos paiements</span>
                   </div>
 

@@ -58,7 +58,7 @@ export default function Fichiers() {
                 <div key={f.id} className="contents text-sm">
                   <div className="px-4 py-3.5 flex items-center border-b border-ink-700/50 text-xl">{getIcon(f.type_mime)}</div>
                   <div className="px-4 py-3.5 flex flex-col justify-center border-b border-ink-700/50">
-                    <p className="text-slate-200 font-medium truncate max-w-xs">{f.nom_fichier}</p>
+                    <p className="text-ink-600 font-medium truncate max-w-xs">{f.nom_fichier}</p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {f.uploader_nom} · {new Date(f.date_upload).toLocaleDateString('fr-FR')}
                     </p>

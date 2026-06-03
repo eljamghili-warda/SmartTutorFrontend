@@ -27,22 +27,23 @@ const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir, userRol
           )}
         </div>
       </div>
-      <h3 className="font-display font-bold text-white text-base leading-tight group-hover:text-violet-400 transition-colors">
+      <h3 className="font-display font-bold text-ink-800 text-base leading-tight group-hover:text-blue-500 transition-colors">
         {salle.nom}
       </h3>
       {salle.matiere && <p className="text-xs text-violet-400 font-medium">📖 {salle.matiere}</p>}
-      <p className="text-sm text-slate-500 flex-1 line-clamp-2">{salle.description || 'Aucune description.'}</p>
-      <div className="flex items-center justify-between pt-3 border-t border-ink-700 text-xs text-slate-500">
+      <p className="text-sm text-ink-600 flex-1 line-clamp-2">{salle.description || 'Aucune description.'}</p>
+      <div className="flex items-center justify-between pt-3 border-t border-gold-200 text-xs text-navy-500">
         <span>👥 {salle.nb_participants} participants</span>
         <span>par {salle.createur_nom}</span>
       </div>
       <div>
         {estMembre ? (
-          <Btn size="sm" className="w-full justify-center" onClick={() => onOuvrir(salle)}>
+          <Btn size="sm" className="w-full justify-center" style={{color:"#fff"}} onClick={() => onOuvrir(salle)}>
             🚪 Entrer dans la salle
           </Btn>
         ) : isPrivee ? (
           <Btn size="sm" variant="secondary" className="w-full justify-center"
+            style={{color: demandeEnvoyee ? undefined : "#fff"}}
             disabled={demandeEnvoyee}
             onClick={() => onDemanderInvitation(salle)}>
             {demandeEnvoyee ? '⏳ Demande envoyée' : '✉️ Demander une invitation'}
@@ -56,7 +57,7 @@ const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir, userRol
               {demandeEnvoyee ? '⏳ Demande envoyée' : '📨 Demander à rejoindre'}
             </Btn>
           ) : (
-            <Btn size="sm" className="w-full justify-center"
+            <Btn size="sm" className="w-full justify-center" style={{color:"#fff"}}
               onClick={() => onRejoindre(salle)}>
               ➕ Rejoindre
             </Btn>

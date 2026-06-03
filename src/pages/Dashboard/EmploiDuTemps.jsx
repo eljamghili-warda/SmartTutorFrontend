@@ -75,7 +75,7 @@ export default function EmploiDuTemps() {
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <Btn variant="secondary" size="sm" onClick={() => setWeekStart(d => addDays(d, -7))}>← Préc.</Btn>
-            <span className="font-display font-bold text-sm text-white min-w-[200px] text-center">
+            <span className="font-display font-bold text-sm text-ink-800 min-w-[200px] text-center">
               {format(weekStart, 'dd MMM', { locale: fr })} – {format(addDays(weekStart, 6), 'dd MMM yyyy', { locale: fr })}
             </span>
             <Btn variant="secondary" size="sm" onClick={() => setWeekStart(d => addDays(d, 7))}>Suiv. →</Btn>
@@ -116,7 +116,7 @@ export default function EmploiDuTemps() {
                   <div className={`px-2 py-2.5 text-center border-b flex-shrink-0
                     ${isToday ? 'border-violet-500/30 bg-violet-600/10' : 'border-ink-700 bg-ink-900'}`}>
                     <p className="text-xs font-semibold text-slate-500 uppercase">{JOURS[i]}</p>
-                    <p className={`font-display font-bold text-lg mt-0.5 ${isToday ? 'text-violet-400' : 'text-slate-200'}`}>
+                    <p className={`font-display font-bold text-lg mt-0.5 ${isToday ? 'text-violet-400' : 'text-ink-600'}`}>
                       {format(day, 'd')}
                     </p>
                   </div>
@@ -127,7 +127,7 @@ export default function EmploiDuTemps() {
                       const cfg = statutConfig[s.statut] || statutConfig.PLANIFIEE
                       return (
                         <div key={s.id} className={`rounded-lg p-2 border ${cfg.bg} ${cfg.border} flex flex-col gap-1`}>
-                          <p className="text-xs font-bold text-slate-200 leading-tight line-clamp-2">{s.titre}</p>
+                          <p className="text-xs font-bold text-ink-600 leading-tight line-clamp-2">{s.titre}</p>
                           <p className="text-xs text-slate-500">{format(new Date(s.date_debut), 'HH:mm')} · {s.duree}min</p>
                           {s.salle_nom && <p className="text-xs text-slate-600 truncate">🏠 {s.salle_nom}</p>}
                           <p className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</p>
@@ -137,7 +137,7 @@ export default function EmploiDuTemps() {
                           {!isTuteur && s.statut === 'PLANIFIEE' && s.statut_paiement !== 'PAYE' && (
                             <button
                               onClick={() => setPaiementSeanceId(s.id)}
-                              className="mt-1 w-full text-xs font-bold py-1 px-2 rounded-md bg-violet-600/80 hover:bg-violet-600 text-white transition-colors"
+                              className="mt-1 w-full text-xs font-bold py-1 px-2 rounded-md bg-violet-600/80 hover:bg-violet-600 text-ink-800 transition-colors"
                             >
                               💳 Payer
                             </button>

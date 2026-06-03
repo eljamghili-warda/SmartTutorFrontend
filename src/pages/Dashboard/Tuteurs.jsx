@@ -17,7 +17,7 @@ const TuteurCardEtudiant = ({ t, onEval }) => {
       <div className="flex items-center gap-3">
         <Avatar user={t} size="lg" />
         <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-white truncate">{t.prenom} {t.nom}</p>
+          <p className="font-display font-bold text-ink-800 truncate">{t.prenom} {t.nom}</p>
           <Stars note={t.note_moyenne || 0} />
           <p className="text-xs text-slate-500 mt-0.5">
             ⭐ {t.note_moyenne ? Number(t.note_moyenne).toFixed(1) : 'Non évalué'}
@@ -73,7 +73,7 @@ const TuteurCardTuteur = ({ t }) => {
       <div className="flex items-center gap-3">
         <Avatar user={t} size="lg" />
         <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-white truncate">{t.prenom} {t.nom}</p>
+          <p className="font-display font-bold text-ink-800 truncate">{t.prenom} {t.nom}</p>
           <Stars note={t.note_moyenne || 0} />
           <p className="text-xs text-slate-500 mt-0.5">
             ⭐ {t.note_moyenne ? Number(t.note_moyenne).toFixed(1) : 'Non évalué'}

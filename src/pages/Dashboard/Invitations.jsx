@@ -73,7 +73,7 @@ export default function Invitations() {
           {/* Infos salle */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-display font-bold text-white">{inv.salle_nom}</p>
+              <p className="font-display font-bold text-ink-800">{inv.salle_nom}</p>
               <Badge variant={isTuteurInvit ? 'primary' : 'default'}>
                 {isTuteurInvit ? 'Invitation tuteur' : 'Invitation membre'}
               </Badge>
@@ -110,14 +110,14 @@ export default function Invitations() {
               {inv.matiere && (
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs text-slate-500">Matière</span>
-                  <span className="text-sm font-semibold text-white">📚 {inv.matiere}</span>
+                  <span className="text-sm font-semibold text-ink-800">📚 {inv.matiere}</span>
                 </div>
               )}
               {/* Durée */}
               {inv.duree_heures && (
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs text-slate-500">Durée prévue</span>
-                  <span className="text-sm font-semibold text-white">
+                  <span className="text-sm font-semibold text-ink-800">
                     ⏱ {inv.duree_heures}h
                     <span className="text-slate-500 text-xs ml-1">
                       ({inv.duree_heures === 1 ? '1 heure' : `${inv.duree_heures} heures`})
@@ -196,7 +196,7 @@ export default function Invitations() {
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2
-                ${tab === t.id ? 'bg-violet-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}>
+                ${tab === t.id ? 'bg-violet-600 text-ink-800 shadow' : 'text-slate-400 hover:text-ink-600'}`}>
               {t.label}
               {t.count > 0 && (
                 <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold

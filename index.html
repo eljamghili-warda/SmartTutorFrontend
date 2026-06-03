@@ -234,12 +234,22 @@
     .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
 
     /* ── Text-white fix: inside white cards/modals → navy ───── */
-    /* Cards and content areas — sauf la sidebar qui utilise des styles inline */
+    /* FIX GLOBAL: text-white dans main content (pas sidebar) → navy foncé */
+    main .text-white,
+    main h1.text-white, main h2.text-white, main h3.text-white,
+    main p.text-white, main span.text-white,
     .bg-ink-800 .text-white,
     .bg-ink-800 h3.text-white,
     .bg-ink-800 h2.text-white,
     .bg-ink-800 .font-bold.text-white,
-    .bg-ink-800 .font-semibold.text-white { color: #0A1628 !important; }
+    .bg-ink-800 .font-semibold.text-white,
+    .bg-white .text-white { color: #0A1628 !important; }
+    
+    /* Boutons dans les cards — garder text-white sur les boutons */
+    main button.text-white,
+    main a.text-white,
+    main [class*="bg-navy"] .text-white,
+    main [class*="bg-violet"] .text-white { color: #FFFFFF !important; }
 
     .bg-ink-700\/40 .text-slate-200,
     .bg-ink-700\/50 .text-slate-200 { color: #1E3A6E !important; }
