@@ -61,9 +61,9 @@ export default function MesTarifs() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f0f1a' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0f0f1a' }}>
       <Header />
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 16px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '32px 16px' }}><div style={{ maxWidth: 720, margin: '0 auto' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
@@ -156,7 +156,7 @@ export default function MesTarifs() {
             ))}
           </div>
         )}
-      </div>
+      </div></div>
     </div>
   )
 }

@@ -122,7 +122,7 @@ export default function MesDisponibilites() {
 
   // ── Rendu ────────────────────────────────────────────────────────────────────
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Header title="Mes disponibilités" />
       <ToastContainer toasts={toasts} />
 
@@ -417,6 +417,6 @@ export default function MesDisponibilites() {
 
         </div>
       </div>
-    </>
+    </div>
   )
 }

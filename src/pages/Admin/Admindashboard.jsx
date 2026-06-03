@@ -25,7 +25,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Header title="Vue d'ensemble" />
       <ToastContainer toasts={toasts} />
       <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
@@ -35,11 +35,30 @@ export default function AdminDashboard() {
           <>
             {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard icon="👥" value={stats?.totalUtilisateurs ?? '—'} label="Utilisateurs" color="violet" />
-              <StatCard icon="🚪" value={stats?.sallesActives ?? '—'}     label="Salles actives" color="emerald" />
-              <StatCard icon="📅" value={stats?.totalSeances ?? '—'}      label="Séances totales" color="amber" />
-              <StatCard icon="⏳" value={stats?.tuteursPendingCount ?? '—'} label="Tuteurs en attente" color="rose" />
+              <StatCard icon="👥" value={stats?.utilisateurs?.total       ?? '—'} label="Utilisateurs"      color="violet" />
+              <StatCard icon="🚪" value={stats?.salles?.actives           ?? '—'} label="Salles actives"    color="emerald" />
+              <StatCard icon="📅" value={stats?.seances?.total            ?? '—'} label="Séances totales"   color="amber" />
+              <StatCard icon="⏳" value={stats?.tuteursPending            ?? '—'} label="Tuteurs en attente" color="rose" />
             </div>
+
+            {/* Sous-stats utilisateurs */}
+            {stats?.utilisateurs && (
+              <div className="grid grid-cols-3 gap-3">
+                <StatCard icon="🎓" value={stats.utilisateurs.etudiants ?? '—'} label="Étudiants"  color="violet" />
+                <StatCard icon="👨‍🏫" value={stats.utilisateurs.tuteurs   ?? '—'} label="Tuteurs"    color="emerald" />
+                <StatCard icon="🔒" value={stats.utilisateurs.bloques   ?? '—'} label="Bloqués"    color="rose" />
+              </div>
+            )}
+
+            {/* Finances */}
+            {stats?.finances && (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard icon="💰" value={`${parseFloat(stats.finances.total_volume       || 0).toFixed(0)} DH`} label="Volume total"    color="emerald" />
+                <StatCard icon="🏦" value={`${parseFloat(stats.finances.total_commissions  || 0).toFixed(0)} DH`} label="Commissions"     color="amber" />
+                <StatCard icon="👨‍🏫" value={`${parseFloat(stats.finances.total_tuteurs     || 0).toFixed(0)} DH`} label="Gains tuteurs"   color="violet" />
+                <StatCard icon="✅" value={stats.finances.nb_paiements ?? '—'}                                      label="Paiements reçus" color="emerald" />
+              </div>
+            )}
 
             {/* Pending tuteurs */}
             {pending.length > 0 && (
@@ -84,6 +103,6 @@ export default function AdminDashboard() {
           </>
         )}
       </div>
-    </>
+    </div>
   )
 }
