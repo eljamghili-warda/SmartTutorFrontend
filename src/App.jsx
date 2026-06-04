@@ -28,13 +28,14 @@ import AdminTuteurs      from './pages/Admin/AdminTuteurs'
 import AdminSalles       from './pages/Admin/AdminSalles'
 import AdminSeances      from './pages/Admin/AdminSeances'
 import AdminRevenus      from './pages/Admin/AdminRevenus'
+import Landing           from './pages/Landing/Landing'
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/"     element={<Navigate to="/auth" replace />} />
+          <Route path="/"     element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
 
           {/* ── Plein écran sans sidebar ── */}
