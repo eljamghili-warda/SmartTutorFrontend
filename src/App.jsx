@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { NotifProvider } from './context/NotifContext'
 
 import Auth              from './pages/Auth/Auth'
 import DashboardLayout   from './components/DashboardLayout/DashboardLayout'
@@ -33,6 +34,7 @@ import Landing           from './pages/Landing/Landing'
 function App() {
   return (
     <AuthProvider>
+      <NotifProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/"     element={<Landing />} />
@@ -72,6 +74,7 @@ function App() {
           <Route path="*" element={<Navigate to="/auth" replace />} />
         </Routes>
       </BrowserRouter>
+      </NotifProvider>
     </AuthProvider>
   )
 }
