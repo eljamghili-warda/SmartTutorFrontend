@@ -4,40 +4,27 @@ import Header from '../../components/Header/Header'
 import { Btn, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
 const JOURS = [
-  { id: 1, court: 'Lun', long: 'Lundi' },
-  { id: 2, court: 'Mar', long: 'Mardi' },
-  { id: 3, court: 'Mer', long: 'Mercredi' },
-  { id: 4, court: 'Jeu', long: 'Jeudi' },
-  { id: 5, court: 'Ven', long: 'Vendredi' },
-  { id: 6, court: 'Sam', long: 'Samedi' },
-  { id: 7, court: 'Dim', long: 'Dimanche' },
+  { id:1, court:'Lun', long:'Lundi'    },
+  { id:2, court:'Mar', long:'Mardi'    },
+  { id:3, court:'Mer', long:'Mercredi' },
+  { id:4, court:'Jeu', long:'Jeudi'    },
+  { id:5, court:'Ven', long:'Vendredi' },
+  { id:6, court:'Sam', long:'Samedi'   },
+  { id:7, court:'Dim', long:'Dimanche' },
 ]
+const HEURES = Array.from({ length: 18 }, (_, i) => `${String(i + 6).padStart(2, '0')}:00`)
 
-// Créneaux horaires disponibles (de 6h à 23h)
-const HEURES = Array.from({ length: 18 }, (_, i) => {
-  const h = i + 6
-  return `${String(h).padStart(2, '0')}:00`
-})
-
-const s = (val) => ({ style: val })
-
-// ─── Composant principal ──────────────────────────────────────────────────────
 export default function MesDisponibilites() {
-  const [dispos, setDispos]     = useState([])   // { id, jour_semaine, heure_debut, heure_fin }
-  const [loading, setLoading]   = useState(true)
-  const [saving, setSaving]     = useState(false)
+  const [dispos,   setDispos]   = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [saving,   setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(null)
-
-  // Formulaire d'ajout
-  const [form, setForm] = useState({ jourSemaine: 1, heureDebut: '09:00', heureFin: '12:00' })
   const [showForm, setShowForm] = useState(false)
-  const [formError, setFormError] = useState('')
-
+  const [form,     setForm]     = useState({ jourSemaine: 1, heureDebut: '09:00', heureFin: '12:00' })
+  const [formErr,  setFormErr]  = useState('')
   const { toasts, success, error } = useToast()
 
-  // ── Chargement ──────────────────────────────────────────────────────────────
   const load = () => {
     setLoading(true)
     seancesAPI.getDisponibilites()
@@ -45,358 +32,233 @@ export default function MesDisponibilites() {
       .catch(() => error('Impossible de charger vos disponibilités'))
       .finally(() => setLoading(false))
   }
-
   useEffect(() => { load() }, [])
 
-  // ── Validation formulaire ───────────────────────────────────────────────────
   const validate = () => {
-    if (form.heureDebut >= form.heureFin)
-      return "L'heure de fin doit être après l'heure de début"
-
-    const dureeMin = (parseInt(form.heureFin) - parseInt(form.heureDebut)) * 60
-    if (form.heureFin.split(':')[0] * 60 + parseInt(form.heureFin.split(':')[1])
-      - form.heureDebut.split(':')[0] * 60 - parseInt(form.heureDebut.split(':')[1]) < 30)
-      return 'La plage doit durer au moins 30 minutes'
-
-    // Chevauchement avec une dispo existante le même jour
+    if (form.heureDebut >= form.heureFin) return "L'heure de fin doit être après l'heure de début"
+    const [dh, dm] = form.heureDebut.split(':').map(Number)
+    const [fh, fm] = form.heureFin.split(':').map(Number)
+    if ((fh * 60 + fm) - (dh * 60 + dm) < 30) return 'La plage doit durer au moins 30 minutes'
     const conflict = dispos.find(d => {
       if (d.jour_semaine !== form.jourSemaine) return false
-      const existDebut = d.heure_debut.slice(0, 5)
-      const existFin   = d.heure_fin.slice(0, 5)
-      return form.heureDebut < existFin && form.heureFin > existDebut
+      return form.heureDebut < d.heure_fin.slice(0, 5) && form.heureFin > d.heure_debut.slice(0, 5)
     })
-    if (conflict)
-      return `Chevauchement avec une disponibilité existante (${conflict.heure_debut.slice(0,5)}–${conflict.heure_fin.slice(0,5)})`
-
+    if (conflict) return `Chevauchement avec ${conflict.heure_debut.slice(0,5)}–${conflict.heure_fin.slice(0,5)}`
     return null
   }
 
-  // ── Ajouter ─────────────────────────────────────────────────────────────────
   const handleAjouter = async () => {
-    setFormError('')
+    setFormErr('')
     const err = validate()
-    if (err) { setFormError(err); return }
-
+    if (err) { setFormErr(err); return }
     setSaving(true)
     try {
-      await seancesAPI.setDisponibilite({
-        jourSemaine: form.jourSemaine,
-        heureDebut:  form.heureDebut,
-        heureFin:    form.heureFin,
-      })
+      await seancesAPI.setDisponibilite({ jourSemaine: form.jourSemaine, heureDebut: form.heureDebut, heureFin: form.heureFin })
       success('Disponibilité ajoutée !')
       setShowForm(false)
       setForm({ jourSemaine: 1, heureDebut: '09:00', heureFin: '12:00' })
       load()
-    } catch (e) {
-      error(e.response?.data?.error || 'Erreur lors de l\'ajout')
-    } finally {
-      setSaving(false)
-    }
+    } catch (e) { error(e.response?.data?.error || 'Erreur') }
+    finally { setSaving(false) }
   }
 
-  // ── Supprimer ────────────────────────────────────────────────────────────────
   const handleSupprimer = async (id) => {
     setDeleting(id)
     try {
       await seancesAPI.deleteDisponibilite(id)
       success('Disponibilité supprimée')
       setDispos(prev => prev.filter(d => d.id !== id))
-    } catch {
-      error('Erreur lors de la suppression')
-    } finally {
-      setDeleting(null)
-    }
+    } catch { error('Erreur suppression') }
+    finally { setDeleting(null) }
   }
 
-  // ── Grouper par jour pour l'affichage ────────────────────────────────────────
   const disposByJour = JOURS.map(j => ({
     ...j,
-    plages: dispos
-      .filter(d => d.jour_semaine === j.id)
-      .sort((a, b) => a.heure_debut.localeCompare(b.heure_debut)),
+    plages: dispos.filter(d => d.jour_semaine === j.id)
+                  .sort((a, b) => a.heure_debut.localeCompare(b.heure_debut)),
   }))
 
-  const totalPlages = dispos.length
-  const joursActifs = new Set(dispos.map(d => d.jour_semaine)).size
+  const duree = (debut, fin) => {
+    const [dh, dm] = debut.split(':').map(Number)
+    const [fh, fm] = fin.split(':').map(Number)
+    const tot = (fh * 60 + fm) - (dh * 60 + dm)
+    return tot >= 60 ? `${Math.floor(tot/60)}h${tot % 60 ? String(tot % 60).padStart(2,'0') : ''}` : `${tot}min`
+  }
 
-  // ── Rendu ────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="flex flex-col h-full">
       <Header title="Mes disponibilités" />
       <ToastContainer toasts={toasts} />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px' }}>
-        <div style={{ maxWidth: 820, margin: '0 auto' }}>
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-3xl mx-auto flex flex-col gap-4">
 
           {/* ── En-tête ── */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 16, flexWrap: 'wrap' }}>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 style={{ fontWeight: 900, fontSize: 22, color: '#fff', marginBottom: 4 }}>
-                🗓️ Mes disponibilités
-              </h1>
-              <p style={{ color: '#64748b', fontSize: 13, lineHeight: 1.6 }}>
-                Définissez vos créneaux disponibles. Les étudiants pourront planifier des séances uniquement sur ces plages horaires.
+              <h1 className="font-bold text-xl text-ink-800">🗓️ Mes disponibilités</h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Définissez vos créneaux disponibles. Les étudiants planifient des séances uniquement sur ces plages.
               </p>
             </div>
-            <Btn onClick={() => { setShowForm(true); setFormError('') }}>
-              + Ajouter une plage
-            </Btn>
+            <Btn onClick={() => { setShowForm(true); setFormErr('') }}>+ Ajouter une plage</Btn>
           </div>
 
           {/* ── Stats rapides ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+          <div className="grid grid-cols-3 gap-3">
             {[
-              { icon: '📅', val: joursActifs, label: 'Jours actifs', color: '#7c3aed' },
-              { icon: '⏰', val: totalPlages, label: 'Plages définies', color: '#0ea5e9' },
-              { icon: '✅', val: totalPlages > 0 ? 'Actif' : 'Inactif', label: 'Statut planning', color: totalPlages > 0 ? '#10b981' : '#ef4444' },
+              { icon: '📅', val: new Set(dispos.map(d => d.jour_semaine)).size, label: 'Jours actifs'    },
+              { icon: '⏰', val: dispos.length,                                  label: 'Plages définies' },
+              { icon: '✅', val: dispos.length > 0 ? 'Actif' : 'Inactif',       label: 'Statut planning',
+                color: dispos.length > 0 ? 'text-emerald-600' : 'text-rose-500' },
             ].map(s => (
-              <div key={s.label} style={{ background: '#13131f', border: '1px solid #2d2d4a', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 24 }}>{s.icon}</span>
+              <div key={s.label} className="rounded-xl border border-blue-200 bg-white shadow-sm px-4 py-3 flex items-center gap-3">
+                <span className="text-2xl">{s.icon}</span>
                 <div>
-                  <div style={{ fontWeight: 900, fontSize: 22, color: s.color }}>{s.val}</div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>{s.label}</div>
+                  <p className={`font-black text-lg ${s.color || 'text-ink-800'}`}>{s.val}</p>
+                  <p className="text-xs text-slate-500">{s.label}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* ── Alerte si aucune dispo ── */}
+          {/* ── Alerte aucune dispo ── */}
           {!loading && dispos.length === 0 && (
-            <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 14, padding: '16px 20px', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 22 }}>⚠️</span>
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 flex gap-3 items-start">
+              <span className="text-xl">⚠️</span>
               <div>
-                <p style={{ fontWeight: 700, color: '#fbbf24', fontSize: 14, marginBottom: 4 }}>
-                  Aucune disponibilité définie
-                </p>
-                <p style={{ color: '#92400e', fontSize: 13, lineHeight: 1.5 }}>
-                  Vous ne pouvez pas planifier de séances tant que vous n'avez pas défini vos créneaux disponibles. Cliquez sur <strong style={{ color: '#fbbf24' }}>+ Ajouter une plage</strong> pour commencer.
-                </p>
+                <p className="font-bold text-amber-700 text-sm">Aucune disponibilité définie</p>
+                <p className="text-amber-600 text-xs mt-0.5">Cliquez sur <strong>+ Ajouter une plage</strong> pour commencer.</p>
               </div>
             </div>
           )}
 
-          {/* ── Formulaire d'ajout ── */}
+          {/* ── Formulaire ── */}
           {showForm && (
-            <div style={{ background: '#13131f', border: '1px solid #7c3aed55', borderRadius: 16, padding: 20, marginBottom: 24, boxShadow: '0 0 0 1px rgba(124,58,237,0.1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-                <h3 style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>➕ Nouvelle plage de disponibilité</h3>
-                <button onClick={() => setShowForm(false)} style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}>✕</button>
+            <div className="rounded-2xl border border-blue-300 bg-white shadow-sm p-5 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-ink-800">➕ Nouvelle plage</h3>
+                <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
               </div>
 
-              {/* Sélection du jour — visuels style Preply */}
-              <div style={{ marginBottom: 18 }}>
-                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Jour de la semaine
-                </label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {/* Jours */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Jour de la semaine</label>
+                <div className="flex gap-2 flex-wrap">
                   {JOURS.map(j => (
-                    <button
-                      key={j.id}
-                      type="button"
+                    <button key={j.id} type="button"
                       onClick={() => setForm(f => ({ ...f, jourSemaine: j.id }))}
-                      style={{
-                        padding: '8px 14px',
-                        borderRadius: 10,
-                        border: form.jourSemaine === j.id
-                          ? '2px solid #7c3aed'
-                          : '2px solid #2d2d4a',
-                        background: form.jourSemaine === j.id
-                          ? 'rgba(124,58,237,0.15)'
-                          : 'transparent',
-                        color: form.jourSemaine === j.id ? '#a78bfa' : '#64748b',
-                        fontWeight: form.jourSemaine === j.id ? 700 : 500,
-                        fontSize: 13,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {j.long}
-                    </button>
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border
+                        ${form.jourSemaine === j.id
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-slate-600 border-blue-200 hover:border-blue-400'}`}
+                    >{j.long}</button>
                   ))}
                 </div>
               </div>
 
               {/* Heures */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Heure de début
-                  </label>
-                  <select
-                    value={form.heureDebut}
-                    onChange={e => setForm(f => ({ ...f, heureDebut: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, background: '#0f0f1a', border: '1px solid #2d2d4a', color: '#e2e8f0', fontSize: 14, outline: 'none', cursor: 'pointer' }}
-                  >
-                    {HEURES.map(h => <option key={h} value={h}>{h}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Heure de fin
-                  </label>
-                  <select
-                    value={form.heureFin}
-                    onChange={e => setForm(f => ({ ...f, heureFin: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, background: '#0f0f1a', border: '1px solid #2d2d4a', color: '#e2e8f0', fontSize: 14, outline: 'none', cursor: 'pointer' }}
-                  >
-                    {HEURES.filter(h => h > form.heureDebut).map(h => <option key={h} value={h}>{h}</option>)}
-                  </select>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  ['heureDebut', 'Heure de début', HEURES],
+                  ['heureFin',   'Heure de fin',   HEURES.filter(h => h > form.heureDebut)],
+                ].map(([key, lbl, opts]) => (
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{lbl}</label>
+                    <select
+                      value={form[key]}
+                      onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                      className="w-full px-3 py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-ink-800 text-sm outline-none focus:border-blue-400 focus:bg-white transition-colors"
+                    >
+                      {opts.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                ))}
               </div>
 
-              {/* Aperçu */}
+              {/* Aperçu durée */}
               {form.heureDebut < form.heureFin && (
-                <div style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#a78bfa' }}>
-                  📋 <strong>{JOURS.find(j => j.id === form.jourSemaine)?.long}</strong> de <strong>{form.heureDebut}</strong> à <strong>{form.heureFin}</strong>
-                  {' '}— durée : <strong>
-                    {(() => {
-                      const [dh, dm] = form.heureDebut.split(':').map(Number)
-                      const [fh, fm] = form.heureFin.split(':').map(Number)
-                      const total = (fh * 60 + fm) - (dh * 60 + dm)
-                      return total >= 60 ? `${Math.floor(total/60)}h${total%60 ? String(total%60).padStart(2,'0') : ''}` : `${total}min`
-                    })()}
-                  </strong>
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                  📋 <strong>{JOURS.find(j => j.id === form.jourSemaine)?.long}</strong> de <strong>{form.heureDebut}</strong> à <strong>{form.heureFin}</strong> — durée : <strong>{duree(form.heureDebut, form.heureFin)}</strong>
                 </div>
               )}
 
               {/* Erreur */}
-              {formError && (
-                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#f87171', fontSize: 13 }}>
-                  ⚠️ {formError}
+              {formErr && (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+                  ⚠️ {formErr}
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: 10 }}>
-                <Btn onClick={handleAjouter} disabled={saving}>
-                  {saving ? '…' : '✅ Enregistrer'}
-                </Btn>
-                <Btn variant="secondary" onClick={() => { setShowForm(false); setFormError('') }}>
-                  Annuler
-                </Btn>
+              <div className="flex gap-2">
+                <Btn onClick={handleAjouter} disabled={saving}>{saving ? '…' : '✅ Enregistrer'}</Btn>
+                <Btn variant="secondary" onClick={() => { setShowForm(false); setFormErr('') }}>Annuler</Btn>
               </div>
             </div>
           )}
 
-          {/* ── Grille des disponibilités style Preply ── */}
+          {/* ── Grille disponibilités ── */}
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-              <Spinner size="lg" />
-            </div>
+            <div className="flex justify-center py-16"><Spinner /></div>
           ) : (
-            <div style={{ background: '#13131f', border: '1px solid #2d2d4a', borderRadius: 16, overflow: 'hidden' }}>
-              {/* En-tête grille */}
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 80px', padding: '12px 20px', background: '#0f0f1a', borderBottom: '1px solid #2d2d4a' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Jour</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Plages horaires</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Actions</span>
+            <div className="rounded-2xl border border-blue-200 bg-white shadow-sm overflow-hidden">
+
+              {/* Header tableau */}
+              <div className="grid grid-cols-[140px_1fr_48px] px-5 py-2.5 bg-blue-50 border-b border-blue-200">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Jour</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Plages horaires</span>
+                <span></span>
               </div>
 
-              {/* Lignes par jour */}
               {disposByJour.map((jour, idx) => (
-                <div
-                  key={jour.id}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '120px 1fr 80px',
-                    padding: '14px 20px',
-                    borderBottom: idx < 6 ? '1px solid #1e1e35' : 'none',
-                    alignItems: 'center',
-                    background: jour.plages.length > 0 ? 'transparent' : 'transparent',
-                    minHeight: 56,
-                  }}
+                <div key={jour.id}
+                  className={`grid grid-cols-[140px_1fr_48px] items-center px-5 py-3 min-h-[52px]
+                    ${idx < 6 ? 'border-b border-blue-100' : ''}
+                    ${jour.plages.length > 0 ? 'bg-blue-50/30' : 'bg-white'}`}
                 >
                   {/* Jour */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: 8,
-                      background: jour.plages.length > 0 ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${jour.plages.length > 0 ? 'rgba(124,58,237,0.4)' : '#2d2d4a'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 800,
-                      color: jour.plages.length > 0 ? '#a78bfa' : '#475569',
-                    }}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0
+                      ${jour.plages.length > 0 ? 'bg-blue-100 border border-blue-200 text-blue-700' : 'bg-slate-100 border border-slate-200 text-slate-400'}`}>
                       {jour.court}
                     </div>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: jour.plages.length > 0 ? '#e2e8f0' : '#475569' }}>
-                        {jour.long}
-                      </p>
+                      <p className={`text-sm font-semibold ${jour.plages.length > 0 ? 'text-ink-800' : 'text-slate-400'}`}>{jour.long}</p>
                       {jour.plages.length > 0 && (
-                        <p style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
-                          {jour.plages.length} plage{jour.plages.length > 1 ? 's' : ''}
-                        </p>
+                        <p className="text-xs text-slate-400">{jour.plages.length} plage{jour.plages.length > 1 ? 's' : ''}</p>
                       )}
                     </div>
                   </div>
 
                   {/* Plages */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div className="flex flex-wrap gap-2">
                     {jour.plages.length === 0 ? (
-                      <span style={{ fontSize: 12, color: '#334155', fontStyle: 'italic' }}>
-                        Aucune disponibilité
-                      </span>
-                    ) : jour.plages.map(p => {
-                      const [dh, dm] = p.heure_debut.slice(0,5).split(':').map(Number)
-                      const [fh, fm] = p.heure_fin.slice(0,5).split(':').map(Number)
-                      const dureeMin = (fh*60+fm) - (dh*60+dm)
-                      const dureeStr = dureeMin >= 60
-                        ? `${Math.floor(dureeMin/60)}h${dureeMin%60 ? String(dureeMin%60).padStart(2,'0') : ''}`
-                        : `${dureeMin}min`
-
-                      return (
-                        <div
-                          key={p.id}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            padding: '6px 12px',
-                            borderRadius: 20,
-                            background: 'rgba(124,58,237,0.12)',
-                            border: '1px solid rgba(124,58,237,0.3)',
-                          }}
+                      <span className="text-xs text-slate-300 italic">Aucune</span>
+                    ) : jour.plages.map(p => (
+                      <div key={p.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-100 border border-blue-200">
+                        <span className="text-xs font-bold text-blue-700">
+                          {p.heure_debut.slice(0,5)} – {p.heure_fin.slice(0,5)}
+                        </span>
+                        <span className="text-xs text-slate-400 bg-white/60 px-1.5 rounded-full">
+                          {duree(p.heure_debut.slice(0,5), p.heure_fin.slice(0,5))}
+                        </span>
+                        <button
+                          onClick={() => handleSupprimer(p.id)}
+                          disabled={deleting === p.id}
+                          className="text-rose-400 hover:text-rose-600 text-xs ml-0.5 disabled:opacity-40"
                         >
-                          <span style={{ fontSize: 13, fontWeight: 700, color: '#a78bfa' }}>
-                            {p.heure_debut.slice(0,5)} – {p.heure_fin.slice(0,5)}
-                          </span>
-                          <span style={{ fontSize: 11, color: '#64748b', background: 'rgba(0,0,0,0.2)', padding: '1px 6px', borderRadius: 10 }}>
-                            {dureeStr}
-                          </span>
-                          <button
-                            onClick={() => handleSupprimer(p.id)}
-                            disabled={deleting === p.id}
-                            style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              color: '#ef4444', fontSize: 14, padding: '0 2px',
-                              opacity: deleting === p.id ? 0.4 : 0.6,
-                              lineHeight: 1,
-                            }}
-                            title="Supprimer"
-                          >
-                            {deleting === p.id ? '…' : '✕'}
-                          </button>
-                        </div>
-                      )
-                    })}
+                          {deleting === p.id ? '…' : '✕'}
+                        </button>
+                      </div>
+                    ))}
                   </div>
 
-                  {/* Bouton ajouter sur la ligne */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  {/* Bouton + rapide */}
+                  <div className="flex justify-end">
                     <button
-                      onClick={() => {
-                        setForm(f => ({ ...f, jourSemaine: jour.id }))
-                        setShowForm(true)
-                        setFormError('')
-                      }}
-                      style={{
-                        background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)',
-                        color: '#7c3aed', borderRadius: 8, padding: '5px 10px',
-                        cursor: 'pointer', fontSize: 16, fontWeight: 700,
-                        transition: 'all 0.15s',
-                      }}
-                      title={`Ajouter un créneau pour ${jour.long}`}
-                    >
-                      +
-                    </button>
+                      onClick={() => { setForm(f => ({ ...f, jourSemaine: jour.id })); setShowForm(true); setFormErr('') }}
+                      className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 transition-colors flex items-center justify-center text-lg font-bold"
+                    >+</button>
                   </div>
                 </div>
               ))}
@@ -405,12 +267,12 @@ export default function MesDisponibilites() {
 
           {/* ── Conseils ── */}
           {!loading && (
-            <div style={{ marginTop: 20, background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: 14, padding: '16px 20px' }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8', marginBottom: 8 }}>💡 Conseils</p>
-              <ul style={{ fontSize: 12, color: '#64748b', lineHeight: 1.8, paddingLeft: 16, margin: 0 }}>
-                <li>Les étudiants ne peuvent planifier une séance <strong style={{ color: '#94a3b8' }}>que dans vos créneaux disponibles</strong>.</li>
-                <li>Vous pouvez avoir <strong style={{ color: '#94a3b8' }}>plusieurs plages</strong> le même jour (ex: 9h–12h et 14h–18h).</li>
-                <li>Une séance planifiée dans un créneau le <strong style={{ color: '#94a3b8' }}>bloque automatiquement</strong> pour éviter les doublons.</li>
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              <p className="font-bold mb-1">💡 Conseils</p>
+              <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+                <li>Les étudiants planifient <strong>uniquement dans vos créneaux disponibles</strong>.</li>
+                <li>Vous pouvez avoir <strong>plusieurs plages</strong> le même jour (ex: 9h–12h et 14h–18h).</li>
+                <li>Une séance planifiée <strong>bloque automatiquement</strong> le créneau.</li>
               </ul>
             </div>
           )}

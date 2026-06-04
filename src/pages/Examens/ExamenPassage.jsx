@@ -32,8 +32,8 @@ function ProgressBar({ current, total }) {
   const pct = total > 0 ? Math.round((current / total) * 100) : 0
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 h-2 bg-ink-700 rounded-full overflow-hidden">
-        <div className="h-full bg-violet-500 transition-all duration-300 rounded-full"
+      <div className="flex-1 h-2 bg-blue-100 rounded-full overflow-hidden">
+        <div className="h-full bg-blue-600 transition-all duration-300 rounded-full"
           style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs text-slate-500 flex-shrink-0">{current}/{total}</span>
@@ -157,7 +157,7 @@ export default function ExamenPassage() {
 
   // ─── Écran de chargement / erreur ─────────────────────────────────────────
   if (phase === 'loading') return (
-    <div className="min-h-screen bg-ink-950 flex items-center justify-center">
+    <div className="min-h-screen bg-blue-50 flex items-center justify-center">
       {error ? (
         <div className="text-center p-8">
           <p className="text-rose-400 text-lg mb-4">{error}</p>
@@ -169,12 +169,12 @@ export default function ExamenPassage() {
 
   // ─── Confirmation avant démarrage ─────────────────────────────────────────
   if (phase === 'confirm') return (
-    <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
-      <div className="bg-ink-800 border border-ink-600 rounded-3xl p-8 max-w-md w-full">
+    <div className="min-h-screen bg-blue-50 flex items-center justify-center p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-3xl p-8 max-w-md w-full">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-3xl mx-auto mb-4">📝</div>
+          <div className="w-16 h-16 rounded-2xl bg-blue-700/20 border border-violet-500/30 flex items-center justify-center text-3xl mx-auto mb-4">📝</div>
           <h1 className="text-xl font-bold text-slate-100">{examen?.titre}</h1>
-          <p className="text-sm text-slate-400 mt-1">{examen?.description}</p>
+          <p className="text-sm text-slate-500 mt-1">{examen?.description}</p>
         </div>
 
         {error && (
@@ -190,7 +190,7 @@ export default function ExamenPassage() {
             { icon: '❓', label: 'Questions',     value: examen?.questions?.length ?? '—' },
             { icon: '🔁', label: 'Tentatives max',value: examen?.max_tentatives || 'Illimité' },
           ].map(({ icon, label, value }) => (
-            <div key={label} className="bg-ink-700 rounded-2xl p-3 text-center">
+            <div key={label} className="bg-blue-100 rounded-2xl p-3 text-center">
               <p className="text-lg">{icon}</p>
               <p className="text-sm font-bold text-slate-100 mt-1">{value}</p>
               <p className="text-xs text-slate-500">{label}</p>
@@ -212,8 +212,8 @@ export default function ExamenPassage() {
 
   // ─── Résultat ─────────────────────────────────────────────────────────────
   if (phase === 'result') return (
-    <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
-      <div className="bg-ink-800 border border-ink-600 rounded-3xl p-8 max-w-md w-full text-center">
+    <div className="min-h-screen bg-blue-50 flex items-center justify-center p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-3xl p-8 max-w-md w-full text-center">
         <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4
           ${result?.reussi ? 'bg-emerald-500/20 border-2 border-emerald-500/40' : 'bg-rose-500/20 border-2 border-rose-500/40'}`}>
           {result?.reussi ? '🏆' : '😔'}
@@ -222,18 +222,18 @@ export default function ExamenPassage() {
         <h2 className={`text-2xl font-bold mb-1 ${result?.reussi ? 'text-emerald-400' : 'text-rose-400'}`}>
           {result?.reussi ? 'Félicitations !' : 'Dommage…'}
         </h2>
-        <p className="text-slate-400 text-sm mb-6">{examen?.titre}</p>
+        <p className="text-slate-500 text-sm mb-6">{examen?.titre}</p>
 
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-ink-700 rounded-2xl p-3">
+          <div className="bg-blue-100 rounded-2xl p-3">
             <p className="text-xl font-bold text-slate-100">{result?.scoreObtenu ?? '—'}</p>
             <p className="text-xs text-slate-500">Points obtenus</p>
           </div>
-          <div className="bg-ink-700 rounded-2xl p-3">
-            <p className="text-xl font-bold text-violet-400">{parseFloat(result?.pourcentage || 0).toFixed(0)}%</p>
+          <div className="bg-blue-100 rounded-2xl p-3">
+            <p className="text-xl font-bold text-blue-700">{parseFloat(result?.pourcentage || 0).toFixed(0)}%</p>
             <p className="text-xs text-slate-500">Score</p>
           </div>
-          <div className="bg-ink-700 rounded-2xl p-3">
+          <div className="bg-blue-100 rounded-2xl p-3">
             <p className="text-xl font-bold text-slate-100">{result?.scoreMax ?? '—'}</p>
             <p className="text-xs text-slate-500">Points max</p>
           </div>
@@ -243,12 +243,12 @@ export default function ExamenPassage() {
           <div className="bg-amber-500/10 border border-amber-400/30 rounded-2xl p-4 mb-6">
             <p className="text-amber-400 font-semibold text-sm">🎓 Certificat obtenu !</p>
             <p className="text-xs text-amber-400/70 mt-1">N° {result.certificat.numero_certificat}</p>
-            <p className="text-xs text-slate-400 mt-1">Vous recevrez un email de confirmation.</p>
+            <p className="text-xs text-slate-500 mt-1">Vous recevrez un email de confirmation.</p>
           </div>
         )}
 
         {result?.resultatsVisibles === false && (
-          <div className="bg-ink-700 rounded-xl p-3 mb-4 text-xs text-slate-400">
+          <div className="bg-blue-100 rounded-xl p-3 mb-4 text-xs text-slate-500">
             ⏳ Le corrigé sera disponible le{' '}
             {new Date(result?.dateAffichageResultats).toLocaleDateString('fr-FR', {
               day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit'
@@ -272,15 +272,15 @@ export default function ExamenPassage() {
   const isListeComplete = examen?.mode_affichage === 'LISTE_COMPLETE'
 
   return (
-    <div className="min-h-screen bg-ink-950 flex flex-col">
+    <div className="min-h-screen bg-blue-50 flex flex-col">
 
       {/* Barre fixe */}
       <div className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 border-b
-        ${isUrgent ? 'bg-rose-950 border-rose-800' : 'bg-ink-900 border-ink-700'}`}>
+        ${isUrgent ? 'bg-rose-950 border-rose-800' : 'bg-white border-blue-200'}`}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-sm">📝</div>
+          <div className="w-8 h-8 rounded-xl bg-blue-700/20 border border-violet-500/30 flex items-center justify-center text-sm">📝</div>
           <div>
-            <p className="text-xs font-semibold text-slate-200 leading-none truncate max-w-48">{examen?.titre}</p>
+            <p className="text-xs font-semibold text-blue-900 leading-none truncate max-w-48">{examen?.titre}</p>
             <p className="text-xs text-slate-500 mt-0.5">{questionsRepondues}/{questions.length} répondues</p>
           </div>
         </div>
@@ -289,7 +289,7 @@ export default function ExamenPassage() {
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono font-bold text-sm
             ${isUrgent
               ? 'text-rose-400 bg-rose-500/20 border border-rose-500/30 animate-pulse'
-              : 'text-slate-200 bg-ink-800 border border-ink-600'}`}>
+              : 'text-blue-900 bg-blue-50 border border-blue-200'}`}>
             ⏱ {String(mins).padStart(2,'0')}:{String(secs).padStart(2,'0')}
           </div>
         )}
@@ -362,10 +362,10 @@ export default function ExamenPassage() {
                     <button key={q.id} onClick={() => setCurrentIdx(i)}
                       className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all
                         ${i === currentIdx
-                          ? 'bg-violet-600 text-white'
+                          ? 'bg-blue-700 text-white'
                           : reponses[String(q.id)]
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-ink-700 text-slate-400 hover:bg-ink-600'}`}>
+                            : 'bg-blue-100 text-slate-500 hover:bg-blue-200'}`}>
                       {i + 1}
                     </button>
                   ))}
@@ -379,11 +379,11 @@ export default function ExamenPassage() {
       {/* Modal confirmation fin */}
       {confirmEnd && (
         <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
-          <div className="bg-ink-800 border border-ink-600 rounded-3xl p-6 max-w-sm w-full">
+          <div className="bg-blue-50 border border-blue-200 rounded-3xl p-6 max-w-sm w-full">
             <h3 className="text-lg font-bold text-slate-100 mb-2">Terminer l'examen ?</h3>
-            <p className="text-sm text-slate-400 mb-1">
+            <p className="text-sm text-slate-500 mb-1">
               Vous avez répondu à{' '}
-              <strong className="text-slate-200">{questionsRepondues}/{questions.length}</strong> questions.
+              <strong className="text-blue-900">{questionsRepondues}/{questions.length}</strong> questions.
             </p>
             {questionsRepondues < questions.length && (
               <p className="text-xs text-amber-400 mb-4">
@@ -412,16 +412,16 @@ function QuestionBlock({ question, idx, selected, onSelect }) {
   const reponses = question.reponses || []
 
   return (
-    <div className="bg-ink-800 border border-ink-600 rounded-2xl p-5">
+    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
       {/* En-tête question */}
       <div className="flex items-start gap-3 mb-4">
-        <span className="flex-shrink-0 w-7 h-7 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-violet-400">
+        <span className="flex-shrink-0 w-7 h-7 rounded-xl bg-blue-700/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-blue-700">
           {idx + 1}
         </span>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className={`text-xs px-1.5 py-0.5 rounded font-semibold
-              ${question.type === 'QCM' ? 'bg-violet-500/20 text-violet-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
+              ${question.type === 'QCM' ? 'bg-blue-600/20 text-blue-700' : 'bg-cyan-500/20 text-cyan-400'}`}>
               {question.type}
             </span>
             <span className="text-xs text-amber-400">
@@ -446,10 +446,10 @@ function QuestionBlock({ question, idx, selected, onSelect }) {
                 onClick={() => onSelect(rId)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all border w-full
                   ${isChosen
-                    ? 'bg-violet-600/20 border-violet-500/50 text-violet-300'
-                    : 'bg-ink-700 border-ink-600 text-slate-300 hover:bg-ink-600 hover:border-slate-500'}`}>
+                    ? 'bg-blue-700/20 border-violet-500/50 text-blue-700'
+                    : 'bg-blue-100 border-blue-200 text-blue-800 hover:bg-blue-200 hover:border-slate-500'}`}>
                 <span className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
-                  ${isChosen ? 'bg-violet-500 border-violet-500' : 'border-slate-600'}`}>
+                  ${isChosen ? 'bg-blue-600 border-violet-500' : 'border-slate-600'}`}>
                   {isChosen && <span className="w-2 h-2 rounded-full bg-white" />}
                 </span>
                 <span className="flex-1">{r.texte}</span>

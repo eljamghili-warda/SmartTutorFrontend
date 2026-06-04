@@ -30,7 +30,7 @@ const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir, userRol
       <h3 className="font-display font-bold text-ink-800 text-base leading-tight group-hover:text-blue-500 transition-colors">
         {salle.nom}
       </h3>
-      {salle.matiere && <p className="text-xs text-violet-400 font-medium">📖 {salle.matiere}</p>}
+      {salle.matiere && <p className="text-xs text-blue-700 font-medium">📖 {salle.matiere}</p>}
       <p className="text-sm text-ink-600 flex-1 line-clamp-2">{salle.description || 'Aucune description.'}</p>
       <div className="flex items-center justify-between pt-3 border-t border-gold-200 text-xs text-navy-500">
         <span>👥 {salle.nb_participants} participants</span>
@@ -88,7 +88,7 @@ const CreateModal = ({ open, onClose, onCreate }) => {
               { v:'PRIVEE',   icon:'🔒', label:'Privée',   desc:'Sur invitation' }].map(t => (
               <button key={t.v} type="button" onClick={() => setForm(f => ({ ...f, type: t.v }))}
                 className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all text-left
-                  ${form.type === t.v ? 'border-violet-500 bg-violet-600/10 text-violet-400' : 'border-ink-600 text-slate-400 hover:border-ink-500'}`}>
+                  ${form.type === t.v ? 'border-violet-500 bg-blue-700/10 text-blue-700' : 'border-blue-200 text-slate-500 hover:border-blue-200'}`}>
                 <div>{t.icon} {t.label}</div>
                 <div className="text-xs font-normal mt-0.5 opacity-70">{t.desc}</div>
               </button>

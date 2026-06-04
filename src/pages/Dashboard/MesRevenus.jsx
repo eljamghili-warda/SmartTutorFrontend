@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { paiementsAPI } from '../../services/api'
-import { useAuth } from '../../context/AuthContext'
 import Header from '../../components/Header/Header'
 import { Spinner } from '../../components/UI'
 
 const STATUT = {
-  COMPLETE:  { label: 'Reçu',      color: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.3)' },
-  REMBOURSE: { label: 'Remboursé', color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.3)' },
+  COMPLETE:  { label: 'Reçu',      color: 'text-emerald-600', bg: 'bg-emerald-50',  border: 'border-emerald-200' },
+  REMBOURSE: { label: 'Remboursé', color: 'text-rose-500',    bg: 'bg-rose-50',     border: 'border-rose-200'    },
 }
 
 export default function MesRevenus() {
-  const { user } = useAuth()
-  const [data, setData]       = useState(null)
+  const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
-  const [erreur, setErreur]   = useState('')
+  const [erreur,  setErreur]  = useState('')
 
   useEffect(() => {
     paiementsAPI.getMesRevenus()
@@ -22,99 +20,102 @@ export default function MesRevenus() {
       .finally(() => setLoading(false))
   }, [])
 
-  const stats = data?.stats || {}
+  const stats     = data?.stats     || {}
   const paiements = data?.paiements || []
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0f0f1a' }}>
+    <div className="flex flex-col h-full">
       <Header title="Mes Revenus" />
-      <div style={{ flex: 1, overflowY: 'auto', maxWidth: 900, margin: '0 auto', width: '100%', padding: '32px 16px' }}>
 
-        <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontWeight: 900, fontSize: 26, color: '#fff', marginBottom: 4 }}>💰 Mes Revenus</h1>
-          <p style={{ color: '#64748b', fontSize: 14 }}>Historique de vos gains sur SmartTutor</p>
-        </div>
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-3xl mx-auto flex flex-col gap-4">
 
-        {loading && <div className="flex justify-center py-16"><Spinner /></div>}
-        {erreur && <p style={{ color: '#f87171', textAlign: 'center' }}>{erreur}</p>}
+          {/* ── Titre ── */}
+          <div>
+            <h1 className="font-bold text-xl text-ink-800">💰 Mes Revenus</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Historique de vos gains sur SmartEdu</p>
+          </div>
 
-        {!loading && data && (
-          <>
-            {/* Stats cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 28 }}>
+          {loading && <div className="flex justify-center py-16"><Spinner /></div>}
+          {erreur  && <p className="text-rose-500 text-center">{erreur}</p>}
+
+          {!loading && data && (<>
+
+            {/* ── Stats cards ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { label: 'Gains totaux', value: `${parseFloat(stats.total_gains || 0).toFixed(2)} DH`, icon: '🎉', color: '#7c3aed' },
-                { label: 'Séances payées', value: stats.nb_paiements || 0, icon: '📚', color: '#3b82f6' },
-                { label: 'Remboursements', value: `${parseFloat(stats.total_rembourse || 0).toFixed(2)} DH`, icon: '↩️', color: '#f59e0b' },
+                { label: 'Gains totaux',   value: `${parseFloat(stats.total_gains     || 0).toFixed(2)} DH`, icon: '🎉', border: 'border-t-blue-600'   },
+                { label: 'Séances payées', value:  stats.nb_paiements || 0,                                  icon: '📚', border: 'border-t-blue-400'   },
+                { label: 'Remboursements', value: `${parseFloat(stats.total_rembourse || 0).toFixed(2)} DH`, icon: '↩️', border: 'border-t-amber-400'  },
               ].map(s => (
-                <div key={s.label} style={{ background: '#13131f', border: '1px solid #2d2d4a', borderRadius: 16, padding: '20px 22px' }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
-                  <div style={{ fontSize: 26, fontWeight: 900, color: s.color, marginBottom: 4 }}>{s.value}</div>
-                  <div style={{ fontSize: 13, color: '#64748b' }}>{s.label}</div>
+                <div key={s.label} className={`rounded-2xl border border-blue-200 bg-white shadow-sm p-5 border-t-4 ${s.border}`}>
+                  <div className="text-3xl mb-2">{s.icon}</div>
+                  <div className="font-black text-2xl text-ink-800">{s.value}</div>
+                  <div className="text-sm text-slate-500 mt-0.5">{s.label}</div>
                 </div>
               ))}
             </div>
 
-            {/* Commission info */}
-            <div style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: 12, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 18 }}>ℹ️</span>
-              <p style={{ fontSize: 13, color: '#a78bfa', margin: 0 }}>
-                Vos gains représentent <strong>85%</strong> du montant total de chaque séance. Les 15% restants constituent la commission de la plateforme.
-              </p>
+            {/* ── Info commission ── */}
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              ℹ️ Vos gains représentent <strong>85%</strong> du montant total de chaque séance. Les 15% restants constituent la commission de la plateforme.
             </div>
 
-            {/* Historique */}
-            <div style={{ background: '#13131f', border: '1px solid #2d2d4a', borderRadius: 16, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 22px', borderBottom: '1px solid #2d2d4a' }}>
-                <h2 style={{ fontWeight: 700, fontSize: 16, color: '#fff', margin: 0 }}>Historique des paiements</h2>
+            {/* ── Historique ── */}
+            <div className="rounded-2xl border border-blue-200 bg-white shadow-sm overflow-hidden">
+
+              {/* Header */}
+              <div className="px-5 py-3 bg-blue-50 border-b border-blue-200">
+                <h2 className="font-bold text-sm text-ink-800">Historique des paiements</h2>
               </div>
 
               {paiements.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#475569' }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
-                  <p style={{ fontSize: 14 }}>Aucun paiement reçu pour l'instant</p>
+                <div className="flex flex-col items-center gap-2 py-12 text-slate-400">
+                  <span className="text-4xl">📭</span>
+                  <p className="text-sm">Aucun paiement reçu pour l'instant</p>
                 </div>
-              ) : (
-                <div>
-                  {paiements.map(p => {
-                    const s = STATUT[p.statut] || STATUT.COMPLETE
-                    return (
-                      <div key={p.id} style={{ padding: '16px 22px', borderBottom: '1px solid #1e1e35', display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <div style={{
-                          width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-                          background: s.bg, border: `1px solid ${s.border}`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-                        }}>
-                          {p.statut === 'REMBOURSE' ? '↩️' : '💸'}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 14, marginBottom: 2 }}>{p.seance_titre}</div>
-                          <div style={{ fontSize: 12, color: '#64748b' }}>
-                            {p.salle_nom} · {p.matiere || '—'} · Payé par {p.payeur_prenom} {p.payeur_nom}
-                          </div>
-                          <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
-                            {new Date(p.date_paiement).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: 900, fontSize: 18, color: s.color }}>
-                            {p.statut === 'REMBOURSE' ? '-' : '+'}{parseFloat(p.gain_tuteur).toFixed(2)} DH
-                          </div>
-                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                            Total: {p.montant_total} DH
-                          </div>
-                          <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
-                            {s.label}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+              ) : paiements.map((p, i) => {
+                const st = STATUT[p.statut] || STATUT.COMPLETE
+                return (
+                  <div key={p.id}
+                    className={`flex items-center gap-4 px-5 py-4 hover:bg-blue-50/50 transition-colors
+                      ${i < paiements.length - 1 ? 'border-b border-blue-100' : ''}`}
+                  >
+                    {/* Icône */}
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0
+                      ${st.bg} border ${st.border}`}>
+                      {p.statut === 'REMBOURSE' ? '↩️' : '💸'}
+                    </div>
+
+                    {/* Infos */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-ink-800 text-sm truncate">{p.seance_titre}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
+                        {p.salle_nom} · {p.matiere || '—'} · {p.payeur_prenom} {p.payeur_nom}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {new Date(p.date_paiement).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </p>
+                    </div>
+
+                    {/* Montant */}
+                    <div className="text-right flex-shrink-0">
+                      <p className={`font-black text-lg ${st.color}`}>
+                        {p.statut === 'REMBOURSE' ? '-' : '+'}{parseFloat(p.gain_tuteur).toFixed(2)} DH
+                      </p>
+                      <p className="text-xs text-slate-400">Total: {p.montant_total} DH</p>
+                      <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-semibold
+                        ${st.bg} ${st.color} border ${st.border}`}>
+                        {st.label}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          </>
-        )}
+          </>)}
+
+        </div>
       </div>
     </div>
   )

@@ -22,7 +22,7 @@ export default function PanelDetailsExamen({ examen, onClose }) {
     <div className="flex flex-col h-full max-h-[80vh]">
 
       {/* Tabs */}
-      <div className="flex gap-1 px-6 pb-4 border-b border-ink-700">
+      <div className="flex gap-1 px-6 pb-4 border-b border-blue-200">
         {[
           { key: 'details',   label: 'ℹ️ Détails' },
           { key: 'questions', label: '❓ Questions' },
@@ -30,7 +30,7 @@ export default function PanelDetailsExamen({ examen, onClose }) {
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all
-              ${tab === t.key ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white hover:bg-ink-700'}`}>
+              ${tab === t.key ? 'bg-blue-700 text-white' : 'text-slate-500 hover:text-white hover:bg-blue-100'}`}>
             {t.label}
           </button>
         ))}
@@ -74,7 +74,7 @@ function TabDetails({ examen, stats }) {
     { label: 'Terminées',     value: stats.terminees,  color: 'text-blue-400'  },
     { label: 'Réussies',      value: stats.reussies,   color: 'text-emerald-400' },
     { label: 'Échecs',        value: stats.echecs,     color: 'text-rose-400'  },
-    { label: 'Taux réussite', value: stats.tauxReussite ? `${stats.tauxReussite}%` : '—', color: 'text-violet-400' },
+    { label: 'Taux réussite', value: stats.tauxReussite ? `${stats.tauxReussite}%` : '—', color: 'text-blue-700' },
     { label: 'Moy. score',    value: stats.moyenneScore ? `${stats.moyenneScore}%` : '—', color: 'text-amber-400' },
   ]
 
@@ -85,7 +85,7 @@ function TabDetails({ examen, stats }) {
         <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">📈 Statistiques globales</h3>
         <div className="grid grid-cols-3 gap-3">
           {statCards.map(s => (
-            <div key={s.label} className="bg-ink-700 rounded-xl p-3 text-center">
+            <div key={s.label} className="bg-blue-100 rounded-xl p-3 text-center">
               <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
               <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
             </div>
@@ -98,9 +98,9 @@ function TabDetails({ examen, stats }) {
         <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">⚙️ Configuration</h3>
         <div className="space-y-2">
           {infos.map(({ icon, label, value }) => (
-            <div key={label} className="flex items-center justify-between py-2 border-b border-ink-700/50">
-              <span className="text-sm text-slate-400">{icon} {label}</span>
-              <span className="text-sm font-semibold text-slate-200">{value}</span>
+            <div key={label} className="flex items-center justify-between py-2 border-b border-blue-200/50">
+              <span className="text-sm text-slate-500">{icon} {label}</span>
+              <span className="text-sm font-semibold text-blue-900">{value}</span>
             </div>
           ))}
         </div>
@@ -127,17 +127,17 @@ function TabQuestions({ questions }) {
         const totalPts = questions.reduce((sum, q2) => sum + parseFloat(q2.points || 0), 0)
 
         return (
-          <div key={q.id} className="bg-ink-700 border border-ink-600 rounded-xl overflow-hidden">
+          <div key={q.id} className="bg-blue-100 border border-blue-200 rounded-xl overflow-hidden">
             {/* Header question */}
             <button
               onClick={() => setOpenIdx(isOpen ? null : i)}
-              className="w-full flex items-start gap-3 p-4 text-left hover:bg-ink-600/50 transition-colors">
-              <span className="w-7 h-7 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-violet-400 flex-shrink-0 mt-0.5">
+              className="w-full flex items-start gap-3 p-4 text-left hover:bg-blue-200/50 transition-colors">
+              <span className="w-7 h-7 rounded-xl bg-blue-700/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-blue-700 flex-shrink-0 mt-0.5">
                 {i + 1}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 font-semibold">{q.type}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-600/20 text-blue-700 font-semibold">{q.type}</span>
                   <span className="text-xs text-amber-400">{q.points} pt{q.points > 1 ? 's' : ''}</span>
                   <span className="text-xs text-emerald-400">✅ {bonnes.length} bonne{bonnes.length > 1 ? 's' : ''} réponse{bonnes.length > 1 ? 's' : ''}</span>
                 </div>
@@ -148,16 +148,16 @@ function TabQuestions({ questions }) {
 
             {/* Réponses */}
             {isOpen && (
-              <div className="px-4 pb-4 space-y-2 border-t border-ink-600">
+              <div className="px-4 pb-4 space-y-2 border-t border-blue-200">
                 <p className="text-xs text-slate-500 pt-3 mb-2">Réponses :</p>
                 {reponses.map(r => (
                   <div key={r.id}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm
                       ${r.est_correcte
                         ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                        : 'bg-ink-800 border-ink-600 text-slate-400'}`}>
+                        : 'bg-blue-50 border-blue-200 text-slate-500'}`}>
                     <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold
-                      ${r.est_correcte ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-ink-500'}`}>
+                      ${r.est_correcte ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-blue-200'}`}>
                       {r.est_correcte ? '✓' : ''}
                     </span>
                     <span className="flex-1">{r.texte}</span>
@@ -178,7 +178,7 @@ function TabEtudiants({ tentatives, stats, notePassage }) {
   if (!tentatives.length) return (
     <div className="text-center py-12">
       <div className="text-4xl mb-3">👥</div>
-      <p className="text-slate-400 font-semibold">Aucun étudiant n'a encore passé cet examen.</p>
+      <p className="text-slate-500 font-semibold">Aucun étudiant n'a encore passé cet examen.</p>
     </div>
   )
 
@@ -200,11 +200,11 @@ function TabEtudiants({ tentatives, stats, notePassage }) {
   return (
     <div className="space-y-4">
       {/* Résumé */}
-      <div className="bg-ink-700 rounded-xl p-3 flex items-center justify-between text-sm">
-        <span className="text-slate-400">
+      <div className="bg-blue-100 rounded-xl p-3 flex items-center justify-between text-sm">
+        <span className="text-slate-500">
           <strong className="text-slate-100">{etudiants.length}</strong> étudiant{etudiants.length > 1 ? 's' : ''} ont passé l'examen
         </span>
-        <span className="text-slate-400">
+        <span className="text-slate-500">
           <strong className="text-emerald-400">{stats.reussies}</strong> réussite{stats.reussies > 1 ? 's' : ''}
         </span>
       </div>
@@ -223,16 +223,16 @@ function TabEtudiants({ tentatives, stats, notePassage }) {
                   ? 'bg-emerald-500/5 border-emerald-500/20'
                   : e.statut === 'EN_COURS'
                     ? 'bg-amber-500/5 border-amber-500/20'
-                    : 'bg-ink-700 border-ink-600'}`}>
+                    : 'bg-blue-100 border-blue-200'}`}>
 
               {/* Rang */}
               <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
-                ${idx === 0 ? 'bg-amber-500/20 text-amber-400' : idx === 1 ? 'bg-slate-500/20 text-slate-400' : idx === 2 ? 'bg-orange-500/20 text-orange-400' : 'bg-ink-600 text-slate-500'}`}>
+                ${idx === 0 ? 'bg-amber-500/20 text-amber-400' : idx === 1 ? 'bg-slate-500/20 text-slate-500' : idx === 2 ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-200 text-slate-500'}`}>
                 {idx + 1}
               </span>
 
               {/* Avatar + nom */}
-              <div className="w-9 h-9 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-sm font-bold text-violet-400 flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-blue-700/20 border border-violet-500/30 flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">
                 {(e.etudiant_prenom?.[0] || '?').toUpperCase()}
               </div>
 
@@ -265,7 +265,7 @@ function TabEtudiants({ tentatives, stats, notePassage }) {
               {/* Barre de score */}
               {e.statut !== 'EN_COURS' && !isNaN(pct) && (
                 <div className="w-16 flex-shrink-0">
-                  <div className="h-1.5 bg-ink-600 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-blue-200 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${reussi ? 'bg-emerald-500' : 'bg-rose-500'}`}
                       style={{ width: `${Math.min(100, pct)}%` }} />
                   </div>

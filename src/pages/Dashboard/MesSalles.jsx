@@ -67,9 +67,9 @@ export default function MesSalles() {
                     <Badge variant={rb.v}>{rb.label}</Badge>
                   </div>
                   <h3 className="font-display font-bold text-ink-800 group-hover:text-blue-400 transition-colors">{s.nom}</h3>
-                  {s.matiere && <p className="text-xs text-violet-400">📖 {s.matiere}</p>}
+                  {s.matiere && <p className="text-xs text-blue-700">📖 {s.matiere}</p>}
                   <p className="text-sm text-slate-500 flex-1 line-clamp-2">{s.description || 'Aucune description.'}</p>
-                  <div className="flex items-center justify-between pt-3 border-t border-ink-700">
+                  <div className="flex items-center justify-between pt-3 border-t border-blue-200">
                     <span className="text-xs text-slate-500">👥 {s.nb_participants}</span>
                     {/* ✅ Bouton Quitter visible pour TOUS (même admin) */}
                     <Btn variant="danger" size="sm" onClick={(e) => handleQuitterClick(e, s)}>
@@ -95,7 +95,7 @@ export default function MesSalles() {
               <span className="text-2xl flex-shrink-0">🚨</span>
               <div>
                 <p className="text-sm font-semibold text-rose-400 mb-1">Vous êtes l'admin de cette salle</p>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-500">
                   Si vous quittez <span className="text-ink-800 font-medium">"{confirmSalle?.nom}"</span>,
                   la salle sera <span className="text-rose-400 font-semibold">définitivement supprimée</span> avec
                   tous ses messages, fichiers et participants.
@@ -103,7 +103,7 @@ export default function MesSalles() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-500">
               Êtes-vous sûr de vouloir quitter <span className="text-ink-800 font-medium">"{confirmSalle?.nom}"</span> ?
               Vous devrez demander une nouvelle invitation pour y revenir.
             </p>

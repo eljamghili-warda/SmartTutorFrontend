@@ -47,27 +47,27 @@ export default function Fichiers() {
         ) : fichiers.length === 0 ? (
           <EmptyState icon="📁" title="Aucun fichier partagé" desc="Les fichiers partagés dans vos salles apparaîtront ici." />
         ) : (
-          <div className="bg-ink-800 border border-ink-700 rounded-2xl overflow-hidden">
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl overflow-hidden">
             <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-0">
               <div className="contents text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 {['', 'Fichier', 'Salle', 'Taille', 'Action'].map((h, i) => (
-                  <div key={i} className="px-4 py-3 bg-ink-900 border-b border-ink-700">{h}</div>
+                  <div key={i} className="px-4 py-3 bg-white border-b border-blue-200">{h}</div>
                 ))}
               </div>
               {fichiers.map((f, i) => (
                 <div key={f.id} className="contents text-sm">
-                  <div className="px-4 py-3.5 flex items-center border-b border-ink-700/50 text-xl">{getIcon(f.type_mime)}</div>
-                  <div className="px-4 py-3.5 flex flex-col justify-center border-b border-ink-700/50">
+                  <div className="px-4 py-3.5 flex items-center border-b border-blue-200/50 text-xl">{getIcon(f.type_mime)}</div>
+                  <div className="px-4 py-3.5 flex flex-col justify-center border-b border-blue-200/50">
                     <p className="text-ink-600 font-medium truncate max-w-xs">{f.nom_fichier}</p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {f.uploader_nom} · {new Date(f.date_upload).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
-                  <div className="px-4 py-3.5 flex items-center border-b border-ink-700/50 text-xs text-violet-400">{f.salle_nom}</div>
-                  <div className="px-4 py-3.5 flex items-center border-b border-ink-700/50 text-xs text-slate-500">{formatSize(f.taille)}</div>
-                  <div className="px-4 py-3.5 flex items-center border-b border-ink-700/50">
+                  <div className="px-4 py-3.5 flex items-center border-b border-blue-200/50 text-xs text-blue-700">{f.salle_nom}</div>
+                  <div className="px-4 py-3.5 flex items-center border-b border-blue-200/50 text-xs text-slate-500">{formatSize(f.taille)}</div>
+                  <div className="px-4 py-3.5 flex items-center border-b border-blue-200/50">
                     <a href={`http://localhost:5000/${f.url_telechargement}`} download
-                      className="text-xs px-3 py-1.5 rounded-lg bg-violet-600/15 text-violet-400 border border-violet-600/25 hover:bg-violet-600/25 transition-colors">
+                      className="text-xs px-3 py-1.5 rounded-lg bg-blue-700/15 text-blue-700 border border-violet-600/25 hover:bg-blue-700/25 transition-colors">
                       ⬇ Télécharger
                     </a>
                   </div>

@@ -49,17 +49,17 @@ export default function Parametres() {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-xl mx-auto flex flex-col gap-5">
           {/* Profile preview */}
-          <div className="bg-ink-800 border border-ink-700 rounded-2xl p-5 flex items-center gap-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 flex items-center gap-4">
             <Avatar user={user} size="xl" />
             <div>
               <p className="font-display font-bold text-lg text-ink-800">{user?.prenom} {user?.nom}</p>
-              <p className="text-sm text-slate-400 capitalize mt-0.5">{user?.role}</p>
+              <p className="text-sm text-slate-500 capitalize mt-0.5">{user?.role}</p>
               <p className="text-xs text-slate-600 mt-0.5">{user?.email}</p>
             </div>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="bg-ink-800 border border-ink-700 rounded-2xl p-6 flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col gap-4">
             <h3 className="font-display font-bold text-ink-800 mb-1">Informations personnelles</h3>
 
             <div className="grid grid-cols-2 gap-3">

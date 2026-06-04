@@ -4,21 +4,21 @@ import Header from '../../components/Header/Header'
 import { Btn, Spinner } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
-const MATIERES_SUGGESTIONS = [
-  'Mathématiques', 'Physique', 'Chimie', 'Informatique', 'Algorithmes',
-  'Base de données', 'Réseaux', 'Java', 'Python', 'JavaScript',
-  'React', 'Anglais', 'Français', 'Économie', 'Gestion', 'Marketing',
-  'Comptabilité', 'Droit', 'Biologie', 'Statistiques',
+const MATIERES = [
+  'Mathématiques','Physique','Chimie','Informatique','Algorithmes',
+  'Base de données','Réseaux','Java','Python','JavaScript',
+  'React','Anglais','Français','Économie','Gestion','Marketing',
+  'Comptabilité','Droit','Biologie','Statistiques',
 ]
 
 export default function MesTarifs() {
-  const [tarifs, setTarifs]   = useState([])
-  const [loading, setLoading] = useState(true)
+  const [tarifs,   setTarifs]   = useState([])
+  const [loading,  setLoading]  = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm]       = useState({ matiere: '', tarifHeure: '' })
-  const [saving, setSaving]   = useState(false)
+  const [form,     setForm]     = useState({ matiere: '', tarifHeure: '' })
+  const [saving,   setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(null)
-  const { toasts, success, error } = useToast()
+  const { success, error } = useToast()
 
   const load = () => {
     tarifsAPI.getMesTarifs()
@@ -26,7 +26,6 @@ export default function MesTarifs() {
       .catch(() => error('Erreur de chargement'))
       .finally(() => setLoading(false))
   }
-
   useEffect(() => { load() }, [])
 
   const handleSubmit = async () => {
@@ -40,11 +39,8 @@ export default function MesTarifs() {
       setForm({ matiere: '', tarifHeure: '' })
       setShowForm(false)
       load()
-    } catch (e) {
-      error(e.response?.data?.error || 'Erreur')
-    } finally {
-      setSaving(false)
-    }
+    } catch (e) { error(e.response?.data?.error || 'Erreur') }
+    finally { setSaving(false) }
   }
 
   const handleDelete = async (id) => {
@@ -53,110 +49,151 @@ export default function MesTarifs() {
       await tarifsAPI.delete(id)
       success('Tarif supprimé')
       setTarifs(t => t.filter(x => x.id !== id))
-    } catch {
-      error('Erreur de suppression')
-    } finally {
-      setDeleting(null)
-    }
+    } catch { error('Erreur suppression') }
+    finally { setDeleting(null) }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0f0f1a' }}>
-      <Header />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '32px 16px' }}><div style={{ maxWidth: 720, margin: '0 auto' }}>
+    <div className="flex flex-col h-full">
+      <Header title="Mes Tarifs" />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <div>
-            <h1 style={{ fontWeight: 900, fontSize: 24, color: '#fff', marginBottom: 4 }}>📋 Mes Tarifs</h1>
-            <p style={{ color: '#64748b', fontSize: 13 }}>Définissez votre tarif horaire par matière enseignée</p>
-          </div>
-          <Btn onClick={() => setShowForm(true)}>+ Ajouter un tarif</Btn>
-        </div>
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-2xl mx-auto flex flex-col gap-4">
 
-        {/* Info */}
-        <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 12, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: '#93c5fd' }}>
-          💡 Vos tarifs sont visibles par les étudiants. Le montant d'une séance = <strong>tarif × durée</strong>. Vous recevrez <strong>85%</strong> du montant total.
-        </div>
-
-        {/* Formulaire ajout */}
-        {showForm && (
-          <div style={{ background: '#13131f', border: '1px solid #2d2d4a', borderRadius: 16, padding: 20, marginBottom: 20 }}>
-            <h3 style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Nouveau tarif</h3>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ flex: 2, minWidth: 180 }}>
-                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>Matière</label>
-                <input
-                  list="matieres-list"
-                  value={form.matiere}
-                  onChange={e => setForm(f => ({ ...f, matiere: e.target.value }))}
-                  placeholder="Ex: Java, Mathématiques…"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, background: '#0f0f1a', border: '1px solid #2d2d4a', color: '#e2e8f0', fontSize: 14, outline: 'none' }}
-                />
-                <datalist id="matieres-list">
-                  {MATIERES_SUGGESTIONS.map(m => <option key={m} value={m} />)}
-                </datalist>
-              </div>
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>Tarif (DH/h)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="5000"
-                  value={form.tarifHeure}
-                  onChange={e => setForm(f => ({ ...f, tarifHeure: e.target.value }))}
-                  placeholder="Ex: 120"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, background: '#0f0f1a', border: '1px solid #2d2d4a', color: '#e2e8f0', fontSize: 14, outline: 'none' }}
-                />
-              </div>
+          {/* ── En-tête ── */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-bold text-xl text-ink-800">📋 Mes Tarifs</h1>
+              <p className="text-sm text-slate-500 mt-0.5">Définissez votre tarif horaire par matière enseignée</p>
             </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <Btn onClick={handleSubmit} disabled={saving}>
-                {saving ? '…' : 'Enregistrer'}
-              </Btn>
-              <Btn variant="secondary" onClick={() => { setShowForm(false); setForm({ matiere: '', tarifHeure: '' }) }}>
-                Annuler
-              </Btn>
-            </div>
+            <Btn onClick={() => setShowForm(true)}>+ Ajouter un tarif</Btn>
           </div>
-        )}
 
-        {/* Liste des tarifs */}
-        {loading && <div className="flex justify-center py-10"><Spinner /></div>}
-        {!loading && tarifs.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 20px', background: '#13131f', border: '1px solid #2d2d4a', borderRadius: 16 }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>💸</div>
-            <p style={{ color: '#64748b', fontSize: 14, marginBottom: 16 }}>Vous n'avez pas encore défini de tarifs.</p>
-            <Btn onClick={() => setShowForm(true)}>Définir mon premier tarif</Btn>
+          {/* ── Info commission ── */}
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            💡 Vos tarifs sont visibles par les étudiants. Montant d'une séance = <strong>tarif × durée</strong>. Vous recevrez <strong>85%</strong> du montant total.
           </div>
-        )}
 
-        {!loading && tarifs.length > 0 && (
-          <div style={{ background: '#13131f', border: '1px solid #2d2d4a', borderRadius: 16, overflow: 'hidden' }}>
-            {tarifs.map((t, i) => (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', borderBottom: i < tarifs.length - 1 ? '1px solid #1e1e35' : 'none' }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                  📖
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 14 }}>{t.matiere}</div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>Ajouté le {new Date(t.date_creation).toLocaleDateString('fr-FR')}</div>
-                </div>
-                <div style={{ textAlign: 'right', marginRight: 16 }}>
-                  <div style={{ fontWeight: 900, fontSize: 20, color: '#7c3aed' }}>{t.tarif_heure} DH</div>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>par heure</div>
-                </div>
+          {/* ── Formulaire ajout ── */}
+          {showForm && (
+            <div className="rounded-2xl border border-blue-200 bg-white shadow-sm p-5 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-ink-800">Nouveau tarif</h3>
                 <button
-                  onClick={() => handleDelete(t.id)}
-                  disabled={deleting === t.id}
-                  style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
-                >
-                  {deleting === t.id ? '…' : '🗑️'}
-                </button>
+                  onClick={() => { setShowForm(false); setForm({ matiere: '', tarifHeure: '' }) }}
+                  className="text-slate-400 hover:text-slate-600 text-lg leading-none"
+                >✕</button>
               </div>
-            ))}
-          </div>
-        )}
-      </div></div>
+
+              <div className="flex gap-3 flex-wrap">
+                {/* Matière */}
+                <div className="flex-[2] min-w-[180px] flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Matière</label>
+                  <input
+                    list="matieres-list"
+                    value={form.matiere}
+                    onChange={e => setForm(f => ({ ...f, matiere: e.target.value }))}
+                    placeholder="Ex: Java, Mathématiques…"
+                    className="w-full px-3 py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-ink-800 text-sm outline-none focus:border-blue-400 focus:bg-white transition-colors"
+                  />
+                  <datalist id="matieres-list">
+                    {MATIERES.map(m => <option key={m} value={m} />)}
+                  </datalist>
+                </div>
+
+                {/* Tarif */}
+                <div className="flex-1 min-w-[140px] flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Tarif (DH/h)</label>
+                  <input
+                    type="number" min="1" max="5000"
+                    value={form.tarifHeure}
+                    onChange={e => setForm(f => ({ ...f, tarifHeure: e.target.value }))}
+                    placeholder="Ex: 120"
+                    className="w-full px-3 py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-ink-800 text-sm outline-none focus:border-blue-400 focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Btn onClick={handleSubmit} disabled={saving}>
+                  {saving ? '…' : 'Enregistrer'}
+                </Btn>
+                <Btn variant="secondary" onClick={() => { setShowForm(false); setForm({ matiere: '', tarifHeure: '' }) }}>
+                  Annuler
+                </Btn>
+              </div>
+            </div>
+          )}
+
+          {/* ── Loading ── */}
+          {loading && (
+            <div className="flex justify-center py-16"><Spinner /></div>
+          )}
+
+          {/* ── Empty state ── */}
+          {!loading && tarifs.length === 0 && (
+            <div className="rounded-2xl border border-blue-200 bg-white text-center py-12 px-6 flex flex-col items-center gap-3">
+              <span className="text-5xl">💸</span>
+              <p className="text-slate-500 text-sm">Vous n'avez pas encore défini de tarifs.</p>
+              <Btn onClick={() => setShowForm(true)}>Définir mon premier tarif</Btn>
+            </div>
+          )}
+
+          {/* ── Liste des tarifs ── */}
+          {!loading && tarifs.length > 0 && (
+            <div className="rounded-2xl border border-blue-200 bg-white shadow-sm overflow-hidden">
+
+              {/* Header tableau */}
+              <div className="grid grid-cols-[1fr_auto_auto] px-5 py-2.5 bg-blue-50 border-b border-blue-200">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Matière</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-10">Tarif / heure</span>
+                <span></span>
+              </div>
+
+              {tarifs.map((t, i) => (
+                <div
+                  key={t.id}
+                  className={`grid grid-cols-[1fr_auto_auto] items-center px-5 py-3.5 gap-4
+                    ${i < tarifs.length - 1 ? 'border-b border-blue-100' : ''}
+                    hover:bg-blue-50/50 transition-colors`}
+                >
+                  {/* Matière + date */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center text-lg flex-shrink-0">
+                      📖
+                    </div>
+                    <div>
+                      <p className="font-bold text-ink-800 text-sm">{t.matiere}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Ajouté le {new Date(t.date_creation).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Prix */}
+                  <div className="text-right">
+                    <span className="font-black text-xl text-blue-700">{t.tarif_heure}</span>
+                    <span className="font-bold text-blue-700 text-sm ml-1">DH</span>
+                    <p className="text-xs text-slate-400">par heure</p>
+                  </div>
+
+                  {/* Supprimer */}
+                  <button
+                    onClick={() => handleDelete(t.id)}
+                    disabled={deleting === t.id}
+                    className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 text-rose-500
+                      hover:bg-rose-100 transition-colors flex items-center justify-center text-sm
+                      disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {deleting === t.id ? '…' : '🗑️'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
+      </div>
     </div>
   )
 }

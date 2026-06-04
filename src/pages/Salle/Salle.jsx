@@ -36,13 +36,13 @@ function useCallTimer(active) {
 // ─── Panneau d'appel flottant ─────────────────────────────────────────────────
 function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, canEnd, callTime, isSharing, onShareToggle, isTuteur }) {
   return (
-    <div className="fixed bottom-4 right-4 z-40 bg-ink-800 border border-emerald-500/30 rounded-2xl shadow-2xl p-4 w-72 flex flex-col gap-3">
+    <div className="fixed bottom-4 right-4 z-40 bg-blue-50 border border-emerald-500/30 rounded-2xl shadow-2xl p-4 w-72 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">Appel en cours</span>
         </div>
-        <span className="text-xs font-mono text-slate-400 bg-ink-700 px-2 py-0.5 rounded-lg">{callTime}</span>
+        <span className="text-xs font-mono text-slate-500 bg-blue-100 px-2 py-0.5 rounded-lg">{callTime}</span>
       </div>
 
       {/* Participants */}
@@ -50,12 +50,12 @@ function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, ca
         {callParticipants.length === 0 ? (
           <p className="text-xs text-slate-500 text-center py-2">En attente de participants…</p>
         ) : callParticipants.map(p => (
-          <div key={p.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl bg-ink-700">
-            <div className="w-7 h-7 rounded-full bg-violet-600/30 border border-violet-500/40 flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0">
+          <div key={p.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl bg-blue-100">
+            <div className="w-7 h-7 rounded-full bg-blue-700/30 border border-violet-500/40 flex items-center justify-center text-xs font-bold text-blue-700 flex-shrink-0">
               {p.prenom?.[0]?.toUpperCase()}{p.nom?.[0]?.toUpperCase()}
             </div>
-            <p className="text-xs font-semibold text-slate-200 flex-1 truncate">
-              {p.prenom} {p.nom}{p.isMe && <span className="text-violet-400 ml-1">(vous)</span>}
+            <p className="text-xs font-semibold text-blue-900 flex-1 truncate">
+              {p.prenom} {p.nom}{p.isMe && <span className="text-blue-700 ml-1">(vous)</span>}
             </p>
             <span className="text-xs flex-shrink-0">{p.muted ? '🔇' : '🎙️'}</span>
           </div>
@@ -63,10 +63,10 @@ function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, ca
       </div>
 
       {/* Contrôles */}
-      <div className="flex gap-2 pt-1 border-t border-ink-600">
+      <div className="flex gap-2 pt-1 border-t border-blue-200">
         <button onClick={onToggleMute}
           className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all
-            ${isMuted ? 'bg-rose-500/20 border border-rose-500/40 text-rose-400' : 'bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600'}`}>
+            ${isMuted ? 'bg-rose-500/20 border border-rose-500/40 text-rose-400' : 'bg-blue-100 border border-blue-200 text-blue-800 hover:bg-blue-200'}`}>
           {isMuted ? '🔇' : '🎙️'}
         </button>
 
@@ -75,8 +75,8 @@ function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, ca
           <button onClick={onShareToggle}
             className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all
               ${isSharing
-                ? 'bg-violet-500/30 border border-violet-400/60 text-violet-300 animate-pulse'
-                : 'bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600'}`}>
+                ? 'bg-blue-600/30 border border-violet-400/60 text-blue-700 animate-pulse'
+                : 'bg-blue-100 border border-blue-200 text-blue-800 hover:bg-blue-200'}`}>
             {isSharing ? '⏹ Écran' : '🖥️ Écran'}
           </button>
         )}
@@ -88,7 +88,7 @@ function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, ca
           </button>
         ) : (
           <button onClick={onLeave}
-            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600 transition-all">
+            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold bg-blue-100 border border-blue-200 text-blue-800 hover:bg-blue-200 transition-all">
             🚪
           </button>
         )}
@@ -156,16 +156,16 @@ function ScreenShareViewer({ sharerNom, videoRef, onClose }) {
       <div
         ref={dragRef}
         style={{ position: 'fixed', left: pos.x, top: pos.y, zIndex: 9998, width: 300 }}
-        className="rounded-2xl overflow-hidden shadow-2xl border-2 border-violet-500/50 bg-ink-900 select-none"
+        className="rounded-2xl overflow-hidden shadow-2xl border-2 border-violet-500/50 bg-white select-none"
       >
         {/* Barre drag */}
         <div
           onMouseDown={onMouseDown}
-          className="flex items-center justify-between px-3 py-1.5 bg-ink-800 cursor-grab active:cursor-grabbing"
+          className="flex items-center justify-between px-3 py-1.5 bg-blue-50 cursor-grab active:cursor-grabbing"
         >
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-            <span className="text-xs font-semibold text-violet-300 truncate max-w-[140px]">
+            <span className="text-xs font-semibold text-blue-700 truncate max-w-[140px]">
               🖥️ {sharerNom}
             </span>
           </div>
@@ -174,7 +174,7 @@ function ScreenShareViewer({ sharerNom, videoRef, onClose }) {
             <button
               onClick={() => setMode('normal')}
               title="Agrandir"
-              className="w-6 h-6 rounded-lg bg-ink-700 hover:bg-violet-600/30 text-slate-400 hover:text-violet-300 flex items-center justify-center text-xs transition-all">
+              className="w-6 h-6 rounded-lg bg-blue-100 hover:bg-blue-700/30 text-slate-500 hover:text-blue-700 flex items-center justify-center text-xs transition-all">
               ⛶
             </button>
             {/* Fermer vignette (remet en normal) */}
@@ -188,7 +188,7 @@ function ScreenShareViewer({ sharerNom, videoRef, onClose }) {
         </div>
 
         {/* Mini vidéo */}
-        <div className="relative bg-ink-950" style={{ height: 168 }}>
+        <div className="relative bg-blue-50" style={{ height: 168 }}>
           <video
             ref={videoRef}
             autoPlay
@@ -206,7 +206,7 @@ function ScreenShareViewer({ sharerNom, videoRef, onClose }) {
         </div>
 
         {/* Hint bas */}
-        <div className="px-3 py-1 bg-ink-800 text-center">
+        <div className="px-3 py-1 bg-blue-50 text-center">
           <p className="text-xs text-slate-600">Glisser pour déplacer · Cliquer pour agrandir</p>
         </div>
       </div>
@@ -221,11 +221,11 @@ function ScreenShareViewer({ sharerNom, videoRef, onClose }) {
       style={{ zIndex: 9998 }}
     >
       {/* Barre du haut */}
-      <div className="flex items-center justify-between px-4 py-2 bg-ink-900/90 backdrop-blur-sm flex-shrink-0 border-b border-ink-700/50">
+      <div className="flex items-center justify-between px-4 py-2 bg-white/90 backdrop-blur-sm flex-shrink-0 border-b border-blue-200/50">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
           <span className="text-sm font-semibold text-white">
-            🖥️ Écran partagé par <span className="text-violet-400">{sharerNom}</span>
+            🖥️ Écran partagé par <span className="text-blue-700">{sharerNom}</span>
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -239,12 +239,12 @@ function ScreenShareViewer({ sharerNom, videoRef, onClose }) {
           {/* Plein écran */}
           {mode !== 'fullscreen' ? (
             <button onClick={enterFullscreen}
-              className="px-3 py-1.5 rounded-lg bg-ink-700 text-slate-300 text-xs hover:bg-ink-600 transition-all">
+              className="px-3 py-1.5 rounded-lg bg-blue-100 text-blue-800 text-xs hover:bg-blue-200 transition-all">
               ⛶ Plein écran
             </button>
           ) : (
             <button onClick={exitFullscreen}
-              className="px-3 py-1.5 rounded-lg bg-ink-700 text-slate-300 text-xs hover:bg-ink-600 transition-all">
+              className="px-3 py-1.5 rounded-lg bg-blue-100 text-blue-800 text-xs hover:bg-blue-200 transition-all">
               ⊡ Réduire
             </button>
           )}
@@ -263,13 +263,13 @@ function ScreenShareViewer({ sharerNom, videoRef, onClose }) {
           autoPlay
           playsInline
           muted
-          className="max-w-full max-h-full rounded-xl shadow-2xl border border-ink-600/50 object-contain bg-ink-950"
+          className="max-w-full max-h-full rounded-xl shadow-2xl border border-blue-200/50 object-contain bg-blue-50"
           style={{ width: '100%', height: '100%' }}
         />
       </div>
 
       {/* Bas — info et accès tableau blanc */}
-      <div className="flex items-center justify-center gap-4 py-2 flex-shrink-0 border-t border-ink-700/30">
+      <div className="flex items-center justify-center gap-4 py-2 flex-shrink-0 border-t border-blue-200/30">
         <p className="text-xs text-slate-600">Lecture seule</p>
         <span className="text-slate-700">·</span>
         <button
@@ -317,7 +317,7 @@ function InviteTuteurModal({ salleId, hasTuteur, onClose, onSuccess, onError }) 
         <span className="text-xl">⚠️</span>
         <div>
           <p className="text-sm font-semibold text-amber-400 mb-1">Cette salle a déjà un tuteur</p>
-          <p className="text-sm text-slate-400">L'ancien tuteur sera retiré dès que le nouveau accepte.</p>
+          <p className="text-sm text-slate-500">L'ancien tuteur sera retiré dès que le nouveau accepte.</p>
         </div>
       </div>
       <div className="flex gap-3 justify-end">
@@ -336,28 +336,28 @@ function InviteTuteurModal({ salleId, hasTuteur, onClose, onSuccess, onError }) 
         </div>
       )}
       {loading ? (
-        <div className="flex justify-center py-4"><span className="text-slate-400 text-sm">Chargement...</span></div>
+        <div className="flex justify-center py-4"><span className="text-slate-500 text-sm">Chargement...</span></div>
       ) : tuteurs.length === 0 ? (
-        <p className="text-sm text-slate-500 bg-ink-700 rounded-xl p-3 text-center">Aucun tuteur disponible.</p>
+        <p className="text-sm text-slate-500 bg-blue-100 rounded-xl p-3 text-center">Aucun tuteur disponible.</p>
       ) : (
         <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
           {tuteurs.map(t => (
             <button key={t.id} type="button" onClick={() => setSelected(String(t.id))}
               className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all
-                ${selected === String(t.id) ? 'border-violet-500 bg-violet-600/10' : 'border-ink-600 hover:border-ink-500'}`}>
-              <div className="w-9 h-9 rounded-full bg-violet-600/20 flex items-center justify-center text-sm font-bold text-violet-400 flex-shrink-0">
+                ${selected === String(t.id) ? 'border-violet-500 bg-blue-700/10' : 'border-blue-200 hover:border-blue-200'}`}>
+              <div className="w-9 h-9 rounded-full bg-blue-700/20 flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">
                 {t.prenom?.[0]}{t.nom?.[0]}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{t.prenom} {t.nom}</p>
                 {t.specialites?.length > 0 && <p className="text-xs text-slate-500 truncate">{t.specialites.slice(0,3).join(', ')}</p>}
               </div>
-              {selected === String(t.id) && <span className="text-violet-400">✓</span>}
+              {selected === String(t.id) && <span className="text-blue-700">✓</span>}
             </button>
           ))}
         </div>
       )}
-      <div className="flex gap-3 justify-end pt-1 border-t border-ink-700">
+      <div className="flex gap-3 justify-end pt-1 border-t border-blue-200">
         <Btn variant="secondary" onClick={onClose}>Annuler</Btn>
         <Btn onClick={handleSend} disabled={!selected || sending}>
           {sending ? 'Envoi...' : hasTuteur ? '🔄 Remplacer' : "✉️ Inviter"}
@@ -1023,11 +1023,11 @@ export default function Salle() {
   const statutLabel  = { PLANIFIEE:'Planifiée', EN_ATTENTE_PAIEMENT:'⏳ En attente paiement', CONFIRMEE:'✅ Confirmée', EN_COURS:'🔴 En cours', REALISEE:'✅ Réalisée', ANNULEE:'❌ Annulée' }
 
   if (loading) return (
-    <div className="h-screen bg-ink-950 flex items-center justify-center"><Spinner size="lg" /></div>
+    <div className="h-screen bg-blue-50 flex items-center justify-center"><Spinner size="lg" /></div>
   )
 
   return (
-    <div className="h-screen flex flex-col bg-ink-950 overflow-hidden">
+    <div className="h-screen flex flex-col bg-blue-50 overflow-hidden">
       <ToastContainer toasts={toasts} />
 
       {/* ── Panneau d'appel flottant ────────────────────────────────────── */}
@@ -1066,15 +1066,15 @@ export default function Salle() {
               {participants.length} participant{participants.length > 1 ? 's' : ''} - {etudiantsSalle.length} etudiant{etudiantsSalle.length > 1 ? 's' : ''} - {tuteursSalle.length} tuteur{tuteursSalle.length > 1 ? 's' : ''}
             </p>
           </div>
-          {salle?.matiere && <span className="text-xs text-violet-400 hidden sm:block">📖 {salle.matiere}</span>}
+          {salle?.matiere && <span className="text-xs text-blue-700 hidden sm:block">📖 {salle.matiere}</span>}
           <Badge variant={hasTuteur ? 'primary' : 'default'}>
             {hasTuteur ? '👨‍🏫 Avec tuteur' : '📚 Sans tuteur'}
           </Badge>
           {/* Indicateur partage d'écran dans la top bar */}
           {screenShare && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-600/10 border border-violet-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-              <span className="text-xs text-violet-400 font-medium">Écran partagé</span>
+              <span className="text-xs text-blue-700 font-medium">Écran partagé</span>
             </div>
           )}
         </div>
@@ -1088,7 +1088,7 @@ export default function Salle() {
 
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-64 flex-shrink-0 border-r border-ink-700 flex flex-col">
+        <div className="w-64 flex-shrink-0 border-r border-blue-200 flex flex-col">
           <Chat
             messages={messages}
             onSend={(c) => sendMessage(id, c)}
@@ -1102,7 +1102,7 @@ export default function Salle() {
         </div>
         <div className="w-72 flex-shrink-0 border-l border-blue-500/20 flex flex-col bg-gradient-to-b from-ink-900 to-ink-950">
           {/* Tabs */}
-          <div className="flex border-b border-ink-700 flex-shrink-0">
+          <div className="flex border-b border-blue-200 flex-shrink-0">
             {[
               { id:'participants', icon:'👥', label:`${participants.length}` },
               { id:'fichiers',     icon:'📁', label:`${fichiers.length}` },
@@ -1111,7 +1111,7 @@ export default function Salle() {
             ].map(t => (
               <button key={t.id} onClick={() => setRightTab(t.id)}
                 className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-xs transition-all border-b-2
-                  ${rightTab === t.id ? 'border-amber-400 text-amber-300 bg-amber-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
+                  ${rightTab === t.id ? 'border-amber-400 text-amber-300 bg-amber-400/5' : 'border-transparent text-slate-500 hover:text-blue-800'}`}>
                 <span className="text-base">{t.icon}</span>
                 <span>{t.label}</span>
               </button>
@@ -1124,15 +1124,15 @@ export default function Salle() {
               <div className="rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-blue-600/10 p-3">
                 <p className="text-xs font-bold uppercase tracking-wide text-amber-300">Participants</p>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-xl bg-ink-900/70 border border-blue-500/15 py-2">
+                  <div className="rounded-xl bg-white/70 border border-blue-500/15 py-2">
                     <p className="text-lg font-black text-white">{participants.length}</p>
                     <p className="text-[10px] text-slate-500">Total</p>
                   </div>
-                  <div className="rounded-xl bg-ink-900/70 border border-blue-500/15 py-2">
+                  <div className="rounded-xl bg-white/70 border border-blue-500/15 py-2">
                     <p className="text-lg font-black text-blue-300">{etudiantsSalle.length}</p>
                     <p className="text-[10px] text-slate-500">Etudiants</p>
                   </div>
-                  <div className="rounded-xl bg-ink-900/70 border border-amber-400/15 py-2">
+                  <div className="rounded-xl bg-white/70 border border-amber-400/15 py-2">
                     <p className="text-lg font-black text-amber-300">{tuteursSalle.length}</p>
                     <p className="text-[10px] text-slate-500">Tuteurs</p>
                   </div>
@@ -1154,12 +1154,12 @@ export default function Salle() {
                   ? 'text-amber-300 bg-amber-400/10 border-amber-400/20'
                   : roleLabel === 'Admin'
                     ? 'text-blue-300 bg-blue-500/10 border-blue-500/20'
-                    : 'text-slate-300 bg-ink-700 border-ink-600'
+                    : 'text-blue-800 bg-blue-100 border-blue-200'
                 return (
-                  <div key={p.id} className="flex items-center gap-3 p-3 rounded-2xl bg-ink-800/80 border border-blue-500/10 hover:border-amber-400/25 hover:bg-ink-800 transition-colors">
+                  <div key={p.id} className="flex items-center gap-3 p-3 rounded-2xl bg-blue-50/80 border border-blue-500/10 hover:border-amber-400/25 hover:bg-blue-50 transition-colors">
                     <div className="relative flex-shrink-0">
                       <Avatar user={p} size="md" />
-                      <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-ink-900 ${inCall ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                      <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-blue-200 ${inCall ? 'bg-emerald-400' : 'bg-slate-600'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-100 truncate">
@@ -1180,19 +1180,19 @@ export default function Salle() {
           {/* Fichiers */}
           {rightTab === 'fichiers' && (
             <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
-              <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dashed border-ink-600 text-xs text-slate-500 hover:border-violet-500/50 hover:text-violet-400 transition-all cursor-pointer">
+              <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dashed border-blue-200 text-xs text-slate-500 hover:border-violet-500/50 hover:text-blue-700 transition-all cursor-pointer">
                 ⬆️ Uploader un fichier
                 <input type="file" className="hidden" onChange={uploadFichier} />
               </label>
               {fichiers.map(f => (
-                <div key={f.id} className="flex items-center gap-2 px-2 py-2 rounded-xl bg-ink-800 border border-ink-700">
+                <div key={f.id} className="flex items-center gap-2 px-2 py-2 rounded-xl bg-blue-50 border border-blue-200">
                   <span className="text-base">📄</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-200 truncate font-medium">{f.nom_fichier}</p>
+                    <p className="text-xs text-blue-900 truncate font-medium">{f.nom_fichier}</p>
                     <p className="text-xs text-slate-600">{f.uploader_nom}</p>
                   </div>
                   <a href={`http://localhost:5000/${f.url_telechargement}`} download
-                    className="text-xs px-1.5 py-1 rounded-lg bg-ink-700 text-violet-400 hover:bg-violet-600/20 transition-colors flex-shrink-0">⬇</a>
+                    className="text-xs px-1.5 py-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-700/20 transition-colors flex-shrink-0">⬇</a>
                 </div>
               ))}
               {fichiers.length === 0 && <p className="text-xs text-slate-600 text-center py-4">Aucun fichier partagé</p>}
@@ -1217,8 +1217,8 @@ export default function Salle() {
                 }} className="w-full justify-center">➕ Planifier une séance</Btn>
               )}
               {seances.map(s => (
-                <div key={s.id} className="rounded-xl bg-ink-800 border border-ink-700 p-3 flex flex-col gap-1.5">
-                  <p className="text-xs font-bold text-slate-200 leading-tight">{s.titre}</p>
+                <div key={s.id} className="rounded-xl bg-blue-50 border border-blue-200 p-3 flex flex-col gap-1.5">
+                  <p className="text-xs font-bold text-blue-900 leading-tight">{s.titre}</p>
                   <p className="text-xs text-slate-500">
                     {new Date(s.date_debut).toLocaleString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}
                   </p>
@@ -1226,7 +1226,7 @@ export default function Salle() {
                   <Badge variant={statutBadge[s.statut] || 'default'}>{statutLabel[s.statut] || s.statut}</Badge>
                   {/* Montant si disponible */}
                   {s.montant_total > 0 && (
-                    <p className="text-xs text-violet-400 font-semibold">💰 {s.montant_total} DH</p>
+                    <p className="text-xs text-blue-700 font-semibold">💰 {s.montant_total} DH</p>
                   )}
                   {/* Statut paiement → admin */}
                   {isAdmin && (s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut_paiement === 'PAYE' || s.statut === 'CONFIRMEE') && (
@@ -1259,11 +1259,11 @@ export default function Salle() {
                             onClick={() => setPaiementSeanceId(s.id)}
                             className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all"
                             style={{
-                              background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                              color: '#fff',
+                              background: 'linear-gradient(135deg, #1565C0, #1976D2)',
+                              color: '#0D47A1',
                               border: 'none',
                               cursor: 'pointer',
-                              boxShadow: '0 2px 12px rgba(124,58,237,0.4)',
+                              boxShadow: '0 2px 12px rgba(21,101,192,0.4)',
                             }}
                           >
                             💳 Payer maintenant
@@ -1307,14 +1307,14 @@ export default function Salle() {
 
               {/* === VUE PLEIN ÉCRAN : PASSAGE D'EXAMEN === */}
               {tentativeActive && (
-                <div className="fixed inset-0 z-[100] bg-ink-950 flex flex-col overflow-hidden">
+                <div className="fixed inset-0 z-[100] bg-blue-50 flex flex-col overflow-hidden">
                   {/* Header timer */}
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-ink-700 bg-ink-900 flex-shrink-0">
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-blue-200 bg-white flex-shrink-0">
                     <div>
                       <p className="text-xs text-slate-500">Examen en cours</p>
                       <p className="font-bold text-white text-sm">{tentativeActive.examen.titre}</p>
                     </div>
-                    <div className={`text-xl font-mono font-bold px-4 py-1.5 rounded-xl ${timerLeft < 60 ? 'text-rose-400 bg-rose-500/10 animate-pulse' : 'text-violet-400 bg-violet-500/10'}`}>
+                    <div className={`text-xl font-mono font-bold px-4 py-1.5 rounded-xl ${timerLeft < 60 ? 'text-rose-400 bg-rose-500/10 animate-pulse' : 'text-blue-700 bg-blue-600/10'}`}>
                       ⏱ {fmtTimer(timerLeft)}
                     </div>
                     <div className="text-xs text-slate-500">
@@ -1323,8 +1323,8 @@ export default function Salle() {
                   </div>
 
                   {/* Progress bar */}
-                  <div className="h-1 bg-ink-800 flex-shrink-0">
-                    <div className="h-1 bg-violet-500 transition-all duration-500"
+                  <div className="h-1 bg-blue-50 flex-shrink-0">
+                    <div className="h-1 bg-blue-600 transition-all duration-500"
                       style={{ width: `${(Object.keys(reponsesEnCours).length / tentativeActive.questions.length) * 100}%` }} />
                   </div>
 
@@ -1336,7 +1336,7 @@ export default function Salle() {
                       return (
                         <div className="w-full max-w-xl flex flex-col gap-5">
                           <div className="flex items-start gap-3">
-                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-violet-600/20 border border-violet-500/50 flex items-center justify-center text-xs font-bold text-violet-400">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-700/20 border border-violet-500/50 flex items-center justify-center text-xs font-bold text-blue-700">
                               {tentativeActive.currentIdx + 1}
                             </span>
                             <p className="text-white font-semibold text-base leading-relaxed">{q.texte}</p>
@@ -1348,8 +1348,8 @@ export default function Salle() {
                                 <button key={r.id} onClick={() => handleSelectReponse(q.id, r.id)}
                                   className="w-full text-left px-4 py-3 rounded-xl transition-all text-sm"
                                   style={{
-                                    background: selected ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.03)',
-                                    border: selected ? '1.5px solid #7c3aed' : '1px solid rgba(255,255,255,0.08)',
+                                    background: selected ? 'rgba(21,101,192,0.2)' : 'rgba(255,255,255,0.03)',
+                                    border: selected ? '1.5px solid #1565C0' : '1px solid rgba(255,255,255,0.08)',
                                     color: selected ? '#c4b5fd' : '#94a3b8',
                                     fontWeight: selected ? 600 : 400,
                                   }}>
@@ -1365,11 +1365,11 @@ export default function Salle() {
                   </div>
 
                   {/* Navigation */}
-                  <div className="flex items-center justify-between px-5 py-3 border-t border-ink-700 bg-ink-900 flex-shrink-0 gap-3">
+                  <div className="flex items-center justify-between px-5 py-3 border-t border-blue-200 bg-white flex-shrink-0 gap-3">
                     <button
                       onClick={() => setTentativeActive(prev => ({ ...prev, currentIdx: Math.max(0, prev.currentIdx - 1) }))}
                       disabled={tentativeActive.currentIdx === 0}
-                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 disabled:opacity-30 hover:bg-ink-600 transition-all">
+                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-blue-100 text-blue-800 disabled:opacity-30 hover:bg-blue-200 transition-all">
                       ← Précédent
                     </button>
 
@@ -1379,9 +1379,9 @@ export default function Salle() {
                         <button key={q.id} onClick={() => setTentativeActive(prev => ({ ...prev, currentIdx: i }))}
                           className="w-6 h-6 rounded-md text-[10px] font-bold transition-all"
                           style={{
-                            background: reponsesEnCours[String(q.id)] ? '#7c3aed' : tentativeActive.currentIdx === i ? '#312e81' : '#1e1b4b',
+                            background: reponsesEnCours[String(q.id)] ? '#1565C0' : tentativeActive.currentIdx === i ? '#312e81' : '#1e1b4b',
                             color: reponsesEnCours[String(q.id)] || tentativeActive.currentIdx === i ? '#fff' : '#6b7280',
-                            border: tentativeActive.currentIdx === i ? '1px solid #7c3aed' : '1px solid transparent',
+                            border: tentativeActive.currentIdx === i ? '1px solid #1565C0' : '1px solid transparent',
                           }}>
                           {i + 1}
                         </button>
@@ -1391,13 +1391,13 @@ export default function Salle() {
                     {tentativeActive.currentIdx < tentativeActive.questions.length - 1 ? (
                       <button
                         onClick={() => setTentativeActive(prev => ({ ...prev, currentIdx: prev.currentIdx + 1 }))}
-                        className="px-4 py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 hover:bg-ink-600 transition-all">
+                        className="px-4 py-2 rounded-xl text-xs font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200 transition-all">
                         Suivant →
                       </button>
                     ) : (
                       <button onClick={() => setShowConfirmSoum(true)}
                         className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
-                        style={{ background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                        style={{ background: 'linear-gradient(135deg,#1565C0,#1976D2)', color:'#fff' }}>
                         ✅ Terminer et envoyer
                       </button>
                     )}
@@ -1406,20 +1406,20 @@ export default function Salle() {
                   {/* Popup confirmation soumission */}
                   {showConfirmSoum && (
                     <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
-                      <div className="bg-ink-800 border border-ink-600 rounded-2xl p-6 max-w-sm w-full mx-4 flex flex-col gap-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 max-w-sm w-full mx-4 flex flex-col gap-4">
                         <p className="font-bold text-white text-center">Soumettre l'examen ?</p>
-                        <p className="text-xs text-slate-400 text-center">
+                        <p className="text-xs text-slate-500 text-center">
                           {Object.keys(reponsesEnCours).length}/{tentativeActive.questions.length} questions répondues.<br/>
                           Après validation, vous ne pourrez plus modifier vos réponses.
                         </p>
                         <div className="flex gap-3">
                           <button onClick={() => setShowConfirmSoum(false)}
-                            className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 hover:bg-ink-600">
+                            className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200">
                             Annuler
                           </button>
                           <button onClick={() => handleSoumettreExamen(false)}
                             className="flex-1 py-2.5 rounded-xl text-xs font-bold"
-                            style={{ background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                            style={{ background: 'linear-gradient(135deg,#1565C0,#1976D2)', color:'#fff' }}>
                             Confirmer
                           </button>
                         </div>
@@ -1445,12 +1445,12 @@ export default function Salle() {
                   {resultats.reussi && resultats.certificat && (
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
                       <p className="text-xs font-bold text-amber-400">🎓 Certificat généré !</p>
-                      <p className="text-xs text-slate-400 mt-1 font-mono">{resultats.certificat.numero_certificat}</p>
+                      <p className="text-xs text-slate-500 mt-1 font-mono">{resultats.certificat.numero_certificat}</p>
                       <p className="text-xs text-slate-500 mt-1">Vérifiable sur SmartTutor</p>
                     </div>
                   )}
                   <button onClick={() => setResultats(null)}
-                    className="w-full py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 hover:bg-ink-600">
+                    className="w-full py-2 rounded-xl text-xs font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200">
                     Retour aux examens
                   </button>
                 </div>
@@ -1459,7 +1459,7 @@ export default function Salle() {
               {/* === LISTE EXAMENS (quand pas de tentative ni résultat) === */}
               {!tentativeActive && !resultats && (() => {
                 if (!examensLoaded) return (
-                  <button onClick={loadExamens} className="w-full py-3 rounded-xl text-xs text-slate-500 bg-ink-800 border border-ink-700 hover:border-violet-500/50 hover:text-violet-400 transition-all">
+                  <button onClick={loadExamens} className="w-full py-3 rounded-xl text-xs text-slate-500 bg-blue-50 border border-blue-200 hover:border-violet-500/50 hover:text-blue-700 transition-all">
                     📝 Charger les examens
                   </button>
                 )
@@ -1475,27 +1475,27 @@ export default function Salle() {
 
                     {/* Formulaire création/édition (tuteur) */}
                     {showCreateExamen && !editingExamen?.statut && (
-                      <div className="rounded-xl bg-ink-800 border border-violet-500/30 p-3 flex flex-col gap-2">
-                        <p className="text-xs font-bold text-violet-400">Nouvel examen</p>
+                      <div className="rounded-xl bg-blue-50 border border-violet-500/30 p-3 flex flex-col gap-2">
+                        <p className="text-xs font-bold text-blue-700">Nouvel examen</p>
                         <form onSubmit={handleSaveExamen} className="flex flex-col gap-2">
                           <input required value={examForm.titre} onChange={e => setExamForm(f => ({...f, titre:e.target.value}))}
                             placeholder="Titre de l'examen *"
-                            className="w-full px-3 py-2 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600" />
+                            className="w-full px-3 py-2 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs placeholder-slate-600" />
                           <textarea value={examForm.description} onChange={e => setExamForm(f => ({...f, description:e.target.value}))}
                             placeholder="Description (optionnel)" rows={2}
-                            className="w-full px-3 py-2 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600 resize-none" />
+                            className="w-full px-3 py-2 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs placeholder-slate-600 resize-none" />
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="text-[10px] text-slate-500">Note de passage (%)</label>
                               <input type="number" min={0} max={100} value={examForm.notePassage}
                                 onChange={e => setExamForm(f => ({...f, notePassage:Number(e.target.value)}))}
-                                className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                                className="w-full px-2 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs" />
                             </div>
                             <div>
                               <label className="text-[10px] text-slate-500">Durée (min)</label>
                               <input type="number" min={5} max={180} value={examForm.dureeMinutes}
                                 onChange={e => setExamForm(f => ({...f, dureeMinutes:Number(e.target.value)}))}
-                                className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                                className="w-full px-2 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs" />
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
@@ -1503,12 +1503,12 @@ export default function Salle() {
                               <label className="text-[10px] text-slate-500">Max tentatives</label>
                               <input type="number" min={1} value={examForm.maxTentatives} placeholder="illimité"
                                 onChange={e => setExamForm(f => ({...f, maxTentatives:e.target.value}))}
-                                className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600" />
+                                className="w-full px-2 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs placeholder-slate-600" />
                             </div>
                             <div>
                               <label className="text-[10px] text-slate-500">Mode</label>
                               <select value={examForm.modeAffichage} onChange={e => setExamForm(f => ({...f, modeAffichage:e.target.value}))}
-                                className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs">
+                                className="w-full px-2 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs">
                                 <option value="UNE_PAR_UNE">Une par une</option>
                                 <option value="LISTE">Liste complète</option>
                               </select>
@@ -1518,26 +1518,26 @@ export default function Salle() {
                             <label className="text-[10px] text-slate-500">Date de début (optionnel)</label>
                             <input type="datetime-local" value={examForm.dateDebut}
                               onChange={e => setExamForm(f => ({...f, dateDebut:e.target.value}))}
-                              className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                              className="w-full px-2 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs" />
                           </div>
                           <div>
                             <label className="text-[10px] text-slate-500">Date limite (optionnel)</label>
                             <input type="datetime-local" value={examForm.dateLimite}
                               onChange={e => setExamForm(f => ({...f, dateLimite:e.target.value}))}
-                              className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                              className="w-full px-2 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs" />
                           </div>
                           <div>
                             <label className="text-[10px] text-slate-500">Date affichage résultats (optionnel)</label>
                             <input type="datetime-local" value={examForm.dateAffichageResultats}
                               onChange={e => setExamForm(f => ({...f, dateAffichageResultats:e.target.value}))}
-                              className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                              className="w-full px-2 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs" />
                           </div>
                           <div className="flex gap-2">
                             <button type="button" onClick={() => setShowCreateExamen(false)}
-                              className="flex-1 py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-400 hover:bg-ink-600">Annuler</button>
+                              className="flex-1 py-2 rounded-xl text-xs font-semibold bg-blue-100 text-slate-500 hover:bg-blue-200">Annuler</button>
                             <button type="submit" disabled={savingExamen}
                               className="flex-1 py-2 rounded-xl text-xs font-bold"
-                              style={{ background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                              style={{ background:'linear-gradient(135deg,#1565C0,#1976D2)', color:'#fff' }}>
                               {savingExamen ? '...' : '💾 Enregistrer brouillon'}
                             </button>
                           </div>
@@ -1547,21 +1547,21 @@ export default function Salle() {
 
                     {/* Vue gestion questions d'un brouillon (tuteur) */}
                     {editingExamen && editingExamen.statut === 'BROUILLON' && (
-                      <div className="rounded-xl bg-ink-800 border border-violet-500/40 p-3 flex flex-col gap-3">
+                      <div className="rounded-xl bg-blue-50 border border-violet-500/40 p-3 flex flex-col gap-3">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-xs font-bold text-white">{editingExamen.titre}</p>
                             <p className="text-[10px] text-slate-500">{(editingExamen.questions||[]).length} question(s) — {editingExamen.note_passage}% requis — {editingExamen.duree_minutes} min</p>
                           </div>
-                          <button onClick={() => setEditingExamen(null)} className="text-slate-600 hover:text-slate-400 text-xs">✕</button>
+                          <button onClick={() => setEditingExamen(null)} className="text-slate-600 hover:text-slate-500 text-xs">✕</button>
                         </div>
 
                         {/* Questions existantes */}
                         {(editingExamen.questions || []).map((q, qi) => (
-                          <div key={q.id} className="bg-ink-700 rounded-xl p-3 flex flex-col gap-1.5 border border-ink-600">
+                          <div key={q.id} className="bg-blue-100 rounded-xl p-3 flex flex-col gap-1.5 border border-blue-200">
                             <div className="flex items-start justify-between gap-2">
                               <p className="text-xs text-white flex-1 leading-relaxed">
-                                <span className="text-violet-400 font-bold mr-1">Q{qi+1}.</span>{q.texte}
+                                <span className="text-blue-700 font-bold mr-1">Q{qi+1}.</span>{q.texte}
                               </p>
                               <button onClick={() => handleDeleteQuestion(q.id)}
                                 className="text-rose-400/60 hover:text-rose-400 text-xs flex-shrink-0">🗑</button>
@@ -1576,26 +1576,26 @@ export default function Salle() {
                         ))}
 
                         {/* Formulaire nouvelle question */}
-                        <div className="border-t border-ink-600 pt-3 flex flex-col gap-2">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ajouter une question</p>
+                        <div className="border-t border-blue-200 pt-3 flex flex-col gap-2">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ajouter une question</p>
                           <select value={questionForm.type} onChange={e => setQuestionForm(f => ({
                             ...f, type:e.target.value,
                             reponses: e.target.value === 'VRAI_FAUX'
                               ? [{texte:'Vrai',estCorrecte:false},{texte:'Faux',estCorrecte:false}]
                               : [{texte:'',estCorrecte:false},{texte:'',estCorrecte:false}]
                           }))}
-                            className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs">
+                            className="w-full px-2 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs">
                             <option value="QCM">QCM</option>
                             <option value="VRAI_FAUX">Vrai / Faux</option>
                           </select>
                           <textarea value={questionForm.texte} onChange={e => setQuestionForm(f => ({...f, texte:e.target.value}))}
                             placeholder="Texte de la question *" rows={2}
-                            className="w-full px-3 py-2 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600 resize-none" />
+                            className="w-full px-3 py-2 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs placeholder-slate-600 resize-none" />
                           <div className="flex items-center gap-2">
                             <label className="text-[10px] text-slate-500">Points :</label>
                             <input type="number" min={0.5} step={0.5} value={questionForm.points}
                               onChange={e => setQuestionForm(f => ({...f, points:Number(e.target.value)}))}
-                              className="w-16 px-2 py-1 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" />
+                              className="w-16 px-2 py-1 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs" />
                           </div>
                           {/* Réponses */}
                           <div className="flex flex-col gap-1.5">
@@ -1612,7 +1612,7 @@ export default function Salle() {
                                     ...f, reponses: f.reponses.map((rr, i) => i === ri ? {...rr, texte:e.target.value} : rr)
                                   }))}
                                   placeholder={`Réponse ${ri+1}`}
-                                  className="flex-1 px-2 py-1 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600" />
+                                  className="flex-1 px-2 py-1 rounded-lg bg-blue-100 border border-blue-200 text-white text-xs placeholder-slate-600" />
                                 {questionForm.type === 'QCM' && ri > 1 && (
                                   <button type="button" onClick={() => setQuestionForm(f => ({...f, reponses: f.reponses.filter((_,i) => i !== ri)}))}
                                     className="text-rose-400/60 hover:text-rose-400 text-xs">✕</button>
@@ -1622,20 +1622,20 @@ export default function Salle() {
                             {questionForm.type === 'QCM' && questionForm.reponses.length < 6 && (
                               <button type="button"
                                 onClick={() => setQuestionForm(f => ({...f, reponses:[...f.reponses, {texte:'',estCorrecte:false}]}))}
-                                className="text-[10px] text-violet-400 hover:text-violet-300 text-left mt-0.5">
+                                className="text-[10px] text-blue-700 hover:text-blue-700 text-left mt-0.5">
                                 + Ajouter une réponse
                               </button>
                             )}
                           </div>
                           <button onClick={handleAddQuestion}
                             className="w-full py-2 rounded-xl text-xs font-bold mt-1"
-                            style={{ background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                            style={{ background:'linear-gradient(135deg,#1565C0,#1976D2)', color:'#fff' }}>
                             + Enregistrer la question
                           </button>
                         </div>
 
                         {/* Actions examen */}
-                        <div className="flex gap-2 border-t border-ink-600 pt-3">
+                        <div className="flex gap-2 border-t border-blue-200 pt-3">
                           <button onClick={() => handleDeleteExamen(editingExamen.id)}
                             className="flex-1 py-2 rounded-xl text-xs font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20">
                             🗑 Supprimer
@@ -1660,7 +1660,7 @@ export default function Salle() {
                       const tentativesRestantes = ex.max_tentatives ? ex.max_tentatives - (ex.nb_tentatives_faites||0) : null
 
                       return (
-                        <div key={ex.id} className={`rounded-xl border p-3 flex flex-col gap-2 ${ex.statut === 'PUBLIE' ? 'bg-ink-800 border-ink-700' : 'bg-ink-800/60 border-dashed border-ink-600'}`}>
+                        <div key={ex.id} className={`rounded-xl border p-3 flex flex-col gap-2 ${ex.statut === 'PUBLIE' ? 'bg-blue-50 border-blue-200' : 'bg-blue-50/60 border-dashed border-blue-200'}`}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 mb-0.5">
@@ -1690,7 +1690,7 @@ export default function Salle() {
                               setEditingExamen(data)
                               setShowCreateExamen(false)
                             }}
-                              className="w-full py-1.5 rounded-xl text-xs font-semibold bg-violet-600/15 border border-violet-500/30 text-violet-400 hover:bg-violet-600/25 transition-all">
+                              className="w-full py-1.5 rounded-xl text-xs font-semibold bg-blue-700/15 border border-violet-500/30 text-blue-700 hover:bg-blue-700/25 transition-all">
                               ✏️ Gérer les questions
                             </button>
                           )}
@@ -1701,7 +1701,7 @@ export default function Salle() {
                               {peutPasser && (tentativesRestantes === null || tentativesRestantes > 0) ? (
                                 <button onClick={() => handleDemarrerExamen(ex.id)}
                                   className="w-full py-2 rounded-xl text-xs font-bold transition-all"
-                                  style={{ background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff' }}>
+                                  style={{ background:'linear-gradient(135deg,#1565C0,#1976D2)', color:'#fff' }}>
                                   ▶ Commencer l'examen
                                 </button>
                               ) : ex.deja_reussi ? (
@@ -1709,7 +1709,7 @@ export default function Salle() {
                                   ✅ Examen réussi — certificat disponible
                                 </div>
                               ) : !avantLimite ? (
-                                <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">
+                                <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-blue-100 border border-blue-200">
                                   ❌ Période de passage terminée
                                 </div>
                               ) : !apresDebut ? (
@@ -1717,7 +1717,7 @@ export default function Salle() {
                                   ⏳ Pas encore disponible — {new Date(ex.date_debut).toLocaleDateString('fr-FR')}
                                 </div>
                               ) : (
-                                <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">
+                                <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-blue-100 border border-blue-200">
                                   ❌ Nombre maximum de tentatives atteint
                                 </div>
                               )}
@@ -1743,13 +1743,13 @@ export default function Salle() {
       {/* ── Fiche d'appel entrant ──────────────────────────────────────────── */}
       {incomingCall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-ink-800 border border-ink-600 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-violet-600/20 border-2 border-violet-500 flex items-center justify-center text-3xl">👨‍🏫</div>
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-ink-800 animate-pulse" />
+              <div className="w-20 h-20 rounded-full bg-blue-700/20 border-2 border-violet-500 flex items-center justify-center text-3xl">👨‍🏫</div>
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-blue-200 animate-pulse" />
             </div>
             <div className="text-center">
-              <p className="text-xs text-violet-400 font-semibold uppercase tracking-wider mb-1">Appel entrant</p>
+              <p className="text-xs text-blue-700 font-semibold uppercase tracking-wider mb-1">Appel entrant</p>
               <p className="font-display font-bold text-white text-lg">{incomingCall.initiateurNom}</p>
               <p className="text-sm text-slate-500 mt-1">vous invite à rejoindre l'appel</p>
             </div>
@@ -1778,7 +1778,7 @@ export default function Salle() {
               <select
                 value={planForm.matiere}
                 onChange={e => setPlanForm(f => ({ ...f, matiere: e.target.value }))}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, background: '#1a1a2e', border: '1px solid #2d2d4a', color: planForm.matiere ? '#e2e8f0' : '#64748b', fontSize: 14 }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, background: '#FFFFFF', border: '1px solid #BBDEFB', color: planForm.matiere ? '#e2e8f0' : '#64748b', fontSize: 14 }}
               >
                 <option value="">— Choisir une matière —</option>
                 {mesTarifs.map(t => (
@@ -1866,12 +1866,12 @@ export default function Salle() {
                         className="w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all"
                         style={{
                           background: planForm.dateDebut === cr.iso
-                            ? 'linear-gradient(135deg, #7c3aed22, #4f46e522)'
+                            ? 'linear-gradient(135deg, #1565C022, #1976D222)'
                             : 'var(--color-background-secondary)',
                           border: planForm.dateDebut === cr.iso
-                            ? '1.5px solid #7c3aed'
+                            ? '1.5px solid #1565C0'
                             : '1px solid var(--color-border-tertiary)',
-                          color: planForm.dateDebut === cr.iso ? '#a78bfa' : 'var(--color-text-secondary)',
+                          color: planForm.dateDebut === cr.iso ? '#1565C0' : 'var(--color-text-secondary)',
                           fontWeight: planForm.dateDebut === cr.iso ? 600 : 400,
                         }}
                       >
@@ -1919,4 +1919,3 @@ export default function Salle() {
     </div>
   )
 }
-

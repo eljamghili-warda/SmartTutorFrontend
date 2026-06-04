@@ -13,7 +13,7 @@ const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
 
 const statutConfig = {
   PLANIFIEE:  { color: 'text-amber-400',   bg: 'bg-amber-400/10',   border: 'border-amber-400/25',   label: 'Planifiée' },
-  EN_COURS:   { color: 'text-violet-400',  bg: 'bg-violet-400/10',  border: 'border-violet-400/25',  label: 'En cours' },
+  EN_COURS:   { color: 'text-blue-700',  bg: 'bg-violet-400/10',  border: 'border-violet-400/25',  label: 'En cours' },
   REALISEE:   { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/25', label: 'Réalisée ✓' },
   ANNULEE:    { color: 'text-rose-400',    bg: 'bg-rose-400/10',    border: 'border-rose-400/25',    label: 'Annulée' },
 }
@@ -112,11 +112,11 @@ export default function EmploiDuTemps() {
               const isToday = isSameDay(day, new Date())
               return (
                 <div key={i} className={`flex flex-col rounded-xl border overflow-hidden min-h-[200px]
-                  ${isToday ? 'border-violet-500/50 bg-violet-600/5' : 'border-ink-700 bg-ink-800'}`}>
+                  ${isToday ? 'border-violet-500/50 bg-blue-700/5' : 'border-blue-200 bg-blue-50'}`}>
                   <div className={`px-2 py-2.5 text-center border-b flex-shrink-0
-                    ${isToday ? 'border-violet-500/30 bg-violet-600/10' : 'border-ink-700 bg-ink-900'}`}>
+                    ${isToday ? 'border-violet-500/30 bg-blue-700/10' : 'border-blue-200 bg-white'}`}>
                     <p className="text-xs font-semibold text-slate-500 uppercase">{JOURS[i]}</p>
-                    <p className={`font-display font-bold text-lg mt-0.5 ${isToday ? 'text-violet-400' : 'text-ink-600'}`}>
+                    <p className={`font-display font-bold text-lg mt-0.5 ${isToday ? 'text-blue-700' : 'text-ink-600'}`}>
                       {format(day, 'd')}
                     </p>
                   </div>
@@ -132,12 +132,12 @@ export default function EmploiDuTemps() {
                           {s.salle_nom && <p className="text-xs text-slate-600 truncate">🏠 {s.salle_nom}</p>}
                           <p className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</p>
                           {isTuteur && s.statut === 'PLANIFIEE' && (
-                            <p className="text-xs text-violet-400 mt-1">📞 Appel = séance lancée</p>
+                            <p className="text-xs text-blue-700 mt-1">📞 Appel = séance lancée</p>
                           )}
                           {!isTuteur && s.statut === 'PLANIFIEE' && s.statut_paiement !== 'PAYE' && (
                             <button
                               onClick={() => setPaiementSeanceId(s.id)}
-                              className="mt-1 w-full text-xs font-bold py-1 px-2 rounded-md bg-violet-600/80 hover:bg-violet-600 text-ink-800 transition-colors"
+                              className="mt-1 w-full text-xs font-bold py-1 px-2 rounded-md bg-blue-700/80 hover:bg-blue-700 text-ink-800 transition-colors"
                             >
                               💳 Payer
                             </button>
