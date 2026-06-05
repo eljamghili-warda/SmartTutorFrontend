@@ -4,25 +4,163 @@ import Header from '../../components/Header/Header'
 import { Btn, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
-const JOURS = [
-  { id:1, court:'Lun', long:'Lundi'    },
-  { id:2, court:'Mar', long:'Mardi'    },
-  { id:3, court:'Mer', long:'Mercredi' },
-  { id:4, court:'Jeu', long:'Jeudi'    },
-  { id:5, court:'Ven', long:'Vendredi' },
-  { id:6, court:'Sam', long:'Samedi'   },
-  { id:7, court:'Dim', long:'Dimanche' },
-]
-const HEURES = Array.from({ length: 18 }, (_, i) => `${String(i + 6).padStart(2, '0')}:00`)
+const HEURES = Array.from({ length: 29 }, (_, i) => {
+  const h = Math.floor(i / 2) + 6
+  const m = i % 2 === 0 ? '00' : '30'
+  return `${String(h).padStart(2,'0')}:${m}`
+}).filter(h => h <= '22:00')
 
+const JOURS_COURT = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam']
+const MOIS_NOMS   = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+
+const duree = (debut, fin) => {
+  const [dh, dm] = debut.split(':').map(Number)
+  const [fh, fm] = fin.split(':').map(Number)
+  const tot = (fh*60+fm) - (dh*60+dm)
+  if (tot <= 0) return ''
+  return tot >= 60
+    ? `${Math.floor(tot/60)}h${tot%60 ? String(tot%60).padStart(2,'0') : ''}`
+    : `${tot}min`
+}
+
+const toISO = (d) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth()+1).padStart(2,'0')
+  const j = String(d.getDate()).padStart(2,'0')
+  return `${y}-${m}-${j}`
+}
+
+const formatDate = (isoStr) => {
+  const d = new Date(isoStr + 'T00:00:00')
+  return d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'long', year:'numeric' })
+}
+
+// ── Mini calendrier ───────────────────────────────────────────────────────────
+function Calendrier({ selectedDates, onToggle, disabledBefore }) {
+  const today = new Date()
+  today.setHours(0,0,0,0)
+
+  const [viewYear,  setViewYear]  = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth())
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y-1) }
+    else setViewMonth(m => m-1)
+  }
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y+1) }
+    else setViewMonth(m => m+1)
+  }
+
+  // Jours du mois
+  const firstDay = new Date(viewYear, viewMonth, 1)
+  const lastDay  = new Date(viewYear, viewMonth+1, 0)
+  // Décalage : lundi = 0
+  const startOffset = (firstDay.getDay() + 6) % 7
+  const totalCells  = startOffset + lastDay.getDate()
+  const rows        = Math.ceil(totalCells / 7)
+
+  const cells = []
+  for (let r = 0; r < rows * 7; r++) {
+    const dayNum = r - startOffset + 1
+    if (dayNum < 1 || dayNum > lastDay.getDate()) { cells.push(null); continue }
+    const d = new Date(viewYear, viewMonth, dayNum)
+    cells.push(d)
+  }
+
+  return (
+    <div style={{
+      background:'#FFFFFF', border:'1px solid #E8D5A3', borderRadius:16,
+      padding:20, width:'100%', maxWidth:380,
+      boxShadow:'0 4px 20px rgba(10,22,40,0.08)',
+    }}>
+      {/* Navigation mois */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+        <button onClick={prevMonth} style={{
+          width:32, height:32, borderRadius:8, border:'1px solid #E8D5A3',
+          background:'#FDF9F0', cursor:'pointer', fontSize:16, color:'#8B6914',
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }}>‹</button>
+        <span style={{ fontWeight:700, fontSize:15, color:'#0A1628', fontFamily:'Plus Jakarta Sans, sans-serif' }}>
+          {MOIS_NOMS[viewMonth]} {viewYear}
+        </span>
+        <button onClick={nextMonth} style={{
+          width:32, height:32, borderRadius:8, border:'1px solid #E8D5A3',
+          background:'#FDF9F0', cursor:'pointer', fontSize:16, color:'#8B6914',
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }}>›</button>
+      </div>
+
+      {/* En-têtes jours */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:6 }}>
+        {['Lu','Ma','Me','Je','Ve','Sa','Di'].map(j => (
+          <div key={j} style={{ textAlign:'center', fontSize:11, fontWeight:700,
+            color:'#94A3B8', padding:'4px 0', fontFamily:'Plus Jakarta Sans, sans-serif' }}>
+            {j}
+          </div>
+        ))}
+      </div>
+
+      {/* Grille jours */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:3 }}>
+        {cells.map((d, i) => {
+          if (!d) return <div key={i} />
+          const iso       = toISO(d)
+          const isPast    = d < today
+          const isToday   = toISO(d) === toISO(today)
+          const isSelected = selectedDates.includes(iso)
+
+          let bg = 'transparent', color = '#374151', border = '1px solid transparent'
+          if (isPast)       { color = '#CBD5E1' }
+          if (isToday)      { border = '1px solid #C5A059'; color = '#8B6914' }
+          if (isSelected)   { bg = '#0A1628'; color = '#E8D5A3'; border = '1px solid #C5A059' }
+
+          return (
+            <button key={i} onClick={() => !isPast && onToggle(iso)}
+              disabled={isPast}
+              style={{
+                width:'100%', aspectRatio:'1', borderRadius:8,
+                background: bg, border, color,
+                fontSize:13, fontWeight: isSelected ? 700 : 400,
+                cursor: isPast ? 'not-allowed' : 'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                transition:'all 0.1s', fontFamily:'Plus Jakarta Sans, sans-serif',
+                opacity: isPast ? 0.4 : 1,
+              }}
+              onMouseEnter={e => { if (!isPast && !isSelected) e.currentTarget.style.background = '#F5F0E6' }}
+              onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
+            >
+              {d.getDate()}
+            </button>
+          )
+        })}
+      </div>
+
+      {selectedDates.length > 0 && (
+        <div style={{
+          marginTop:14, padding:'8px 12px', background:'#F5F0E6',
+          borderRadius:9, border:'1px solid #E8D5A3',
+          fontSize:12, color:'#8B6914', fontWeight:600,
+          fontFamily:'Plus Jakarta Sans, sans-serif',
+        }}>
+          {selectedDates.length} date{selectedDates.length > 1 ? 's' : ''} sélectionnée{selectedDates.length > 1 ? 's' : ''}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Page principale ───────────────────────────────────────────────────────────
 export default function MesDisponibilites() {
-  const [dispos,   setDispos]   = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [saving,   setSaving]   = useState(false)
-  const [deleting, setDeleting] = useState(null)
-  const [showForm, setShowForm] = useState(false)
-  const [form,     setForm]     = useState({ jourSemaine: 1, heureDebut: '09:00', heureFin: '12:00' })
-  const [formErr,  setFormErr]  = useState('')
+  const [dispos,     setDispos]     = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [saving,     setSaving]     = useState(false)
+  const [deleting,   setDeleting]   = useState(null)
+  const [showForm,   setShowForm]   = useState(false)
+  const [selDates,   setSelDates]   = useState([])   // dates sélectionnées dans le calendrier
+  const [heureDebut, setHeureDebut] = useState('09:00')
+  const [heureFin,   setHeureFin]   = useState('11:00')
+  const [formErr,    setFormErr]    = useState('')
   const { toasts, success, error } = useToast()
 
   const load = () => {
@@ -34,246 +172,302 @@ export default function MesDisponibilites() {
   }
   useEffect(() => { load() }, [])
 
-  const validate = () => {
-    if (form.heureDebut >= form.heureFin) return "L'heure de fin doit être après l'heure de début"
-    const [dh, dm] = form.heureDebut.split(':').map(Number)
-    const [fh, fm] = form.heureFin.split(':').map(Number)
-    if ((fh * 60 + fm) - (dh * 60 + dm) < 30) return 'La plage doit durer au moins 30 minutes'
-    const conflict = dispos.find(d => {
-      if (d.jour_semaine !== form.jourSemaine) return false
-      return form.heureDebut < d.heure_fin.slice(0, 5) && form.heureFin > d.heure_debut.slice(0, 5)
-    })
-    if (conflict) return `Chevauchement avec ${conflict.heure_debut.slice(0,5)}–${conflict.heure_fin.slice(0,5)}`
-    return null
+  const toggleDate = (iso) => {
+    setSelDates(prev =>
+      prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso].sort()
+    )
   }
 
   const handleAjouter = async () => {
     setFormErr('')
-    const err = validate()
-    if (err) { setFormErr(err); return }
+    if (selDates.length === 0) { setFormErr('Sélectionnez au moins une date sur le calendrier.'); return }
+    if (heureDebut >= heureFin) { setFormErr("L'heure de fin doit être après l'heure de début."); return }
+    const [dh,dm] = heureDebut.split(':').map(Number)
+    const [fh,fm] = heureFin.split(':').map(Number)
+    if ((fh*60+fm)-(dh*60+dm) < 30) { setFormErr('La plage doit durer au moins 30 minutes.'); return }
+
     setSaving(true)
-    try {
-      await seancesAPI.setDisponibilite({ jourSemaine: form.jourSemaine, heureDebut: form.heureDebut, heureFin: form.heureFin })
-      success('Disponibilité ajoutée !')
-      setShowForm(false)
-      setForm({ jourSemaine: 1, heureDebut: '09:00', heureFin: '12:00' })
-      load()
-    } catch (e) { error(e.response?.data?.error || 'Erreur') }
-    finally { setSaving(false) }
+    let ok = 0, fail = 0
+    for (const date of selDates) {
+      try {
+        await seancesAPI.setDisponibilite({ dateSpecifique: date, heureDebut, heureFin })
+        ok++
+      } catch (e) {
+        fail++
+        console.warn(`Erreur date ${date}:`, e.response?.data?.error)
+      }
+    }
+    setSaving(false)
+    if (ok > 0) success(`${ok} disponibilité${ok>1?'s':''} ajoutée${ok>1?'s':''}${fail>0?` (${fail} chevauchement${fail>1?'s':''} ignoré${fail>1?'s':''})`:''} !`)
+    else error('Aucune disponibilité ajoutée (chevauchements).')
+    setShowForm(false)
+    setSelDates([])
+    load()
   }
 
   const handleSupprimer = async (id) => {
     setDeleting(id)
     try {
       await seancesAPI.deleteDisponibilite(id)
-      success('Disponibilité supprimée')
+      success('Supprimée')
       setDispos(prev => prev.filter(d => d.id !== id))
     } catch { error('Erreur suppression') }
     finally { setDeleting(null) }
   }
 
-  const disposByJour = JOURS.map(j => ({
-    ...j,
-    plages: dispos.filter(d => d.jour_semaine === j.id)
-                  .sort((a, b) => a.heure_debut.localeCompare(b.heure_debut)),
-  }))
-
-  const duree = (debut, fin) => {
-    const [dh, dm] = debut.split(':').map(Number)
-    const [fh, fm] = fin.split(':').map(Number)
-    const tot = (fh * 60 + fm) - (dh * 60 + dm)
-    return tot >= 60 ? `${Math.floor(tot/60)}h${tot % 60 ? String(tot % 60).padStart(2,'0') : ''}` : `${tot}min`
-  }
+  // Grouper par date
+  const disposByDate = {}
+  dispos.forEach(d => {
+    const key = d.date_specifique
+      ? d.date_specifique.slice(0,10)
+      : `jour-${d.jour_semaine}`
+    if (!disposByDate[key]) disposByDate[key] = []
+    disposByDate[key].push(d)
+  })
 
   return (
-    <div className="flex flex-col h-full">
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', fontFamily:'Plus Jakarta Sans, sans-serif' }}>
       <Header title="Mes disponibilités" />
       <ToastContainer toasts={toasts} />
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto flex flex-col gap-4">
+      <div style={{ flex:1, overflowY:'auto', padding:'24px 32px', background:'#F5F0E6' }}>
+        <div style={{ maxWidth:820, margin:'0 auto', display:'flex', flexDirection:'column', gap:20 }}>
 
-          {/* ── En-tête ── */}
-          <div className="flex items-start justify-between gap-4 flex-wrap">
+          {/* ── Header ── */}
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
             <div>
-              <h1 className="font-bold text-xl text-ink-800">🗓️ Mes disponibilités</h1>
-              <p className="text-sm text-slate-500 mt-0.5">
-                Définissez vos créneaux disponibles. Les étudiants planifient des séances uniquement sur ces plages.
+              <h1 style={{ fontSize:22, fontWeight:800, color:'#0A1628', margin:0 }}>Mes disponibilités</h1>
+              <p style={{ fontSize:13, color:'#64748B', marginTop:4 }}>
+                Choisissez des dates précises sur le calendrier et définissez vos plages horaires.
               </p>
             </div>
-            <Btn onClick={() => { setShowForm(true); setFormErr('') }}>+ Ajouter une plage</Btn>
+            <button
+              onClick={() => { setShowForm(true); setFormErr(''); setSelDates([]) }}
+              style={{
+                display:'flex', alignItems:'center', gap:8,
+                padding:'10px 20px', borderRadius:12,
+                background:'linear-gradient(135deg, #0A1628, #162B55)',
+                color:'#E8D5A3', border:'1px solid rgba(197,160,89,0.3)',
+                fontSize:13, fontWeight:700, cursor:'pointer',
+                boxShadow:'0 4px 16px rgba(10,22,40,0.2)',
+              }}
+            >
+              <span style={{ fontSize:16 }}>+</span>
+              Ajouter des disponibilités
+            </button>
           </div>
 
-          {/* ── Stats rapides ── */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* ── Stats ── */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12 }}>
             {[
-              { icon: '📅', val: new Set(dispos.map(d => d.jour_semaine)).size, label: 'Jours actifs'    },
-              { icon: '⏰', val: dispos.length,                                  label: 'Plages définies' },
-              { icon: '✅', val: dispos.length > 0 ? 'Actif' : 'Inactif',       label: 'Statut planning',
-                color: dispos.length > 0 ? 'text-emerald-600' : 'text-rose-500' },
+              { label:'Dates configurées', value: Object.keys(disposByDate).length, color:'#1565C0' },
+              { label:'Plages définies',    value: dispos.length,                    color:'#C5A059' },
+              { label:'Statut',             value: dispos.length > 0 ? 'Actif' : 'Inactif', color: dispos.length > 0 ? '#059669' : '#DC2626' },
             ].map(s => (
-              <div key={s.label} className="rounded-xl border border-blue-200 bg-white shadow-sm px-4 py-3 flex items-center gap-3">
-                <span className="text-2xl">{s.icon}</span>
-                <div>
-                  <p className={`font-black text-lg ${s.color || 'text-ink-800'}`}>{s.val}</p>
-                  <p className="text-xs text-slate-500">{s.label}</p>
-                </div>
+              <div key={s.label} style={{
+                background:'#FFFFFF', border:'1px solid #E8D5A3', borderRadius:14,
+                padding:'16px 20px', boxShadow:'0 2px 8px rgba(10,22,40,0.05)',
+              }}>
+                <div style={{ fontSize:24, fontWeight:800, color:s.color }}>{s.value}</div>
+                <div style={{ fontSize:11, color:'#94A3B8', marginTop:2, fontWeight:500 }}>{s.label}</div>
               </div>
             ))}
           </div>
 
-          {/* ── Alerte aucune dispo ── */}
-          {!loading && dispos.length === 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 flex gap-3 items-start">
-              <span className="text-xl">⚠️</span>
-              <div>
-                <p className="font-bold text-amber-700 text-sm">Aucune disponibilité définie</p>
-                <p className="text-amber-600 text-xs mt-0.5">Cliquez sur <strong>+ Ajouter une plage</strong> pour commencer.</p>
-              </div>
-            </div>
-          )}
-
-          {/* ── Formulaire ── */}
+          {/* ── Formulaire calendrier ── */}
           {showForm && (
-            <div className="rounded-2xl border border-blue-300 bg-white shadow-sm p-5 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-ink-800">➕ Nouvelle plage</h3>
-                <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+            <div style={{
+              background:'#FFFFFF', border:'1px solid #E8D5A3', borderRadius:20,
+              padding:24, boxShadow:'0 4px 24px rgba(10,22,40,0.1)',
+            }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+                <h3 style={{ fontSize:16, fontWeight:700, color:'#0A1628', margin:0 }}>
+                  Nouvelle disponibilité
+                </h3>
+                <button onClick={() => { setShowForm(false); setSelDates([]) }}
+                  style={{ background:'none', border:'none', cursor:'pointer', fontSize:20, color:'#94A3B8' }}>✕</button>
               </div>
 
-              {/* Jours */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Jour de la semaine</label>
-                <div className="flex gap-2 flex-wrap">
-                  {JOURS.map(j => (
-                    <button key={j.id} type="button"
-                      onClick={() => setForm(f => ({ ...f, jourSemaine: j.id }))}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border
-                        ${form.jourSemaine === j.id
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-slate-600 border-blue-200 hover:border-blue-400'}`}
-                    >{j.long}</button>
-                  ))}
+              <div style={{ display:'flex', gap:24, flexWrap:'wrap', alignItems:'flex-start' }}>
+                {/* Calendrier */}
+                <div style={{ flex:'0 0 auto' }}>
+                  <p style={{ fontSize:12, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:1, marginBottom:10 }}>
+                    1. Sélectionnez les dates
+                  </p>
+                  <Calendrier selectedDates={selDates} onToggle={toggleDate} />
                 </div>
-              </div>
 
-              {/* Heures */}
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  ['heureDebut', 'Heure de début', HEURES],
-                  ['heureFin',   'Heure de fin',   HEURES.filter(h => h > form.heureDebut)],
-                ].map(([key, lbl, opts]) => (
-                  <div key={key} className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{lbl}</label>
-                    <select
-                      value={form[key]}
-                      onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                      className="w-full px-3 py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-ink-800 text-sm outline-none focus:border-blue-400 focus:bg-white transition-colors"
-                    >
-                      {opts.map(h => <option key={h} value={h}>{h}</option>)}
-                    </select>
-                  </div>
-                ))}
-              </div>
+                {/* Heures + Récap */}
+                <div style={{ flex:1, minWidth:220, display:'flex', flexDirection:'column', gap:16 }}>
+                  <p style={{ fontSize:12, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:1, margin:0 }}>
+                    2. Définissez les heures
+                  </p>
 
-              {/* Aperçu durée */}
-              {form.heureDebut < form.heureFin && (
-                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
-                  📋 <strong>{JOURS.find(j => j.id === form.jourSemaine)?.long}</strong> de <strong>{form.heureDebut}</strong> à <strong>{form.heureFin}</strong> — durée : <strong>{duree(form.heureDebut, form.heureFin)}</strong>
-                </div>
-              )}
-
-              {/* Erreur */}
-              {formErr && (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
-                  ⚠️ {formErr}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Btn onClick={handleAjouter} disabled={saving}>{saving ? '…' : '✅ Enregistrer'}</Btn>
-                <Btn variant="secondary" onClick={() => { setShowForm(false); setFormErr('') }}>Annuler</Btn>
-              </div>
-            </div>
-          )}
-
-          {/* ── Grille disponibilités ── */}
-          {loading ? (
-            <div className="flex justify-center py-16"><Spinner /></div>
-          ) : (
-            <div className="rounded-2xl border border-blue-200 bg-white shadow-sm overflow-hidden">
-
-              {/* Header tableau */}
-              <div className="grid grid-cols-[140px_1fr_48px] px-5 py-2.5 bg-blue-50 border-b border-blue-200">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Jour</span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Plages horaires</span>
-                <span></span>
-              </div>
-
-              {disposByJour.map((jour, idx) => (
-                <div key={jour.id}
-                  className={`grid grid-cols-[140px_1fr_48px] items-center px-5 py-3 min-h-[52px]
-                    ${idx < 6 ? 'border-b border-blue-100' : ''}
-                    ${jour.plages.length > 0 ? 'bg-blue-50/30' : 'bg-white'}`}
-                >
-                  {/* Jour */}
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0
-                      ${jour.plages.length > 0 ? 'bg-blue-100 border border-blue-200 text-blue-700' : 'bg-slate-100 border border-slate-200 text-slate-400'}`}>
-                      {jour.court}
-                    </div>
-                    <div>
-                      <p className={`text-sm font-semibold ${jour.plages.length > 0 ? 'text-ink-800' : 'text-slate-400'}`}>{jour.long}</p>
-                      {jour.plages.length > 0 && (
-                        <p className="text-xs text-slate-400">{jour.plages.length} plage{jour.plages.length > 1 ? 's' : ''}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Plages */}
-                  <div className="flex flex-wrap gap-2">
-                    {jour.plages.length === 0 ? (
-                      <span className="text-xs text-slate-300 italic">Aucune</span>
-                    ) : jour.plages.map(p => (
-                      <div key={p.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-100 border border-blue-200">
-                        <span className="text-xs font-bold text-blue-700">
-                          {p.heure_debut.slice(0,5)} – {p.heure_fin.slice(0,5)}
-                        </span>
-                        <span className="text-xs text-slate-400 bg-white/60 px-1.5 rounded-full">
-                          {duree(p.heure_debut.slice(0,5), p.heure_fin.slice(0,5))}
-                        </span>
-                        <button
-                          onClick={() => handleSupprimer(p.id)}
-                          disabled={deleting === p.id}
-                          className="text-rose-400 hover:text-rose-600 text-xs ml-0.5 disabled:opacity-40"
-                        >
-                          {deleting === p.id ? '…' : '✕'}
-                        </button>
+                  <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                    {[['Heure de début', heureDebut, setHeureDebut, HEURES],
+                      ['Heure de fin',   heureFin,   setHeureFin,   HEURES.filter(h => h > heureDebut)]
+                    ].map(([lbl, val, setter, opts]) => (
+                      <div key={lbl}>
+                        <label style={{ fontSize:12, fontWeight:600, color:'#64748B', display:'block', marginBottom:6 }}>{lbl}</label>
+                        <select value={val} onChange={e => setter(e.target.value)}
+                          style={{
+                            width:'100%', padding:'10px 14px', borderRadius:10,
+                            border:'1px solid #E8D5A3', background:'#FDF9F0',
+                            fontSize:14, color:'#0A1628', fontWeight:600,
+                            outline:'none', cursor:'pointer',
+                            fontFamily:'Plus Jakarta Sans, sans-serif',
+                          }}>
+                          {opts.map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
                       </div>
                     ))}
                   </div>
 
-                  {/* Bouton + rapide */}
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => { setForm(f => ({ ...f, jourSemaine: jour.id })); setShowForm(true); setFormErr('') }}
-                      className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 transition-colors flex items-center justify-center text-lg font-bold"
-                    >+</button>
+                  {/* Aperçu */}
+                  {heureDebut < heureFin && (
+                    <div style={{
+                      background:'#F5F0E6', border:'1px solid #E8D5A3', borderRadius:10,
+                      padding:'10px 14px', fontSize:13, color:'#8B6914',
+                    }}>
+                      <strong>{heureDebut}</strong> → <strong>{heureFin}</strong>
+                      {' '}· <strong>{duree(heureDebut, heureFin)}</strong>
+                      {selDates.length > 0 && (
+                        <div style={{ marginTop:6, fontSize:12, color:'#94A3B8' }}>
+                          Sur {selDates.length} date{selDates.length>1?'s':''}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Erreur */}
+                  {formErr && (
+                    <div style={{
+                      background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10,
+                      padding:'8px 12px', fontSize:13, color:'#DC2626',
+                    }}>
+                      {formErr}
+                    </div>
+                  )}
+
+                  {/* Boutons */}
+                  <div style={{ display:'flex', gap:10, marginTop:4 }}>
+                    <button onClick={handleAjouter} disabled={saving}
+                      style={{
+                        flex:1, padding:'11px', borderRadius:11,
+                        background: saving ? '#CBD5E1' : 'linear-gradient(135deg,#0A1628,#162B55)',
+                        color:'#E8D5A3', border:'1px solid rgba(197,160,89,0.3)',
+                        fontSize:13, fontWeight:700, cursor: saving ? 'not-allowed' : 'pointer',
+                        fontFamily:'Plus Jakarta Sans, sans-serif',
+                      }}>
+                      {saving ? 'Enregistrement…' : `Enregistrer${selDates.length > 1 ? ` (${selDates.length})` : ''}`}
+                    </button>
+                    <button onClick={() => { setShowForm(false); setSelDates([]) }}
+                      style={{
+                        padding:'11px 18px', borderRadius:11,
+                        background:'#F5F0E6', border:'1px solid #E8D5A3',
+                        fontSize:13, fontWeight:600, color:'#64748B', cursor:'pointer',
+                        fontFamily:'Plus Jakarta Sans, sans-serif',
+                      }}>
+                      Annuler
+                    </button>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
           )}
 
-          {/* ── Conseils ── */}
-          {!loading && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              <p className="font-bold mb-1">💡 Conseils</p>
-              <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
-                <li>Les étudiants planifient <strong>uniquement dans vos créneaux disponibles</strong>.</li>
-                <li>Vous pouvez avoir <strong>plusieurs plages</strong> le même jour (ex: 9h–12h et 14h–18h).</li>
-                <li>Une séance planifiée <strong>bloque automatiquement</strong> le créneau.</li>
-              </ul>
+          {/* ── Liste disponibilités ── */}
+          {loading ? (
+            <div style={{ display:'flex', justifyContent:'center', padding:48 }}><Spinner /></div>
+          ) : dispos.length === 0 ? (
+            <div style={{
+              background:'#FFFFFF', border:'1px dashed #E8D5A3', borderRadius:16,
+              padding:'40px 24px', textAlign:'center',
+            }}>
+              <div style={{ fontSize:48, marginBottom:12 }}>📅</div>
+              <p style={{ fontSize:15, fontWeight:700, color:'#0A1628' }}>Aucune disponibilité</p>
+              <p style={{ fontSize:13, color:'#94A3B8', marginTop:4 }}>
+                Cliquez sur "Ajouter des disponibilités" et sélectionnez vos dates sur le calendrier.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              <h3 style={{ fontSize:14, fontWeight:700, color:'#0A1628', margin:0 }}>
+                Vos disponibilités ({dispos.length})
+              </h3>
+              {Object.entries(disposByDate)
+                .sort(([a],[b]) => a.localeCompare(b))
+                .map(([dateKey, plages]) => (
+                <div key={dateKey} style={{
+                  background:'#FFFFFF', border:'1px solid #E8D5A3', borderRadius:14,
+                  overflow:'hidden', boxShadow:'0 2px 8px rgba(10,22,40,0.05)',
+                }}>
+                  {/* Header date */}
+                  <div style={{
+                    padding:'10px 16px', background:'linear-gradient(90deg,#0A1628,#162B55)',
+                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                  }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <div style={{
+                        width:36, height:36, borderRadius:9, background:'rgba(197,160,89,0.2)',
+                        border:'1px solid rgba(197,160,89,0.4)',
+                        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                      }}>
+                        <span style={{ fontSize:9, fontWeight:700, color:'#C5A059', lineHeight:1 }}>
+                          {dateKey.startsWith('jour-') ? '—'
+                            : new Date(dateKey+'T00:00:00').toLocaleDateString('fr-FR',{month:'short'}).toUpperCase()}
+                        </span>
+                        <span style={{ fontSize:15, fontWeight:800, color:'#E8D5A3', lineHeight:1 }}>
+                          {dateKey.startsWith('jour-') ? ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'][parseInt(dateKey.split('-')[1])-1]
+                            : new Date(dateKey+'T00:00:00').getDate()}
+                        </span>
+                      </div>
+                      <div>
+                        <p style={{ fontSize:13, fontWeight:700, color:'#FFFFFF', margin:0 }}>
+                          {dateKey.startsWith('jour-')
+                            ? ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'][parseInt(dateKey.split('-')[1])-1]
+                            : formatDate(dateKey)}
+                        </p>
+                        <p style={{ fontSize:11, color:'rgba(255,255,255,0.45)', margin:0 }}>
+                          {plages.length} plage{plages.length>1?'s':''}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Plages */}
+                  <div style={{ padding:'12px 16px', display:'flex', flexWrap:'wrap', gap:8 }}>
+                    {plages.sort((a,b) => a.heure_debut.localeCompare(b.heure_debut)).map(p => (
+                      <div key={p.id} style={{
+                        display:'flex', alignItems:'center', gap:8,
+                        padding:'7px 12px', borderRadius:99,
+                        background:'#F5F0E6', border:'1px solid #E8D5A3',
+                      }}>
+                        <span style={{ fontSize:13, fontWeight:700, color:'#0A1628' }}>
+                          {p.heure_debut.slice(0,5)} – {p.heure_fin.slice(0,5)}
+                        </span>
+                        <span style={{
+                          fontSize:11, color:'#8B6914', background:'rgba(197,160,89,0.15)',
+                          padding:'1px 7px', borderRadius:99,
+                        }}>
+                          {duree(p.heure_debut.slice(0,5), p.heure_fin.slice(0,5))}
+                        </span>
+                        <button onClick={() => handleSupprimer(p.id)} disabled={deleting===p.id}
+                          style={{
+                            width:20, height:20, borderRadius:'50%',
+                            background:'none', border:'none',
+                            color: deleting===p.id ? '#CBD5E1' : '#FCA5A5',
+                            cursor: deleting===p.id ? 'not-allowed' : 'pointer',
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            fontSize:14, fontWeight:700, padding:0,
+                          }}>
+                          {deleting===p.id ? '…' : '×'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

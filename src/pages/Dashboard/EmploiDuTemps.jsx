@@ -2,50 +2,135 @@ import React, { useEffect, useState } from 'react'
 import { seancesAPI, sallesAPI } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import Header from '../../components/Header/Header'
-import { Btn, Modal, FormGroup, Badge, Spinner, ToastContainer } from '../../components/UI'
+import { Btn, Modal, FormGroup, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 import { useNavigate } from 'react-router-dom'
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import PaiementModal from '../Paiement/PaiementModal'
 
-const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
+const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
-const statutConfig = {
-  PLANIFIEE:  { color: 'text-amber-400',   bg: 'bg-amber-400/10',   border: 'border-amber-400/25',   label: 'Planifiée' },
-  EN_COURS:   { color: 'text-blue-700',  bg: 'bg-violet-400/10',  border: 'border-violet-400/25',  label: 'En cours' },
-  REALISEE:   { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/25', label: 'Réalisée ✓' },
-  ANNULEE:    { color: 'text-rose-400',    bg: 'bg-rose-400/10',    border: 'border-rose-400/25',    label: 'Annulée' },
+// ── Statuts séances ───────────────────────────────────────────────────────────
+const STATUT_SEANCE = {
+  EN_ATTENTE_PAIEMENT: {
+    label: '⏳ En attente de paiement',
+    dot: '#F59E0B',
+    bg: 'rgba(245,158,11,0.10)',
+    border: 'rgba(245,158,11,0.30)',
+    text: '#F59E0B',
+  },
+  PLANIFIEE: {
+    label: '📅 Planifiée',
+    dot: '#C5A059',
+    bg: 'rgba(197,160,89,0.10)',
+    border: 'rgba(197,160,89,0.30)',
+    text: '#C5A059',
+  },
+  CONFIRMEE: {
+    label: '✅ Confirmée',
+    dot: '#3B82F6',
+    bg: 'rgba(59,130,246,0.10)',
+    border: 'rgba(59,130,246,0.30)',
+    text: '#3B82F6',
+  },
+  EN_COURS: {
+    label: '🎙️ En cours',
+    dot: '#8B5CF6',
+    bg: 'rgba(139,92,246,0.12)',
+    border: 'rgba(139,92,246,0.35)',
+    text: '#A78BFA',
+  },
+  REALISEE: {
+    label: '✓ Réalisée',
+    dot: '#10B981',
+    bg: 'rgba(16,185,129,0.10)',
+    border: 'rgba(16,185,129,0.30)',
+    text: '#10B981',
+  },
+  ANNULEE: {
+    label: '✕ Annulée',
+    dot: '#EF4444',
+    bg: 'rgba(239,68,68,0.08)',
+    border: 'rgba(239,68,68,0.25)',
+    text: '#F87171',
+  },
+}
+
+// ── Statut examens ────────────────────────────────────────────────────────────
+const STATUT_EXAMEN = {
+  dot: '#A855F7',
+  bg: 'rgba(168,85,247,0.10)',
+  border: 'rgba(168,85,247,0.35)',
+  text: '#C084FC',
+  label: '📝 Examen',
+}
+
+// ── Légende ───────────────────────────────────────────────────────────────────
+const LEGENDE = [
+  { key: 'EN_ATTENTE_PAIEMENT', label: 'En attente paiement', color: '#F59E0B' },
+  { key: 'PLANIFIEE',           label: 'Planifiée',           color: '#C5A059' },
+  { key: 'CONFIRMEE',           label: 'Confirmée',           color: '#3B82F6' },
+  { key: 'EN_COURS',            label: 'En cours',            color: '#8B5CF6' },
+  { key: 'REALISEE',            label: 'Réalisée',            color: '#10B981' },
+  { key: 'ANNULEE',             label: 'Annulée',             color: '#EF4444' },
+  { key: 'EXAMEN',              label: 'Examen',              color: '#A855F7' },
+]
+
+// ── Styles globaux ────────────────────────────────────────────────────────────
+const S = {
+  bg:      '#F5F0E6',
+  surface: '#FFFFFF',
+  navy:    '#0A1628',
+  navy2:   '#0F2040',
+  gold:    '#C5A059',
+  goldLt:  'rgba(197,160,89,0.12)',
+  goldBrd: 'rgba(197,160,89,0.25)',
+  muted:   '#8B9CB5',
+  text:    '#0A1628',
+  border:  '#E8D5A3',
 }
 
 export default function EmploiDuTemps() {
   const { user } = useAuth()
   const isTuteur  = user?.role === 'tuteur'
-  const navigate   = useNavigate()
-  const [seances, setSeances]     = useState([])
+  const navigate  = useNavigate()
+
+  const [seances,   setSeances]   = useState([])
+  const [examens,   setExamens]   = useState([])
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [showCreate, setCreate]   = useState(false)
-  const [mesSalles, setMesSalles] = useState([])
+  const [mesSalles,  setMesSalles] = useState([])
   const [form, setForm]           = useState({ salleId:'', titre:'', matiere:'', dateDebut:'', duree:60 })
   const [loading, setLoading]     = useState(true)
-  const { toasts, success, error } = useToast()
   const [paiementSeanceId, setPaiementSeanceId] = useState(null)
+  const { toasts, success, error } = useToast()
 
-  const loadSeances = () => {
+  const loadData = () => {
     const debut = format(weekStart, "yyyy-MM-dd'T'00:00:00")
     const fin   = format(addDays(weekStart, 6), "yyyy-MM-dd'T'23:59:59")
     setLoading(true)
     seancesAPI.getEmploiDuTemps({ debut, fin })
-      .then(({ data }) => setSeances(data))
+      .then(({ data }) => {
+        // Support ancien format (tableau) ET nouveau format ({ seances, examens })
+        if (Array.isArray(data)) {
+          setSeances(data)
+          setExamens([])
+        } else {
+          setSeances(data.seances || [])
+          setExamens(data.examens || [])
+        }
+      })
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { loadSeances() }, [weekStart])
+  useEffect(() => { loadData() }, [weekStart])
 
   useEffect(() => {
     if (isTuteur) {
-      // ✅ FIX: utiliser mon_role (pas role)
-      sallesAPI.getMesSalles().then(({ data }) => setMesSalles(data.filter(s => s.mon_role === 'CO_ADMIN')))
+      sallesAPI.getMesSalles().then(({ data }) =>
+        setMesSalles(data.filter(s => s.mon_role === 'CO_ADMIN'))
+      )
     }
   }, [isTuteur])
 
@@ -57,97 +142,173 @@ export default function EmploiDuTemps() {
       await seancesAPI.create(form)
       success('Séance planifiée !')
       setCreate(false)
-      loadSeances()
+      loadData()
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 
-  // Lancer/Terminer séance = automatique via l'appel (pas de boutons manuels)
-
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-  const getDay = (day) => seances.filter(s => isSameDay(new Date(s.date_debut), day))
+
+  const getSeancesDay = (day) =>
+    seances.filter(s => isSameDay(new Date(s.date_debut), day))
+
+  const getExamensDay = (day) =>
+    examens.filter(e => {
+      const debut = e.date_debut ? new Date(e.date_debut) : null
+      return debut && isSameDay(debut, day)
+    })
+
+  const isToday = (day) => isSameDay(day, new Date())
 
   return (
     <>
       <Header title="Emploi du temps" />
       <ToastContainer toasts={toasts} />
-      <div className="flex-1 overflow-hidden flex flex-col p-6 gap-4">
-        {/* Controls */}
-        <div className="flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <Btn variant="secondary" size="sm" onClick={() => setWeekStart(d => addDays(d, -7))}>← Préc.</Btn>
-            <span className="font-display font-bold text-sm text-ink-800 min-w-[200px] text-center">
+
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', padding:'20px 24px 24px', gap:16 }}>
+
+        {/* ── Barre contrôle ─────────────────────────────────────────────── */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, flexWrap:'wrap', gap:10 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <button onClick={() => setWeekStart(d => addDays(d, -7))} style={{ padding:'7px 14px', borderRadius:9, border:`1px solid ${S.border}`, background:S.surface, color:S.text, cursor:'pointer', fontSize:13, fontWeight:600 }}>← Préc.</button>
+            <div style={{ minWidth:220, textAlign:'center', fontSize:14, fontWeight:700, color:S.navy }}>
               {format(weekStart, 'dd MMM', { locale: fr })} – {format(addDays(weekStart, 6), 'dd MMM yyyy', { locale: fr })}
-            </span>
-            <Btn variant="secondary" size="sm" onClick={() => setWeekStart(d => addDays(d, 7))}>Suiv. →</Btn>
-            <Btn variant="ghost" size="sm" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
-              Aujourd'hui
-            </Btn>
+            </div>
+            <button onClick={() => setWeekStart(d => addDays(d, 7))} style={{ padding:'7px 14px', borderRadius:9, border:`1px solid ${S.border}`, background:S.surface, color:S.text, cursor:'pointer', fontSize:13, fontWeight:600 }}>Suiv. →</button>
+            <button onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn:1 }))} style={{ padding:'7px 12px', borderRadius:9, border:`1px solid ${S.goldBrd}`, background:S.goldLt, color:S.gold, cursor:'pointer', fontSize:12, fontWeight:600 }}>Aujourd'hui</button>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display:'flex', gap:8 }}>
             {isTuteur && (
-              <Btn size="sm" variant="secondary" onClick={() => navigate('/dashboard/disponibilites')}>
-                🗓️ Mes disponibilités
-              </Btn>
+              <button onClick={() => navigate('/dashboard/disponibilites')} style={{ padding:'7px 14px', borderRadius:9, border:`1px solid ${S.border}`, background:S.surface, color:S.muted, cursor:'pointer', fontSize:12, fontWeight:600 }}>🗓️ Disponibilités</button>
             )}
-            {isTuteur && <Btn size="sm" onClick={() => setCreate(true)}>➕ Planifier</Btn>}
+            {isTuteur && (
+              <button onClick={() => setCreate(true)} style={{ padding:'7px 16px', borderRadius:9, border:'none', background:S.gold, color:'#fff', cursor:'pointer', fontSize:13, fontWeight:700 }}>➕ Planifier</button>
+            )}
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex gap-3 flex-shrink-0 flex-wrap">
-          {Object.entries(statutConfig).map(([k, v]) => (
-            <span key={k} className={`text-xs px-2 py-1 rounded-lg border ${v.bg} ${v.border} ${v.color} font-medium`}>
-              {v.label}
+        {/* ── Légende ────────────────────────────────────────────────────── */}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', flexShrink:0 }}>
+          {LEGENDE.map(l => (
+            <span key={l.key} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:`${l.color}18`, border:`1px solid ${l.color}40`, color:l.color }}>
+              <span style={{ width:6, height:6, borderRadius:'50%', background:l.color, flexShrink:0 }} />
+              {l.label}
             </span>
           ))}
         </div>
 
-        {/* Calendar */}
+        {/* ── Calendrier ─────────────────────────────────────────────────── */}
         {loading ? (
-          <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+          <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}><Spinner size="lg" /></div>
         ) : (
-          <div className="flex-1 grid grid-cols-7 gap-2 overflow-y-auto min-h-0">
+          <div style={{ flex:1, display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:8, overflowY:'auto', minHeight:0 }}>
             {days.map((day, i) => {
-              const daySeances = getDay(day)
-              const isToday = isSameDay(day, new Date())
+              const daySeances = getSeancesDay(day)
+              const dayExamens = getExamensDay(day)
+              const today = isToday(day)
+              const total = daySeances.length + dayExamens.length
+
               return (
-                <div key={i} className={`flex flex-col rounded-xl border overflow-hidden min-h-[200px]
-                  ${isToday ? 'border-violet-500/50 bg-blue-700/5' : 'border-blue-200 bg-blue-50'}`}>
-                  <div className={`px-2 py-2.5 text-center border-b flex-shrink-0
-                    ${isToday ? 'border-violet-500/30 bg-blue-700/10' : 'border-blue-200 bg-white'}`}>
-                    <p className="text-xs font-semibold text-slate-500 uppercase">{JOURS[i]}</p>
-                    <p className={`font-display font-bold text-lg mt-0.5 ${isToday ? 'text-blue-700' : 'text-ink-600'}`}>
-                      {format(day, 'd')}
-                    </p>
+                <div key={i} style={{
+                  display:'flex', flexDirection:'column', borderRadius:14, overflow:'hidden', minHeight:200,
+                  border: today ? '2px solid rgba(197,160,89,0.6)' : `1px solid ${S.border}`,
+                  background: today ? 'rgba(197,160,89,0.04)' : S.surface,
+                  boxShadow: today ? '0 0 0 3px rgba(197,160,89,0.10)' : 'none',
+                }}>
+                  {/* En-tête jour */}
+                  <div style={{
+                    padding:'8px 6px', textAlign:'center', flexShrink:0,
+                    borderBottom: today ? '1px solid rgba(197,160,89,0.35)' : `1px solid ${S.border}`,
+                    background: today ? 'rgba(197,160,89,0.10)' : '#FAFAF8',
+                  }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:S.muted, textTransform:'uppercase', letterSpacing:'0.06em' }}>{JOURS[i]}</div>
+                    <div style={{ fontSize:22, fontWeight:800, color: today ? S.gold : S.navy, lineHeight:1.1, marginTop:2 }}>{format(day, 'd')}</div>
+                    {total > 0 && (
+                      <div style={{ fontSize:9, fontWeight:700, color:S.gold, marginTop:2 }}>{total} événement{total>1?'s':''}</div>
+                    )}
                   </div>
-                  <div className="flex-1 p-1.5 flex flex-col gap-1.5 overflow-y-auto">
-                    {daySeances.length === 0 ? (
-                      <div className="flex-1 flex items-center justify-center text-slate-700 text-lg">·</div>
-                    ) : daySeances.map(s => {
-                      const cfg = statutConfig[s.statut] || statutConfig.PLANIFIEE
+
+                  {/* Événements */}
+                  <div style={{ flex:1, overflowY:'auto', padding:'6px', display:'flex', flexDirection:'column', gap:5 }}>
+                    {total === 0 && (
+                      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'#CBD5E1', fontSize:18 }}>·</div>
+                    )}
+
+                    {/* Séances */}
+                    {daySeances.map(s => {
+                      const cfg = STATUT_SEANCE[s.statut] || STATUT_SEANCE.PLANIFIEE
+                      const estAdmin = s.mon_role === 'ADMIN'
                       return (
-                        <div key={s.id} className={`rounded-lg p-2 border ${cfg.bg} ${cfg.border} flex flex-col gap-1`}>
-                          <p className="text-xs font-bold text-ink-600 leading-tight line-clamp-2">{s.titre}</p>
-                          <p className="text-xs text-slate-500">{format(new Date(s.date_debut), 'HH:mm')} · {s.duree}min</p>
-                          {s.salle_nom && <p className="text-xs text-slate-600 truncate">🏠 {s.salle_nom}</p>}
-                          <p className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</p>
-                          {isTuteur && s.statut === 'PLANIFIEE' && (
-                            <p className="text-xs text-blue-700 mt-1">📞 Appel = séance lancée</p>
+                        <div key={`s-${s.id}`} style={{
+                          borderRadius:9, padding:'7px 8px', border:`1px solid ${cfg.border}`,
+                          background: cfg.bg, display:'flex', flexDirection:'column', gap:4,
+                        }}>
+                          {/* Point statut + titre */}
+                          <div style={{ display:'flex', alignItems:'flex-start', gap:5 }}>
+                            <span style={{ width:7, height:7, borderRadius:'50%', background:cfg.dot, flexShrink:0, marginTop:3 }} />
+                            <span style={{ fontSize:11, fontWeight:700, color:S.navy, lineHeight:1.3, flex:1 }}>{s.titre}</span>
+                          </div>
+
+                          {/* Heure + durée */}
+                          <div style={{ fontSize:10, color:S.muted, paddingLeft:12 }}>
+                            {format(new Date(s.date_debut), 'HH:mm')} · {s.duree}min
+                          </div>
+
+                          {/* Salle */}
+                          {s.salle_nom && (
+                            <div style={{ fontSize:10, color:S.muted, paddingLeft:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>🏠 {s.salle_nom}</div>
                           )}
-                          {!isTuteur && s.statut === 'PLANIFIEE' && s.statut_paiement !== 'PAYE' && (
-                            <button
-                              onClick={() => setPaiementSeanceId(s.id)}
-                              className="mt-1 w-full text-xs font-bold py-1 px-2 rounded-md bg-blue-700/80 hover:bg-blue-700 text-ink-800 transition-colors"
-                            >
-                              💳 Payer
-                            </button>
+
+                          {/* Statut */}
+                          <div style={{ fontSize:10, fontWeight:700, color:cfg.text, paddingLeft:12 }}>{cfg.label}</div>
+
+                          {/* Bouton payer — admin de salle + EN_ATTENTE_PAIEMENT */}
+                          {estAdmin && s.statut === 'EN_ATTENTE_PAIEMENT' && s.statut_paiement !== 'PAYE' && (
+                            <button onClick={() => setPaiementSeanceId(s.id)} style={{
+                              marginTop:2, padding:'4px 0', borderRadius:7, border:'none', cursor:'pointer',
+                              fontSize:10, fontWeight:700, background:S.gold, color:'#fff',
+                            }}>💳 Payer la séance</button>
                           )}
+
+                          {/* Payée */}
                           {s.statut_paiement === 'PAYE' && (
-                            <span className="text-xs font-semibold text-emerald-400 mt-1">✅ Payée</span>
+                            <div style={{ fontSize:10, fontWeight:700, color:'#10B981', paddingLeft:12 }}>✅ Payée</div>
+                          )}
+
+                          {/* Info tuteur */}
+                          {isTuteur && s.statut === 'EN_ATTENTE_PAIEMENT' && (
+                            <div style={{ fontSize:10, color:S.muted, paddingLeft:12 }}>En attente du paiement admin</div>
                           )}
                         </div>
                       )
                     })}
+
+                    {/* Examens */}
+                    {dayExamens.map(ex => (
+                      <div key={`e-${ex.id}`} style={{
+                        borderRadius:9, padding:'7px 8px', border:`1px solid ${STATUT_EXAMEN.border}`,
+                        background: STATUT_EXAMEN.bg, display:'flex', flexDirection:'column', gap:4,
+                      }}>
+                        <div style={{ display:'flex', alignItems:'flex-start', gap:5 }}>
+                          <span style={{ width:7, height:7, borderRadius:'50%', background:STATUT_EXAMEN.dot, flexShrink:0, marginTop:3 }} />
+                          <span style={{ fontSize:11, fontWeight:700, color:S.navy, lineHeight:1.3, flex:1 }}>{ex.titre}</span>
+                        </div>
+                        {ex.date_debut && (
+                          <div style={{ fontSize:10, color:S.muted, paddingLeft:12 }}>
+                            Début : {format(new Date(ex.date_debut), 'HH:mm')}
+                            {ex.duree ? ` · ${ex.duree}min` : ''}
+                          </div>
+                        )}
+                        {ex.date_fin && (
+                          <div style={{ fontSize:10, color:S.muted, paddingLeft:12 }}>
+                            Limite : {format(new Date(ex.date_fin), 'dd/MM HH:mm')}
+                          </div>
+                        )}
+                        {ex.salle_nom && (
+                          <div style={{ fontSize:10, color:S.muted, paddingLeft:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>🏠 {ex.salle_nom}</div>
+                        )}
+                        <div style={{ fontSize:10, fontWeight:700, color:STATUT_EXAMEN.text, paddingLeft:12 }}>{STATUT_EXAMEN.label}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )
@@ -156,8 +317,9 @@ export default function EmploiDuTemps() {
         )}
       </div>
 
+      {/* ── Modal planifier ─────────────────────────────────────────────────── */}
       <Modal open={showCreate} onClose={() => setCreate(false)} title="📅 Planifier une séance">
-        <form onSubmit={handleCreate} className="flex flex-col gap-4">
+        <form onSubmit={handleCreate} style={{ display:'flex', flexDirection:'column', gap:16 }}>
           <FormGroup label="Salle *">
             <select required value={form.salleId} onChange={set('salleId')}>
               <option value="">Sélectionner une salle...</option>
@@ -170,7 +332,7 @@ export default function EmploiDuTemps() {
           <FormGroup label="Matière">
             <input value={form.matiere} onChange={set('matiere')} placeholder="ex: Mathématiques" />
           </FormGroup>
-          <div className="grid grid-cols-2 gap-3">
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             <FormGroup label="Date et heure *">
               <input type="datetime-local" required value={form.dateDebut} onChange={set('dateDebut')} />
             </FormGroup>
@@ -178,18 +340,23 @@ export default function EmploiDuTemps() {
               <input type="number" min={15} max={480} value={form.duree} onChange={set('duree')} />
             </FormGroup>
           </div>
-          <div className="flex gap-3 justify-end pt-1">
+          <div style={{ display:'flex', gap:10, justifyContent:'flex-end', paddingTop:4 }}>
             <Btn variant="secondary" onClick={() => setCreate(false)}>Annuler</Btn>
             <Btn type="submit">Planifier</Btn>
           </div>
         </form>
       </Modal>
 
+      {/* ── Modal paiement ──────────────────────────────────────────────────── */}
       {paiementSeanceId && (
         <PaiementModal
           seanceId={paiementSeanceId}
           onClose={() => setPaiementSeanceId(null)}
-          onSuccess={() => { setPaiementSeanceId(null); success('Paiement effectué ! La séance est confirmée.'); loadSeances() }}
+          onSuccess={() => {
+            setPaiementSeanceId(null)
+            success('✅ Paiement effectué ! La séance est confirmée.')
+            loadData()
+          }}
         />
       )}
     </>

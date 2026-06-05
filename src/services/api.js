@@ -38,6 +38,7 @@ export const sallesAPI = {
   demanderInvitation: (id)     => api.post(`/salles/${id}/demander`),
   quitter:            (id)     => api.delete(`/salles/${id}/quitter`),
   getParticipants:    (id)     => api.get(`/salles/${id}/participants`),
+  retirerMembre:      (salleId, userId) => api.delete(`/salles/${salleId}/membres/${userId}`),
   getMessages:        (id, p)  => api.get(`/salles/${id}/messages`, { params: p }),
   getFichiers:        (id)     => api.get(`/salles/${id}/fichiers`),
   uploadFichier:      (id, fd) => api.post(`/salles/${id}/fichiers`, fd, {
