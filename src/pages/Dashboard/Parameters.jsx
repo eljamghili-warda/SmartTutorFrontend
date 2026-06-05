@@ -7,6 +7,55 @@ import { useToast } from '../../hooks/useToast'
 
 const NIVEAUX = ['Licence 1','Licence 2','Licence 3','Master 1','Master 2','Doctorat','BTS','BUT','Prépa']
 
+// Styles inline pour garantir la lisibilité
+const inputStyle = {
+  width: '100%',
+  padding: '10px 14px',
+  borderRadius: '10px',
+  border: '1px solid #E0D5C0',
+  background: '#FFFFFF',
+  color: '#1A3A5C',
+  fontSize: '14px',
+  outline: 'none',
+  transition: 'all 0.2s',
+  fontFamily: 'inherit',
+}
+
+const selectStyle = {
+  width: '100%',
+  padding: '10px 14px',
+  borderRadius: '10px',
+  border: '1px solid #E0D5C0',
+  background: '#FFFFFF',
+  color: '#1A3A5C',
+  fontSize: '14px',
+  outline: 'none',
+  cursor: 'pointer',
+}
+
+const textareaStyle = {
+  width: '100%',
+  padding: '10px 14px',
+  borderRadius: '10px',
+  border: '1px solid #E0D5C0',
+  background: '#FFFFFF',
+  color: '#1A3A5C',
+  fontSize: '14px',
+  outline: 'none',
+  resize: 'vertical',
+  fontFamily: 'inherit',
+}
+
+const labelStyle = {
+  fontSize: '11px',
+  fontWeight: 700,
+  color: '#6B7B8D',
+  textTransform: 'uppercase',
+  letterSpacing: '1px',
+  display: 'block',
+  marginBottom: '6px',
+}
+
 export default function Parametres() {
   const { user, updateUser } = useAuth()
   const { toasts, success, error } = useToast()
@@ -43,86 +92,165 @@ export default function Parametres() {
   }
 
   return (
-    <>
-      <Header title="Paramètres" />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F5F0E6' }}>
+      <Header title="Paramètres" subtitle="Gérez votre profil" />
       <ToastContainer toasts={toasts} />
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-xl mx-auto flex flex-col gap-5">
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
           {/* Profile preview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 flex items-center gap-4">
+          <div style={{ background: '#FFFFFF', border: '1px solid #E8D5A3', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(26,58,92,0.05)' }}>
             <Avatar user={user} size="xl" />
             <div>
-              <p className="font-display font-bold text-lg text-ink-800">{user?.prenom} {user?.nom}</p>
-              <p className="text-sm text-slate-500 capitalize mt-0.5">{user?.role}</p>
-              <p className="text-xs text-slate-600 mt-0.5">{user?.email}</p>
+              <p style={{ fontSize: '18px', fontWeight: 800, color: '#1A3A5C', margin: 0 }}>{user?.prenom} {user?.nom}</p>
+              <p style={{ fontSize: '13px', color: '#C5A059', fontWeight: 600, marginTop: '4px', textTransform: 'capitalize' }}>{user?.role}</p>
+              <p style={{ fontSize: '12px', color: '#6B7B8D', marginTop: '2px' }}>{user?.email}</p>
             </div>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col gap-4">
-            <h3 className="font-display font-bold text-ink-800 mb-1">Informations personnelles</h3>
+          <form onSubmit={handleSubmit} style={{ background: '#FFFFFF', border: '1px solid #E8D5A3', borderRadius: '16px', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 2px 8px rgba(26,58,92,0.05)' }}>
+            
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1A3A5C', marginBottom: '4px' }}>Informations personnelles</h3>
 
-            <div className="grid grid-cols-2 gap-3">
-              <FormGroup label="Prénom"><input value={form.prenom} onChange={set('prenom')} /></FormGroup>
-              <FormGroup label="Nom"><input value={form.nom} onChange={set('nom')} /></FormGroup>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label style={labelStyle}>Prénom</label>
+                <input 
+                  value={form.prenom} 
+                  onChange={set('prenom')}
+                  style={inputStyle}
+                  onFocus={e => { e.target.style.borderColor = '#C5A059'; e.target.style.boxShadow = '0 0 0 3px rgba(197,160,89,0.1)' }}
+                  onBlur={e => { e.target.style.borderColor = '#E0D5C0'; e.target.style.boxShadow = 'none' }}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Nom</label>
+                <input 
+                  value={form.nom} 
+                  onChange={set('nom')}
+                  style={inputStyle}
+                  onFocus={e => { e.target.style.borderColor = '#C5A059'; e.target.style.boxShadow = '0 0 0 3px rgba(197,160,89,0.1)' }}
+                  onBlur={e => { e.target.style.borderColor = '#E0D5C0'; e.target.style.boxShadow = 'none' }}
+                />
+              </div>
             </div>
 
-            <FormGroup label="Email">
-              <input value={user?.email} disabled />
-            </FormGroup>
+            <div>
+              <label style={labelStyle}>Email</label>
+              <input 
+                value={user?.email} 
+                disabled 
+                style={{ ...inputStyle, background: '#F5F0E6', color: '#6B7B8D', cursor: 'not-allowed' }}
+              />
+            </div>
 
             {user?.role === 'etudiant' && (
               <>
-                <FormGroup label="Niveau d'étude">
-                  <select value={form.niveauEtude} onChange={set('niveauEtude')}>
+                <div>
+                  <label style={labelStyle}>Niveau d'étude</label>
+                  <select 
+                    value={form.niveauEtude} 
+                    onChange={set('niveauEtude')}
+                    style={selectStyle}
+                    onFocus={e => { e.target.style.borderColor = '#C5A059'; e.target.style.boxShadow = '0 0 0 3px rgba(197,160,89,0.1)' }}
+                    onBlur={e => { e.target.style.borderColor = '#E0D5C0'; e.target.style.boxShadow = 'none' }}
+                  >
                     <option value="">Sélectionner...</option>
                     {NIVEAUX.map(n => <option key={n}>{n}</option>)}
                   </select>
-                </FormGroup>
-                <FormGroup label="Filière">
-                  <input value={form.filiere} onChange={set('filiere')} placeholder="ex: Informatique" />
-                </FormGroup>
-                <FormGroup label="Établissement">
-                  <input value={form.etablissement} onChange={set('etablissement')} placeholder="ex: Université Ibn Tofail" />
-                </FormGroup>
+                </div>
+                <div>
+                  <label style={labelStyle}>Filière</label>
+                  <input 
+                    value={form.filiere} 
+                    onChange={set('filiere')} 
+                    placeholder="ex: Informatique"
+                    style={inputStyle}
+                    onFocus={e => { e.target.style.borderColor = '#C5A059'; e.target.style.boxShadow = '0 0 0 3px rgba(197,160,89,0.1)' }}
+                    onBlur={e => { e.target.style.borderColor = '#E0D5C0'; e.target.style.boxShadow = 'none' }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Établissement</label>
+                  <input 
+                    value={form.etablissement} 
+                    onChange={set('etablissement')} 
+                    placeholder="ex: Université Ibn Tofail"
+                    style={inputStyle}
+                    onFocus={e => { e.target.style.borderColor = '#C5A059'; e.target.style.boxShadow = '0 0 0 3px rgba(197,160,89,0.1)' }}
+                    onBlur={e => { e.target.style.borderColor = '#E0D5C0'; e.target.style.boxShadow = 'none' }}
+                  />
+                </div>
               </>
             )}
 
             {user?.role === 'tuteur' && (
               <>
-                <FormGroup label="Spécialités" hint="Séparées par virgule">
-                  <input value={form.specialites} onChange={set('specialites')} placeholder="ex: Maths, Physique" />
-                </FormGroup>
-                <FormGroup label="Biographie">
-                  <textarea rows={4} value={form.biographie} onChange={set('biographie')} placeholder="Décrivez votre expertise..." />
-                </FormGroup>
+                <div>
+                  <label style={labelStyle}>Spécialités</label>
+                  <input 
+                    value={form.specialites} 
+                    onChange={set('specialites')} 
+                    placeholder="ex: Maths, Physique, Informatique"
+                    style={inputStyle}
+                    onFocus={e => { e.target.style.borderColor = '#C5A059'; e.target.style.boxShadow = '0 0 0 3px rgba(197,160,89,0.1)' }}
+                    onBlur={e => { e.target.style.borderColor = '#E0D5C0'; e.target.style.boxShadow = 'none' }}
+                  />
+                  <p style={{ fontSize: '10px', color: '#6B7B8D', marginTop: '4px' }}>Séparées par des virgules</p>
+                </div>
+                <div>
+                  <label style={labelStyle}>Biographie</label>
+                  <textarea 
+                    rows={4} 
+                    value={form.biographie} 
+                    onChange={set('biographie')} 
+                    placeholder="Décrivez votre parcours et vos expertises..."
+                    style={textareaStyle}
+                    onFocus={e => { e.target.style.borderColor = '#C5A059'; e.target.style.boxShadow = '0 0 0 3px rgba(197,160,89,0.1)' }}
+                    onBlur={e => { e.target.style.borderColor = '#E0D5C0'; e.target.style.boxShadow = 'none' }}
+                  />
+                </div>
 
                 {/* Section coordonnées bancaires */}
-                <div style={{ borderTop: '1px solid var(--color-border-tertiary)', paddingTop: 16, marginTop: 4 }}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span style={{ fontSize: 16 }}>🏦</span>
-                    <h4 className="font-display font-bold text-ink-800 text-sm">Coordonnées bancaires</h4>
-                    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginLeft: 4 }}>pour recevoir vos paiements</span>
+                <div style={{ borderTop: '1px solid #E8D5A3', paddingTop: '16px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '18px' }}>🏦</span>
+                    <h4 style={{ fontWeight: 700, color: '#1A3A5C', fontSize: '14px', margin: 0 }}>Coordonnées bancaires</h4>
+                    <span style={{ fontSize: '11px', color: '#6B7B8D' }}>pour recevoir vos paiements</span>
                   </div>
 
                   {(!form.rib) && (
-                    <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#fbbf24' }}>
-                      ⚠️ Sans RIB, vous ne recevrez pas les virements automatiques après paiement.
+                    <div style={{ background: '#F8F3E6', border: '1px solid #E8D5A3', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px' }}>
+                      <p style={{ fontSize: '12px', color: '#8B6914', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>⚠️</span> Sans RIB, vous ne recevrez pas les virements automatiques après paiement.
+                      </p>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormGroup label="RIB (24 chiffres)" hint="ex: MA76 0000 0000 0000 0000 0000">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={labelStyle}>RIB (24 chiffres)</label>
                       <input
                         value={form.rib}
                         onChange={set('rib')}
                         placeholder="MA76000000000000000000000"
                         maxLength={34}
-                        style={{ fontFamily: 'monospace', letterSpacing: 1 }}
+                        style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.5px' }}
+                        onFocus={e => { e.target.style.borderColor = '#C5A059'; e.target.style.boxShadow = '0 0 0 3px rgba(197,160,89,0.1)' }}
+                        onBlur={e => { e.target.style.borderColor = '#E0D5C0'; e.target.style.boxShadow = 'none' }}
                       />
-                    </FormGroup>
-                    <FormGroup label="Banque">
-                      <select value={form.nomBanque} onChange={set('nomBanque')}>
+                      <p style={{ fontSize: '10px', color: '#6B7B8D', marginTop: '4px' }}>ex: MA76 0000 0000 0000 0000 0000</p>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Banque</label>
+                      <select 
+                        value={form.nomBanque} 
+                        onChange={set('nomBanque')}
+                        style={selectStyle}
+                        onFocus={e => { e.target.style.borderColor = '#C5A059'; e.target.style.boxShadow = '0 0 0 3px rgba(197,160,89,0.1)' }}
+                        onBlur={e => { e.target.style.borderColor = '#E0D5C0'; e.target.style.boxShadow = 'none' }}
+                      >
                         <option value="">— Sélectionner —</option>
                         <option value="CIH Bank">CIH Bank</option>
                         <option value="Attijariwafa Bank">Attijariwafa Bank</option>
@@ -135,11 +263,11 @@ export default function Parametres() {
                         <option value="CFG Bank">CFG Bank</option>
                         <option value="Autre">Autre</option>
                       </select>
-                    </FormGroup>
+                    </div>
                   </div>
 
                   {form.rib && (
-                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 6, fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '11px', color: '#6B7B8D', marginTop: '12px', fontFamily: 'monospace', background: '#F5F0E6', padding: '8px 12px', borderRadius: '8px' }}>
                       Aperçu : {form.rib.slice(0, 4)} **** **** {form.rib.slice(-4)} {form.nomBanque && `· ${form.nomBanque}`}
                     </div>
                   )}
@@ -147,12 +275,38 @@ export default function Parametres() {
               </>
             )}
 
-            <Btn type="submit" disabled={loading} className="mt-1 justify-center">
+            <button 
+              type="submit" 
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '40px',
+                border: 'none',
+                background: loading ? '#E8D5A3' : 'linear-gradient(135deg, #1A3A5C, #2C5F8A)',
+                color: loading ? '#6B7B8D' : '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                marginTop: '8px',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(26,58,92,0.25)'
+                }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
               {loading ? <Spinner size="sm" /> : '💾 Enregistrer les modifications'}
-            </Btn>
+            </button>
           </form>
         </div>
       </div>
-    </>
+    </div>
   )
 }

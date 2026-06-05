@@ -440,10 +440,10 @@ export default function AdminDashboard() {
 
           {/* ── KPI Cards ────────────────────────────────────────────────── */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16 }}>
-            <StatCard icon="👥" value={stats?.totalUtilisateurs ?? 0} label="Utilisateurs"        color="navy"   delay={0}   />
-            <StatCard icon="🚪" value={stats?.sallesActives ?? 0}     label="Salles actives"      color="blue"   delay={80}  />
-            <StatCard icon="📅" value={stats?.totalSeances ?? 0}      label="Séances totales"     color="emerald" delay={160} />
-            <StatCard icon="⏳" value={stats?.tuteursPendingCount ?? 0} label="Tuteurs en attente" color="rose"  delay={240} />
+            <StatCard icon="👥" value={stats?.utilisateurs?.total ?? 0} label="Utilisateurs"        color="navy"   delay={0}   />
+            <StatCard icon="🚪" value={stats?.salles?.actives ?? 0}     label="Salles actives"      color="blue"   delay={80}  />
+            <StatCard icon="📅" value={stats?.seances?.total ?? 0}      label="Séances totales"     color="emerald" delay={160} />
+            <StatCard icon="⏳" value={pending.length} label="Tuteurs en attente" color="rose"  delay={240} />
           </div>
 
           {/* ── Graphe revenus ────────────────────────────────────────────── */}
