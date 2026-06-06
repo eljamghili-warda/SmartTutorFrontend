@@ -548,7 +548,31 @@ export default function Salle() {
 
   const handleAnnulerSeance = async (seanceId) => {
     if (!confirm('Annuler cette séance ? Cette action est irréversible.')) return
-    try { await seancesAPI.annuler(seanceId); setSeances(prev => prev.map(s => s.id === seanceId ? { ...s, statut: 'ANNULEE' } : s)); success('Séance annulée.'); sendMessage(id, '❌ Séance annulée par le tuteur.') }
+    try {
+      await seancesAPI.annuler(seanceId)
+      // Récupérer les infos de la séance avant de la marquer annulée
+      const seanceAnnulee = seances.find(s => s.id === seanceId)
+      setSeances(prev => prev.map(s => s.id === seanceId ? { ...s, statut: 'ANNULEE' } : s))
+      success('Séance annulée.')
+
+      // Message de chat détaillé avec titre + date + heure
+      if (seanceAnnulee) {
+        const dateStr = new Date(seanceAnnulee.date_debut).toLocaleDateString('fr-FR', {
+          weekday: 'long', day: 'numeric', month: 'long'
+        })
+        const heureStr = new Date(seanceAnnulee.date_debut).toLocaleTimeString('fr-FR', {
+          hour: '2-digit', minute: '2-digit'
+        })
+        const dureeStr = seanceAnnulee.duree ? ` (${seanceAnnulee.duree} min)` : ''
+        sendMessage(id,
+          `❌ Séance annulée par le tuteur\n` +
+          `📌 "${seanceAnnulee.titre}"${seanceAnnulee.matiere ? ` — ${seanceAnnulee.matiere}` : ''}\n` +
+          `📅 ${dateStr} à ${heureStr}${dureeStr}`
+        )
+      } else {
+        sendMessage(id, '❌ Séance annulée par le tuteur.')
+      }
+    }
     catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
   const handleToggleMute = () => {

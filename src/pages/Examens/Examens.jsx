@@ -25,7 +25,7 @@ function FormExamen({ salles, onSave, onClose, initial = null }) {
     salleId: initial?.salle_id || '',
     notePassage: initial?.note_passage || 70,
     dureeMinutes: initial?.duree_minutes || 30,
-    maxTentatives: initial?.max_tentatives || '',
+
     dateDebut: initial?.date_debut ? initial.date_debut.slice(0,16) : '',
     dateLimite: initial?.date_limite ? initial.date_limite.slice(0,16) : '',
     dateAffichageResultats: initial?.date_affichage_resultats ? initial.date_affichage_resultats.slice(0,16) : '',
@@ -48,7 +48,7 @@ function FormExamen({ salles, onSave, onClose, initial = null }) {
         description: form.description,
         notePassage: parseFloat(form.notePassage),
         dureeMinutes: parseInt(form.dureeMinutes),
-        maxTentatives: form.maxTentatives ? parseInt(form.maxTentatives) : null,
+
         dateDebut: form.dateDebut || null,
         dateLimite: form.dateLimite || null,
         dateAffichageResultats: form.dateAffichageResultats || null,
@@ -91,10 +91,7 @@ function FormExamen({ salles, onSave, onClose, initial = null }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <FormGroup label="Nb tentatives max">
-          <input type="number" min={1} className="input w-full" value={form.maxTentatives}
-            placeholder="Illimité" onChange={e => set('maxTentatives', e.target.value)} />
-        </FormGroup>
+
         <FormGroup label="Mode affichage">
           <select className="input w-full" value={form.modeAffichage} onChange={e => set('modeAffichage', e.target.value)}>
             <option value="UNE_PAR_UNE">Question par question</option>
@@ -256,7 +253,7 @@ function ExamenCardTuteur({ examen, onEdit, onManage, onVoirDetails, onPublier, 
       <div className="grid grid-cols-3 gap-2 text-center">
         {[
           { label: 'Questions', value: examen.nb_questions || 0 },
-          { label: 'Tentatives', value: examen.nb_tentatives || 0 },
+
           { label: 'Réussis', value: examen.nb_reussi || 0 },
         ].map(({ label, value }) => (
           <div key={label} className="bg-amber-50 rounded-xl py-2">
@@ -293,83 +290,112 @@ function ExamenCardTuteur({ examen, onEdit, onManage, onVoirDetails, onPublier, 
   )
 }
 
-// ─── Carte examen étudiant (version claire) ────────────────────────────────────
+// ─── Carte examen étudiant — 3 statuts : Réussi / Échoué / Expiré ───────────────
 function ExamenCardEtudiant({ examen, onCommencer, onVoirResultats }) {
   const maintenant = new Date()
   const dateLimite = examen.date_limite ? new Date(examen.date_limite) : null
   const dateDebut  = examen.date_debut  ? new Date(examen.date_debut)  : null
-  const expired    = dateLimite && maintenant > dateLimite
-  const notYet     = dateDebut && maintenant < dateDebut
   const dejaReussi = examen.deja_reussi > 0
-  const tentativesMax = examen.max_tentatives
-  const tentativesFaites = examen.nb_tentatives_faites || 0
-  const plusDeTentatives = tentativesMax && tentativesFaites >= tentativesMax && !dejaReussi
+  const aEchoue    = examen.derniere_tentative_statut === 'ECHOUE'
+  const expire     = dateLimite && maintenant > dateLimite && !dejaReussi && !aEchoue
+  const notYet     = dateDebut && maintenant < dateDebut
+  const disponible = !dejaReussi && !aEchoue && !expire && !notYet && examen.statut === 'PUBLIE'
 
-  let statusBadge, canStart
+  // ── Badge statut étudiant ──
+  let statusBadge
   if (dejaReussi) {
-    statusBadge = <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">🏆 Réussi</span>
-    canStart = false
-  } else if (expired) {
-    statusBadge = <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">⏰ Expiré</span>
-    canStart = false
+    statusBadge = (
+      <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:99,
+        background:'#ECFDF5', color:'#059669', border:'1px solid #86EFAC' }}>
+        ✅ Réussi
+      </span>
+    )
+  } else if (aEchoue) {
+    statusBadge = (
+      <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:99,
+        background:'#FEF2F2', color:'#DC2626', border:'1px solid #FECACA' }}>
+        ❌ Échoué
+      </span>
+    )
+  } else if (expire) {
+    statusBadge = (
+      <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:99,
+        background:'#F5F0E6', color:'#8B6914', border:'1px solid #E8D5A3' }}>
+        ⏰ Expiré
+      </span>
+    )
   } else if (notYet) {
-    statusBadge = <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">⏳ Pas encore disponible</span>
-    canStart = false
-  } else if (plusDeTentatives) {
-    statusBadge = <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">🚫 Tentatives épuisées</span>
-    canStart = false
+    statusBadge = (
+      <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:99,
+        background:'#FFF7ED', color:'#D97706', border:'1px solid #FDE68A' }}>
+        ⏳ Bientôt disponible
+      </span>
+    )
   } else {
-    statusBadge = <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">✅ Disponible</span>
-    canStart = true
+    statusBadge = (
+      <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:99,
+        background:'#EFF6FF', color:'#1565C0', border:'1px solid #BFDBFE' }}>
+        📝 Disponible
+      </span>
+    )
   }
 
   return (
-    <div className="border border-amber-200 rounded-2xl p-5 flex flex-col gap-3 hover:shadow-lg hover:border-amber-400 transition-all bg-white">
+    <div style={{
+      border:'1px solid #E8D5A3', borderRadius:16, padding:20,
+      display:'flex', flexDirection:'column', gap:12,
+      background:'#FFFFFF', boxShadow:'0 2px 8px rgba(10,22,40,0.05)',
+      transition:'box-shadow 0.2s',
+      fontFamily:'Plus Jakarta Sans, sans-serif',
+    }}>
+      {/* Header */}
       <div>
         {statusBadge}
-        <h3 className="font-semibold mt-2 truncate text-slate-800">{examen.titre}</h3>
-        <p className="text-xs text-slate-500">{examen.salle_nom} · {examen.tuteur_prenom} {examen.tuteur_nom}</p>
+        <h3 style={{ fontWeight:700, fontSize:15, color:'#0A1628', margin:'8px 0 2px',
+          whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+          {examen.titre}
+        </h3>
+        <p style={{ fontSize:12, color:'#94A3B8', margin:0 }}>
+          {examen.salle_nom} · {examen.tuteur_prenom} {examen.tuteur_nom}
+        </p>
       </div>
 
       {examen.description && (
-        <p className="text-xs text-slate-600 line-clamp-2">{examen.description}</p>
+        <p style={{ fontSize:12, color:'#64748B', margin:0,
+          display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>
+          {examen.description}
+        </p>
       )}
 
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="bg-amber-50 rounded-xl py-2">
-          <p className="font-bold text-amber-700">{examen.duree_minutes} min</p>
-          <p className="text-slate-500">Durée</p>
-        </div>
-        <div className="bg-amber-50 rounded-xl py-2">
-          <p className="font-bold text-amber-700">{examen.note_passage}%</p>
-          <p className="text-slate-500">Pour réussir</p>
-        </div>
-        <div className="bg-amber-50 rounded-xl py-2">
-          <p className="font-bold text-amber-700">
-            {tentativesFaites}/{tentativesMax || '∞'}
-          </p>
-          <p className="text-slate-500">Tentatives</p>
-        </div>
+      {/* Infos */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+        {[
+          { label:'Durée',       value:`${examen.duree_minutes} min` },
+          { label:'Pour réussir',value:`${examen.note_passage}%`    },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ background:'#F5F0E6', borderRadius:10, padding:'8px 12px', textAlign:'center' }}>
+            <div style={{ fontSize:14, fontWeight:800, color:'#8B6914' }}>{value}</div>
+            <div style={{ fontSize:10, color:'#94A3B8', marginTop:2 }}>{label}</div>
+          </div>
+        ))}
       </div>
 
-      {dateLimite && !expired && (
-        <p className="text-xs text-amber-600">⏰ Jusqu'au {fmtDatetime(examen.date_limite)}</p>
+      {dateLimite && !expire && (
+        <p style={{ fontSize:11, color:'#D97706', margin:0 }}>
+          ⏰ Jusqu'au {fmtDatetime(examen.date_limite)}
+        </p>
       )}
 
-      <div className="flex gap-2">
-        {canStart && (
+      {/* Boutons */}
+      <div style={{ display:'flex', gap:8 }}>
+        {disponible && (
           <Btn size="sm" onClick={() => onCommencer(examen)} className="flex-1">
             ▶ Commencer
           </Btn>
         )}
-        {(dejaReussi || examen.derniere_tentative_statut === 'ECHOUE') && (
+        {(dejaReussi || aEchoue || expire) && (
           <Btn size="sm" variant="ghost" onClick={() => onVoirResultats(examen)}>
-            📊 Mes résultats
-          </Btn>
-        )}
-        {expired && !dejaReussi && examen.nb_tentatives_faites > 0 && (
-          <Btn size="sm" variant="ghost" onClick={() => onVoirResultats(examen)}>
-            📊 Voir corrigé
+            {dejaReussi ? '🏆 Voir mon résultat' : expire ? '📊 Voir corrigé' : '📊 Mes résultats'}
           </Btn>
         )}
       </div>

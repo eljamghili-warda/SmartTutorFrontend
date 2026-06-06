@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { seancesAPI, sallesAPI } from '../../services/api'
+import { seancesAPI, sallesAPI, tarifsAPI } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import Header from '../../components/Header/Header'
 import { Btn, Modal, FormGroup, Spinner, ToastContainer } from '../../components/UI'
@@ -10,6 +10,21 @@ import { fr } from 'date-fns/locale'
 import PaiementModal from '../Paiement/PaiementModal'
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+
+// ── Composant section étape dans le modal ─────────────────────────────────────
+function StepBlock({ num, label, children }) {
+  return (
+    <div style={{ padding:'14px 24px', borderBottom:'1px solid #E8D5A3' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+        <div style={{ width:22, height:22, borderRadius:'50%', background:'#0A1628', border:'1.5px solid #C5A059', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <span style={{ fontSize:10, fontWeight:800, color:'#C5A059' }}>{num}</span>
+        </div>
+        <span style={{ fontSize:12, fontWeight:700, color:'#8B9CB5', textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
 
 // ── Statuts séances ───────────────────────────────────────────────────────────
 const STATUT_SEANCE = {
@@ -112,7 +127,10 @@ export default function EmploiDuTemps() {
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [showCreate, setCreate]   = useState(false)
   const [mesSalles,  setMesSalles] = useState([])
-  const [form, setForm]           = useState({ salleId:'', titre:'', matiere:'', dateDebut:'', duree:60 })
+  const [form, setForm]           = useState({ salleId:'', titre:'', matiere:'', dateDebut:'', duree:60, heureDebut:'', creneauDispo:null })
+  const [mesTarifs,  setMesTarifs]  = useState([])
+  const [mesDispos,  setMesDispos]  = useState([])
+  const [loadingPlan, setLoadingPlan] = useState(false)
   const [loading, setLoading]     = useState(true)
   const [paiementSeanceId, setPaiementSeanceId] = useState(null)
   const [activeLegende, setActiveLegende] = useState(null)
@@ -124,14 +142,8 @@ export default function EmploiDuTemps() {
     setLoading(true)
     seancesAPI.getEmploiDuTemps({ debut, fin })
       .then(({ data }) => {
-        // Support ancien format (tableau) ET nouveau format ({ seances, examens })
-        if (Array.isArray(data)) {
-          setSeances(data)
-          setExamens([])
-        } else {
-          setSeances(data.seances || [])
-          setExamens(data.examens || [])
-        }
+        if (Array.isArray(data)) { setSeances(data); setExamens([]) }
+        else { setSeances(data.seances || []); setExamens(data.examens || []) }
       })
       .finally(() => setLoading(false))
   }
@@ -146,14 +158,34 @@ export default function EmploiDuTemps() {
     }
   }, [isTuteur])
 
-  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
+  const handleSalleChange = async (salleId) => {
+    setForm(f => ({ ...f, salleId, matiere:'', creneauDispo:null, heureDebut:'', dateDebut:'', duree:60 }))
+    if (!salleId) { setMesTarifs([]); setMesDispos([]); return }
+    setLoadingPlan(true)
+    try {
+      const [tarifsRes, disposRes] = await Promise.all([
+        tarifsAPI.getMesTarifs(),
+        seancesAPI.getDisponibilites(),
+      ])
+      setMesTarifs(tarifsRes.data || [])
+      setMesDispos(disposRes.data || [])
+      if ((tarifsRes.data || []).length === 1)
+        setForm(f => ({ ...f, matiere: tarifsRes.data[0].matiere }))
+    } catch { error('Erreur lors du chargement.') }
+    finally { setLoadingPlan(false) }
+  }
 
   const handleCreate = async (e) => {
     e.preventDefault()
+    if (!form.matiere?.trim()) { error('Veuillez sélectionner une matière / tarif.'); return }
+    if (!form.creneauDispo || !form.heureDebut) { error('Veuillez choisir un créneau et une heure de début.'); return }
+    const dateDebut = `${form.creneauDispo.dateStr}T${form.heureDebut}`
     try {
-      await seancesAPI.create(form)
+      await seancesAPI.create({ titre:form.titre, matiere:form.matiere, salleId:form.salleId, dateDebut, duree:form.duree })
       success('Séance planifiée !')
       setCreate(false)
+      setForm({ salleId:'', titre:'', matiere:'', dateDebut:'', duree:60, heureDebut:'', creneauDispo:null })
+      setMesTarifs([]); setMesDispos([])
       loadData()
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
@@ -380,34 +412,197 @@ export default function EmploiDuTemps() {
         )}
       </div>
 
-      {/* ── Modal planifier ─────────────────────────────────────────────────── */}
-      <Modal open={showCreate} onClose={() => setCreate(false)} title="📅 Planifier une séance">
-        <form onSubmit={handleCreate} style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          <FormGroup label="Salle *">
-            <select required value={form.salleId} onChange={set('salleId')}>
-              <option value="">Sélectionner une salle...</option>
-              {mesSalles.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
-            </select>
-          </FormGroup>
-          <FormGroup label="Titre *">
-            <input required value={form.titre} onChange={set('titre')} placeholder="ex: Cours d'Algèbre" />
-          </FormGroup>
-          <FormGroup label="Matière">
-            <input value={form.matiere} onChange={set('matiere')} placeholder="ex: Mathématiques" />
-          </FormGroup>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <FormGroup label="Date et heure *">
-              <input type="datetime-local" required value={form.dateDebut} onChange={set('dateDebut')} />
-            </FormGroup>
-            <FormGroup label="Durée (min)">
-              <input type="number" min={15} max={480} value={form.duree} onChange={set('duree')} />
-            </FormGroup>
-          </div>
-          <div style={{ display:'flex', gap:10, justifyContent:'flex-end', paddingTop:4 }}>
-            <Btn variant="secondary" onClick={() => setCreate(false)}>Annuler</Btn>
-            <Btn type="submit">Planifier</Btn>
-          </div>
-        </form>
+      {/* ── Modal planifier AVEC SCROLL ─────────────────────────────────────── */}
+      <Modal
+        open={showCreate}
+        onClose={() => { setCreate(false); setForm({ salleId:'', titre:'', matiere:'', dateDebut:'', duree:60, heureDebut:'', creneauDispo:null }); setMesTarifs([]); setMesDispos([]) }}
+        title="📅 Planifier une séance"
+      >
+        {/* ✅ AJOUT DU SCROLL : max-h-[80vh] + overflow-y-auto */}
+        <div style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+          <form onSubmit={handleCreate} style={{ display:'flex', flexDirection:'column', gap:0 }}>
+
+            {/* ── Étape 1 : Salle ───────────────────────────────────────── */}
+            <StepBlock num="1" label="Salle">
+              <select required value={form.salleId} onChange={e => handleSalleChange(e.target.value)}
+                style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:`1.5px solid ${S.border}`, background:S.surface, color: form.salleId ? S.text : S.muted, fontSize:13, outline:'none', cursor:'pointer' }}>
+                <option value="">— Sélectionner une salle —</option>
+                {mesSalles.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+              </select>
+            </StepBlock>
+
+            {form.salleId && loadingPlan && (
+              <div style={{ textAlign:'center', padding:'16px', color:S.muted, fontSize:13 }}>⏳ Chargement…</div>
+            )}
+
+            {form.salleId && !loadingPlan && (<>
+
+              {/* ── Étape 2 : Titre ─────────────────────────────────────── */}
+              <StepBlock num="2" label="Titre de la séance">
+                <input required value={form.titre}
+                  onChange={e => setForm(f=>({...f,titre:e.target.value}))}
+                  placeholder="ex: Cours d'Algèbre Linéaire"
+                  style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:`1.5px solid ${S.border}`, background:S.surface, color:S.text, fontSize:13, outline:'none', boxSizing:'border-box' }}
+                  onFocus={e => e.target.style.borderColor = S.gold}
+                  onBlur={e => e.target.style.borderColor = S.border}
+                />
+              </StepBlock>
+
+              {/* ── Étape 3 : Matière ───────────────────────────────────── */}
+              <StepBlock num="3" label="Matière & Tarif">
+                {mesTarifs.length > 0 ? (
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                    {mesTarifs.map(t => {
+                      const sel = form.matiere === t.matiere
+                      return (
+                        <button key={t.id} type="button" onClick={() => setForm(f=>({...f,matiere:t.matiere}))}
+                          style={{ padding:'8px 14px', borderRadius:10, cursor:'pointer', transition:'all 0.15s', background:sel?S.navy:S.surface, border:sel?`2px solid ${S.gold}`:`1.5px solid ${S.border}`, display:'flex', flexDirection:'column', alignItems:'flex-start', gap:2 }}>
+                          <span style={{ fontSize:12, fontWeight:700, color:sel?S.gold:S.text }}>{t.matiere}</span>
+                          <span style={{ fontSize:10, color:sel?S.gold:S.muted }}>{t.tarif_heure} DH/h</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div>
+                    <input required value={form.matiere} onChange={e => setForm(f=>({...f,matiere:e.target.value}))} placeholder="ex: Mathématiques"
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:`1.5px solid ${S.border}`, background:S.surface, color:S.text, fontSize:13, outline:'none', boxSizing:'border-box' }}
+                      onFocus={e => e.target.style.borderColor = S.gold} onBlur={e => e.target.style.borderColor = S.border}
+                    />
+                    <p style={{ fontSize:11, color:'#F59E0B', marginTop:6 }}>⚠️ Configurez vos tarifs pour un calcul automatique.</p>
+                  </div>
+                )}
+                {!form.matiere && <p style={{ fontSize:11, color:'#EF4444', marginTop:6, fontWeight:600 }}>⚠️ Matière obligatoire — l'admin ne peut pas payer sans tarif.</p>}
+              </StepBlock>
+
+              {/* ── Étape 4 : Créneau ───────────────────────────────────── */}
+              <StepBlock num="4" label="Choisir un créneau">
+                {mesDispos.length === 0 ? (
+                  <div style={{ borderRadius:10, background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.3)', padding:'12px 14px' }}>
+                    <p style={{ fontSize:12, color:'#F59E0B', margin:'0 0 4px' }}>⚠️ Aucune disponibilité configurée.</p>
+                    <a href="/dashboard/disponibilites" style={{ fontSize:11, color:'#FCD34D' }}>→ Configurer mes disponibilités</a>
+                  </div>
+                ) : (() => {
+                  const JNOMS = ['','Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
+                  const MOIS  = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+                  const seen  = new Set()
+                  const creneaux = []
+                  const now   = new Date()
+                  const today = new Date(now); today.setHours(0,0,0,0)
+                  for (let dayOffset = 0; dayOffset < 28; dayOffset++) {
+                    const date = new Date(today)
+                    date.setDate(today.getDate() + dayOffset)
+                    const jourISO = date.getDay() === 0 ? 7 : date.getDay()
+                    for (const d of mesDispos) {
+                      if (d.jour_semaine !== jourISO) continue
+                      const [h, m] = d.heure_debut.split(':').map(Number)
+                      const dateAvecHeure = new Date(date); dateAvecHeure.setHours(h, m, 0, 0)
+                      if (dateAvecHeure <= now) continue
+                      const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+                      const key = `${dateStr}-${d.heure_debut}`
+                      if (seen.has(key)) continue
+                      seen.add(key)
+                      creneaux.push({ key, dateStr, heureDebut:d.heure_debut, heureFin:d.heure_fin, dateObj:new Date(dateAvecHeure), jourNom:JNOMS[jourISO], jour:date.getDate(), mois:MOIS[date.getMonth()] })
+                    }
+                  }
+                  if (creneaux.length === 0) return (
+                    <p style={{ fontSize:12, color:'#F59E0B' }}>Aucun créneau dans les 28 prochains jours.</p>
+                  )
+                  return (
+                    <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:220, overflowY:'auto', paddingRight:2 }}>
+                      {creneaux.map(cr => {
+                        const sel = form.creneauDispo?.key === cr.key
+                        const [hd,md] = cr.heureDebut.split(':').map(Number)
+                        const [hf,mf] = cr.heureFin.split(':').map(Number)
+                        const maxDur = (hf*60+mf) - (hd*60+md)
+                        return (
+                          <button key={cr.key} type="button"
+                            onClick={() => setForm(f => ({ ...f, creneauDispo:cr, heureDebut:cr.heureDebut, duree:Math.min(f.duree||60,maxDur), dateDebut:`${cr.dateStr}T${cr.heureDebut}` }))}
+                            style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:11, cursor:'pointer', transition:'all 0.15s', background:sel?S.navy:'transparent', border:sel?`2px solid ${S.gold}`:`1px solid ${S.border}` }}>
+                            <div style={{ flexShrink:0, width:40, height:40, borderRadius:10, background:sel?S.goldLt:'rgba(197,160,89,0.06)', border:`1px solid ${sel?S.gold:S.border}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                              <span style={{ fontSize:8, fontWeight:700, color:sel?S.gold:S.muted, textTransform:'uppercase' }}>{cr.jourNom}</span>
+                              <span style={{ fontSize:16, fontWeight:800, color:sel?S.gold:S.text, lineHeight:1.2 }}>{cr.jour}</span>
+                              <span style={{ fontSize:8, color:sel?S.gold:S.muted }}>{cr.mois}</span>
+                            </div>
+                            <div style={{ flex:1, textAlign:'left' }}>
+                              <div style={{ fontSize:13, fontWeight:700, color:sel?S.gold:S.text }}>{cr.heureDebut} – {cr.heureFin}</div>
+                              <div style={{ fontSize:10, color:S.muted, marginTop:1 }}>{maxDur} min disponibles</div>
+                            </div>
+                            {sel && <span style={{ color:S.gold }}>✓</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </StepBlock>
+
+              {/* ── Étape 5 : Heure + Durée ─────────────────────────────── */}
+              {form.creneauDispo && (() => {
+                const cr = form.creneauDispo
+                const [hDeb,mDeb] = cr.heureDebut.split(':').map(Number)
+                const [hFin,mFin] = cr.heureFin.split(':').map(Number)
+                const totalMinFin = hFin*60+mFin
+                const heures = []
+                for (let min = hDeb*60+mDeb; min <= totalMinFin-30; min+=30)
+                  heures.push(`${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`)
+                const [hC,mC] = (form.heureDebut||cr.heureDebut).split(':').map(Number)
+                const dureeMax = totalMinFin - (hC*60+mC)
+                const finMin = hC*60+mC + Math.min(form.duree, dureeMax)
+                const heureFin = `${String(Math.floor(finMin/60)).padStart(2,'0')}:${String(finMin%60).padStart(2,'0')}`
+                return (
+                  <StepBlock num="5" label="Heure & Durée">
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:12 }}>
+                      {heures.map(h => {
+                        const sel = form.heureDebut === h
+                        return (
+                          <button key={h} type="button"
+                            onClick={() => { const [hh,mm]=h.split(':').map(Number); const max=totalMinFin-(hh*60+mm); setForm(f=>({...f,heureDebut:h,duree:Math.min(f.duree,max),dateDebut:`${cr.dateStr}T${h}`})) }}
+                            style={{ padding:'7px 16px', borderRadius:9, cursor:'pointer', fontSize:13, fontWeight:700, transition:'all 0.15s', background:sel?S.gold:'transparent', border:sel?`2px solid ${S.gold}`:`1.5px solid ${S.border}`, color:sel?'#fff':S.muted }}>
+                            {h}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {form.heureDebut && (
+                      <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:8, background:S.surface, border:`1.5px solid ${S.border}`, borderRadius:10, padding:'6px 12px' }}>
+                          <span style={{ fontSize:11, color:S.muted }}>Durée :</span>
+                          <input type="number" min={30} max={dureeMax} step={30} value={form.duree}
+                            onChange={e => setForm(f=>({...f,duree:Math.min(Number(e.target.value),dureeMax)}))}
+                            style={{ width:60, border:'none', background:'transparent', color:S.text, fontSize:13, fontWeight:700, outline:'none', textAlign:'center' }} />
+                          <span style={{ fontSize:11, color:S.muted }}>min</span>
+                        </div>
+                        <div style={{ flex:1, minWidth:140, display:'flex', alignItems:'center', gap:8, padding:'9px 14px', borderRadius:10, background:`linear-gradient(135deg, ${S.navy}, rgba(197,160,89,0.12))`, border:`1.5px solid ${S.goldBrd}` }}>
+                          <span style={{ fontSize:18 }}>🕐</span>
+                          <div>
+                            <div style={{ fontSize:14, fontWeight:800, color:S.gold }}>{form.heureDebut} → {heureFin}</div>
+                            <div style={{ fontSize:10, color:S.muted }}>{form.duree} minutes</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </StepBlock>
+                )
+              })()}
+
+            </>)}
+
+            {/* ── Footer ──────────────────────────────────────────────────── */}
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end', padding:'16px 24px 20px', borderTop:`1px solid ${S.border}`, marginTop:4 }}>
+              <button type="button"
+                onClick={() => { setCreate(false); setForm({ salleId:'', titre:'', matiere:'', dateDebut:'', duree:60, heureDebut:'', creneauDispo:null }); setMesTarifs([]); setMesDispos([]) }}
+                style={{ padding:'9px 20px', borderRadius:10, border:`1.5px solid ${S.border}`, background:'transparent', color:S.muted, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                Annuler
+              </button>
+              <button type="submit"
+                disabled={!form.salleId || !form.creneauDispo || !form.heureDebut || !form.matiere || !form.titre}
+                style={{ padding:'9px 24px', borderRadius:10, border:'none', fontSize:13, fontWeight:700, cursor:(!form.salleId||!form.creneauDispo||!form.heureDebut||!form.matiere||!form.titre)?'not-allowed':'pointer', transition:'all 0.2s', background:(!form.salleId||!form.creneauDispo||!form.heureDebut||!form.matiere||!form.titre)?'rgba(197,160,89,0.3)':S.gold, color:(!form.salleId||!form.creneauDispo||!form.heureDebut||!form.matiere||!form.titre)?'rgba(255,255,255,0.4)':'#fff' }}>
+                📅 Planifier la séance
+              </button>
+            </div>
+          </form>
+        </div>
       </Modal>
 
       {/* ── Modal paiement ──────────────────────────────────────────────────── */}

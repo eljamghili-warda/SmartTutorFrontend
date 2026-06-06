@@ -101,6 +101,11 @@ export const adminAPI = {
   fermerSalle:       (id)     => api.put(`/admin/salles/${id}/fermer`),
   getSeances:        (p)      => api.get('/admin/seances', { params: p }),
   getRevenus:        ()       => api.get('/admin/revenus'),
+  getExamens:        ()       => api.get('/admin/examens'),
+  getExamenDetails:  (id)     => api.get(`/admin/examens/${id}/details`),
+  getTuteursActivite:()       => api.get('/admin/tuteurs/activite'),
+  getSeancesStats:   ()       => api.get('/admin/seances/stats'),
+  getRevenusDetails: ()       => api.get('/admin/revenus/details'),
   getPaiements:      (p)      => api.get('/admin/paiements', { params: p }),
 }
 
@@ -115,6 +120,8 @@ export const examensAPI = {
   updateQuestion:        (examId, qId, d) => api.put(`/examens/${examId}/questions/${qId}`, d),
   deleteQuestion:        (examId, qId)    => api.delete(`/examens/${examId}/questions/${qId}`),
   getTentatives:         (id)             => api.get(`/examens/${id}/tentatives`),
+  getStats:              (id)             => api.get(`/examens/${id}/stats`),
+  getMaDerniereTentative:(id)             => api.get(`/examens/${id}/ma-derniere-tentative`),
   // Partagé
   getBySalle:            (salleId)        => api.get(`/examens/salle/${salleId}`),
   getById:               (id)             => api.get(`/examens/${id}`),
