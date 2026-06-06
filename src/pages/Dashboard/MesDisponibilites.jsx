@@ -195,8 +195,9 @@ export default function MesDisponibilites() {
         await seancesAPI.setDisponibilite({ dateSpecifique: date, heureDebut, heureFin })
         ok++
       } catch (e) {
-        fail++
-        console.warn(`Erreur date ${date}:`, e.response?.data?.error)
+        const msg = e.response?.data?.error || ''
+        if (msg.toLowerCase().includes('chevauchement')) fail++
+        else { fail++; console.warn(`Erreur date ${date}:`, msg) }
       }
     }
     setSaving(false)
@@ -217,11 +218,28 @@ export default function MesDisponibilites() {
     finally { setDeleting(null) }
   }
 
-  // Grouper par date
+  // Grouper par date — extraire YYYY-MM-DD sans conversion timezone
+  const parseDateKey = (ds) => {
+    if (!ds) return null
+    // Prendre seulement la partie date "YYYY-MM-DD" sans interprétation UTC
+    const str = typeof ds === 'string' ? ds : ds.toISOString()
+    // Si format ISO complet "2026-06-07T..." → prendre les 10 premiers chars directement
+    // MAIS si la date UTC est "2026-06-06T22:00:00Z" (décalage -2h), slice donne "2026-06-06"
+    // Fix : utiliser la date locale en parsant les composantes
+    if (str.includes('T')) {
+      const localDate = new Date(str)
+      const y = localDate.getFullYear()
+      const m = String(localDate.getMonth()+1).padStart(2,'0')
+      const j = String(localDate.getDate()).padStart(2,'0')
+      return `${y}-${m}-${j}`
+    }
+    return str.slice(0, 10)
+  }
+
   const disposByDate = {}
   dispos.forEach(d => {
     const key = d.date_specifique
-      ? d.date_specifique.slice(0,10)
+      ? parseDateKey(d.date_specifique)
       : `jour-${d.jour_semaine}`
     if (!disposByDate[key]) disposByDate[key] = []
     disposByDate[key].push(d)

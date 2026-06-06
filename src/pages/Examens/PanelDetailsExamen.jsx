@@ -6,10 +6,22 @@ const fmt = (d) => d ? new Date(d).toLocaleDateString('fr-FR', {
   day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
 }) : '—'
 
+const S = {
+  // Textes
+  title:    { fontSize:14, fontWeight:700, color:'#0A1628', fontFamily:'Plus Jakarta Sans,sans-serif', margin:0 },
+  label:    { fontSize:12, color:'#64748B', fontFamily:'Plus Jakarta Sans,sans-serif' },
+  value:    { fontSize:13, fontWeight:600, color:'#0A1628', fontFamily:'Plus Jakarta Sans,sans-serif' },
+  sub:      { fontSize:11, color:'#94A3B8', fontFamily:'Plus Jakarta Sans,sans-serif' },
+  // Conteneurs
+  card:     { background:'#FFFFFF', border:'1px solid #E8D5A3', borderRadius:12, padding:'14px 16px', marginBottom:8 },
+  badge:    { fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:99, border:'1px solid #E8D5A3', background:'#F5F0E6', color:'#8B6914' },
+  divider:  { borderBottom:'1px solid #F5F0E6', marginBottom:8 },
+}
+
 export default function PanelDetailsExamen({ examen, onClose }) {
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
-  const [tab,     setTab]     = useState('details') // details | questions | etudiants
+  const [tab,     setTab]     = useState('details')
 
   useEffect(() => {
     examensAPI.getStats(examen.id)
@@ -19,91 +31,94 @@ export default function PanelDetailsExamen({ examen, onClose }) {
   }, [examen.id])
 
   return (
-    <div className="flex flex-col h-full max-h-[80vh]">
+    <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif' }}>
 
       {/* Tabs */}
-      <div className="flex gap-1 px-6 pb-4 border-b border-blue-200">
+      <div style={{ display:'flex', gap:4, marginBottom:20, borderBottom:'2px solid #F5F0E6', paddingBottom:0 }}>
         {[
-          { key: 'details',   label: 'ℹ️ Détails' },
-          { key: 'questions', label: '❓ Questions' },
-          { key: 'etudiants', label: `👥 Étudiants${data ? ` (${data.stats.total})` : ''}` },
+          { key:'details',   label:'ℹ️ Détails' },
+          { key:'questions', label:`❓ Questions${data ? ` (${data.questions.length})` : ''}` },
+          { key:'etudiants', label:`👥 Étudiants${data ? ` (${data.stats.total})` : ''}` },
         ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all
-              ${tab === t.key ? 'bg-blue-700 text-white' : 'text-slate-500 hover:text-white hover:bg-blue-100'}`}>
-            {t.label}
-          </button>
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding:'8px 16px', borderRadius:'8px 8px 0 0', border:'none', cursor:'pointer',
+            fontSize:13, fontWeight: tab===t.key ? 700 : 500,
+            color:      tab===t.key ? '#8B6914' : '#94A3B8',
+            background: tab===t.key ? '#FDF9F0' : 'transparent',
+            borderBottom: tab===t.key ? '2px solid #C5A059' : '2px solid transparent',
+            marginBottom:-2, transition:'all 0.15s',
+          }}>{t.label}</button>
         ))}
       </div>
 
-      {/* Contenu */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
-        {loading ? (
-          <div className="flex justify-center py-12"><Spinner /></div>
-        ) : !data ? (
-          <p className="text-center text-rose-400 py-8">Impossible de charger les statistiques.</p>
-        ) : tab === 'details' ? (
-          <TabDetails examen={data.examen} stats={data.stats} />
-        ) : tab === 'questions' ? (
-          <TabQuestions questions={data.questions} />
-        ) : (
-          <TabEtudiants tentatives={data.tentatives} stats={data.stats} notePassage={data.examen.note_passage} />
-        )}
-      </div>
+      {loading ? (
+        <div style={{ display:'flex', justifyContent:'center', padding:40 }}><Spinner /></div>
+      ) : !data ? (
+        <div style={{ textAlign:'center', padding:40, color:'#DC2626', fontSize:13 }}>
+          Impossible de charger les statistiques.
+        </div>
+      ) : tab === 'details' ? (
+        <TabDetails examen={data.examen} stats={data.stats} />
+      ) : tab === 'questions' ? (
+        <TabQuestions questions={data.questions} />
+      ) : (
+        <TabEtudiants tentatives={data.tentatives} stats={data.stats} notePassage={data.examen.note_passage} />
+      )}
     </div>
   )
 }
 
 // ─── Onglet Détails ───────────────────────────────────────────────────────────
 function TabDetails({ examen, stats }) {
-  const infos = [
-    { icon: '📅', label: 'Date de publication',       value: fmt(examen.published_at) },
-    { icon: '🚦', label: 'Date de début',              value: fmt(examen.date_debut) },
-    { icon: '⏰', label: 'Date limite',                value: fmt(examen.date_limite) },
-    { icon: '📊', label: 'Affichage des résultats',   value: fmt(examen.date_affichage_resultats) },
-    { icon: '⏱',  label: 'Durée',                     value: `${examen.duree_minutes} minutes` },
-    { icon: '🎯', label: 'Note de passage',            value: `${examen.note_passage}%` },
-    { icon: '🔁', label: 'Tentatives max',             value: examen.max_tentatives || 'Illimité' },
-    { icon: '📋', label: 'Mode affichage',             value: examen.mode_affichage === 'LISTE_COMPLETE' ? 'Liste complète' : 'Question par question' },
-    { icon: '🔀', label: 'Mélanger les questions',    value: examen.melanger_questions ? 'Oui' : 'Non' },
-    { icon: '🔀', label: 'Mélanger les réponses',     value: examen.melanger_reponses  ? 'Oui' : 'Non' },
+  const kpis = [
+    { label:'Tentatives',     value: stats.total,      color:'#1565C0' },
+    { label:'Terminées',      value: stats.terminees,  color:'#0EA5E9' },
+    { label:'Réussies',       value: stats.reussies,   color:'#059669' },
+    { label:'Échecs',         value: stats.echecs,     color:'#DC2626' },
+    { label:'Taux réussite',  value: stats.tauxReussite ? `${stats.tauxReussite}%` : '—', color:'#C5A059' },
+    { label:'Moy. score',     value: stats.moyenneScore ? `${stats.moyenneScore}%` : '—', color:'#8B6914' },
   ]
-
-  const statCards = [
-    { label: 'Tentatives',    value: stats.total,      color: 'text-slate-100' },
-    { label: 'Terminées',     value: stats.terminees,  color: 'text-blue-400'  },
-    { label: 'Réussies',      value: stats.reussies,   color: 'text-emerald-400' },
-    { label: 'Échecs',        value: stats.echecs,     color: 'text-rose-400'  },
-    { label: 'Taux réussite', value: stats.tauxReussite ? `${stats.tauxReussite}%` : '—', color: 'text-blue-700' },
-    { label: 'Moy. score',    value: stats.moyenneScore ? `${stats.moyenneScore}%` : '—', color: 'text-amber-400' },
+  const infos = [
+    { label:'Date de publication',      value: fmt(examen.published_at) },
+    { label:'Date de début',            value: fmt(examen.date_debut) },
+    { label:'Date limite',              value: fmt(examen.date_limite) },
+    { label:'Affichage des résultats',  value: fmt(examen.date_affichage_resultats) },
+    { label:'Durée',                    value: `${examen.duree_minutes} minutes` },
+    { label:'Note de passage',          value: `${examen.note_passage}%` },
+    { label:'Tentatives max',           value: examen.max_tentatives || 'Illimité' },
+    { label:'Mode affichage',           value: examen.mode_affichage === 'LISTE_COMPLETE' ? 'Liste complète' : 'Question par question' },
   ]
 
   return (
-    <div className="space-y-6">
-      {/* Statistiques globales */}
-      <div>
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">📈 Statistiques globales</h3>
-        <div className="grid grid-cols-3 gap-3">
-          {statCards.map(s => (
-            <div key={s.label} className="bg-blue-100 rounded-xl p-3 text-center">
-              <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
-            </div>
-          ))}
-        </div>
+    <div>
+      {/* KPIs */}
+      <p style={{ fontSize:11, fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:1, marginBottom:10 }}>
+        Statistiques
+      </p>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:20 }}>
+        {kpis.map(k => (
+          <div key={k.label} style={{ background:'#FAFAFA', border:'1px solid #F0EBE0', borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
+            <div style={{ fontSize:22, fontWeight:800, color:k.color }}>{k.value}</div>
+            <div style={{ fontSize:10, color:'#94A3B8', marginTop:2 }}>{k.label}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Infos détaillées */}
-      <div>
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">⚙️ Configuration</h3>
-        <div className="space-y-2">
-          {infos.map(({ icon, label, value }) => (
-            <div key={label} className="flex items-center justify-between py-2 border-b border-blue-200/50">
-              <span className="text-sm text-slate-500">{icon} {label}</span>
-              <span className="text-sm font-semibold text-blue-900">{value}</span>
-            </div>
-          ))}
-        </div>
+      {/* Config */}
+      <p style={{ fontSize:11, fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:1, marginBottom:10 }}>
+        Configuration
+      </p>
+      <div style={{ background:'#FAFAFA', border:'1px solid #F0EBE0', borderRadius:12, overflow:'hidden' }}>
+        {infos.map((info, i) => (
+          <div key={info.label} style={{
+            display:'flex', justifyContent:'space-between', alignItems:'center',
+            padding:'9px 14px',
+            borderBottom: i < infos.length-1 ? '1px solid #F5F0E6' : 'none',
+          }}>
+            <span style={{ fontSize:12, color:'#64748B' }}>{info.label}</span>
+            <span style={{ fontSize:12, fontWeight:600, color:'#0A1628' }}>{info.value}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -114,56 +129,73 @@ function TabQuestions({ questions }) {
   const [openIdx, setOpenIdx] = useState(null)
 
   if (!questions.length) return (
-    <p className="text-center text-slate-500 py-8">Aucune question.</p>
+    <p style={{ textAlign:'center', color:'#94A3B8', padding:32, fontSize:13 }}>Aucune question.</p>
   )
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-slate-500">{questions.length} question{questions.length > 1 ? 's' : ''} au total</p>
+    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+      <p style={{ fontSize:11, color:'#94A3B8', marginBottom:4 }}>
+        {questions.length} question{questions.length > 1 ? 's' : ''} · {questions.reduce((s,q) => s + parseFloat(q.points||0), 0)} pts total
+      </p>
       {questions.map((q, i) => {
-        const isOpen = openIdx === i
-        const reponses = Array.isArray(q.reponses) ? q.reponses : []
-        const bonnes = reponses.filter(r => r.est_correcte)
-        const totalPts = questions.reduce((sum, q2) => sum + parseFloat(q2.points || 0), 0)
+        const reponses  = Array.isArray(q.reponses) ? q.reponses : []
+        const bonnes    = reponses.filter(r => r.est_correcte)
+        const isOpen    = openIdx === i
 
         return (
-          <div key={q.id} className="bg-blue-100 border border-blue-200 rounded-xl overflow-hidden">
-            {/* Header question */}
-            <button
-              onClick={() => setOpenIdx(isOpen ? null : i)}
-              className="w-full flex items-start gap-3 p-4 text-left hover:bg-blue-200/50 transition-colors">
-              <span className="w-7 h-7 rounded-xl bg-blue-700/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-blue-700 flex-shrink-0 mt-0.5">
-                {i + 1}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-600/20 text-blue-700 font-semibold">{q.type}</span>
-                  <span className="text-xs text-amber-400">{q.points} pt{q.points > 1 ? 's' : ''}</span>
-                  <span className="text-xs text-emerald-400">✅ {bonnes.length} bonne{bonnes.length > 1 ? 's' : ''} réponse{bonnes.length > 1 ? 's' : ''}</span>
+          <div key={q.id} style={{ border:'1px solid #E8D5A3', borderRadius:12, overflow:'hidden', background:'#FFFFFF' }}>
+            <button onClick={() => setOpenIdx(isOpen ? null : i)} style={{
+              width:'100%', display:'flex', alignItems:'flex-start', gap:12,
+              padding:'12px 14px', background:'none', border:'none', cursor:'pointer', textAlign:'left',
+            }}>
+              {/* Numéro */}
+              <span style={{
+                width:26, height:26, borderRadius:8, flexShrink:0,
+                background:'#F5F0E6', border:'1px solid #E8D5A3',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:11, fontWeight:800, color:'#8B6914',
+              }}>{i+1}</span>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', gap:6, marginBottom:4, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:10, fontWeight:700, padding:'1px 8px', borderRadius:99, background:'#F5F0E6', color:'#8B6914', border:'1px solid #E8D5A3' }}>
+                    {q.type}
+                  </span>
+                  <span style={{ fontSize:10, color:'#C5A059', fontWeight:600 }}>{q.points} pt{q.points>1?'s':''}</span>
+                  <span style={{ fontSize:10, color:'#059669', fontWeight:600 }}>✓ {bonnes.length} bonne{bonnes.length>1?'s':''}</span>
                 </div>
-                <p className="text-sm text-slate-100 font-medium leading-relaxed">{q.texte}</p>
+                <p style={{ fontSize:13, fontWeight:600, color:'#0A1628', margin:0, lineHeight:1.4 }}>{q.texte}</p>
               </div>
-              <span className="text-slate-500 text-xs flex-shrink-0 mt-1">{isOpen ? '▲' : '▼'}</span>
+              <span style={{ fontSize:11, color:'#94A3B8', flexShrink:0, marginTop:2 }}>{isOpen ? '▲' : '▼'}</span>
             </button>
 
-            {/* Réponses */}
             {isOpen && (
-              <div className="px-4 pb-4 space-y-2 border-t border-blue-200">
-                <p className="text-xs text-slate-500 pt-3 mb-2">Réponses :</p>
-                {reponses.map(r => (
-                  <div key={r.id}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm
-                      ${r.est_correcte
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                        : 'bg-blue-50 border-blue-200 text-slate-500'}`}>
-                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold
-                      ${r.est_correcte ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-blue-200'}`}>
-                      {r.est_correcte ? '✓' : ''}
-                    </span>
-                    <span className="flex-1">{r.texte}</span>
-                    {r.est_correcte && <span className="text-xs text-emerald-400 font-semibold">✅ Correcte</span>}
-                  </div>
-                ))}
+              <div style={{ padding:'0 14px 12px', borderTop:'1px solid #F5F0E6' }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:6, paddingTop:10 }}>
+                  {reponses.map(r => (
+                    <div key={r.id} style={{
+                      display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:9,
+                      background: r.est_correcte ? '#F0FDF4' : '#FAFAFA',
+                      border: `1px solid ${r.est_correcte ? '#86EFAC' : '#E8D5A3'}`,
+                    }}>
+                      <span style={{
+                        width:20, height:20, borderRadius:'50%', flexShrink:0,
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        fontSize:11, fontWeight:800,
+                        background: r.est_correcte ? '#059669' : '#F5F0E6',
+                        color: r.est_correcte ? '#FFFFFF' : '#94A3B8',
+                        border: `1px solid ${r.est_correcte ? '#059669' : '#E8D5A3'}`,
+                      }}>
+                        {r.est_correcte ? '✓' : ''}
+                      </span>
+                      <span style={{ fontSize:12, color: r.est_correcte ? '#065F46' : '#374151', fontWeight: r.est_correcte ? 600 : 400 }}>
+                        {r.texte}
+                      </span>
+                      {r.est_correcte && (
+                        <span style={{ marginLeft:'auto', fontSize:10, color:'#059669', fontWeight:700 }}>Correcte</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -176,108 +208,111 @@ function TabQuestions({ questions }) {
 // ─── Onglet Étudiants ─────────────────────────────────────────────────────────
 function TabEtudiants({ tentatives, stats, notePassage }) {
   if (!tentatives.length) return (
-    <div className="text-center py-12">
-      <div className="text-4xl mb-3">👥</div>
-      <p className="text-slate-500 font-semibold">Aucun étudiant n'a encore passé cet examen.</p>
+    <div style={{ textAlign:'center', padding:40 }}>
+      <div style={{ fontSize:40, marginBottom:12 }}>👥</div>
+      <p style={{ fontSize:14, fontWeight:700, color:'#0A1628' }}>Aucun étudiant n'a encore passé cet examen.</p>
     </div>
   )
 
-  // Grouper par étudiant — garder meilleure tentative
+  // Garder meilleure tentative par étudiant
   const parEtudiant = {}
   tentatives.forEach(t => {
     const key = t.etudiant_id
-    if (!parEtudiant[key]) {
-      parEtudiant[key] = { ...t, toutes: [] }
-    }
-    parEtudiant[key].toutes.push(t)
-    // Garder la meilleure tentative (ou la dernière REUSSI)
-    if (t.statut === 'REUSSI' || (!parEtudiant[key].statut === 'REUSSI' && parseFloat(t.pourcentage) > parseFloat(parEtudiant[key].pourcentage || 0))) {
-      parEtudiant[key] = { ...t, toutes: parEtudiant[key].toutes }
+    if (!parEtudiant[key]) parEtudiant[key] = { ...t, nb: 0 }
+    parEtudiant[key].nb++
+    if (t.statut === 'REUSSI' ||
+        (parEtudiant[key].statut !== 'REUSSI' && parseFloat(t.pourcentage||0) > parseFloat(parEtudiant[key].pourcentage||0))) {
+      parEtudiant[key] = { ...t, nb: parEtudiant[key].nb }
     }
   })
-  const etudiants = Object.values(parEtudiant).sort((a, b) => parseFloat(b.pourcentage || 0) - parseFloat(a.pourcentage || 0))
+  const etudiants = Object.values(parEtudiant)
+    .sort((a,b) => parseFloat(b.pourcentage||0) - parseFloat(a.pourcentage||0))
 
   return (
-    <div className="space-y-4">
+    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
       {/* Résumé */}
-      <div className="bg-blue-100 rounded-xl p-3 flex items-center justify-between text-sm">
-        <span className="text-slate-500">
-          <strong className="text-slate-100">{etudiants.length}</strong> étudiant{etudiants.length > 1 ? 's' : ''} ont passé l'examen
-        </span>
-        <span className="text-slate-500">
-          <strong className="text-emerald-400">{stats.reussies}</strong> réussite{stats.reussies > 1 ? 's' : ''}
-        </span>
+      <div style={{ display:'flex', gap:8, marginBottom:4, flexWrap:'wrap' }}>
+        {[
+          { label:'Participants', value:etudiants.length, color:'#1565C0' },
+          { label:'Réussites',   value:stats.reussies,   color:'#059669' },
+          { label:'Taux',        value:stats.tauxReussite?`${stats.tauxReussite}%`:'—', color:'#C5A059' },
+        ].map(s => (
+          <div key={s.label} style={{ flex:1, minWidth:90, background:'#FAFAFA', border:'1px solid #F0EBE0', borderRadius:10, padding:'8px 12px', textAlign:'center' }}>
+            <div style={{ fontSize:18, fontWeight:800, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:10, color:'#94A3B8' }}>{s.label}</div>
+          </div>
+        ))}
       </div>
 
       {/* Liste */}
-      <div className="space-y-2">
-        {etudiants.map((e, idx) => {
-          const reussi  = e.statut === 'REUSSI'
-          const pct     = parseFloat(e.pourcentage || 0)
-          const nbTentatives = e.toutes.length
+      {etudiants.map((e, idx) => {
+        const reussi = e.statut === 'REUSSI'
+        const pct    = parseFloat(e.pourcentage || 0)
+        return (
+          <div key={e.etudiant_id} style={{
+            display:'flex', alignItems:'center', gap:12, padding:'12px 14px',
+            background:'#FFFFFF', border:`1px solid ${reussi ? '#86EFAC' : '#E8D5A3'}`,
+            borderRadius:12,
+          }}>
+            {/* Rang */}
+            <span style={{
+              width:26, height:26, borderRadius:8, flexShrink:0,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:11, fontWeight:800,
+              background: idx===0?'#FEF3C7': idx===1?'#F5F0E6':'#FAFAFA',
+              color: idx===0?'#D97706': idx===1?'#94A3B8':'#CBD5E1',
+              border:'1px solid #E8D5A3',
+            }}>{idx+1}</span>
 
-          return (
-            <div key={e.etudiant_id}
-              className={`flex items-center gap-4 p-4 rounded-xl border transition-all
-                ${reussi
-                  ? 'bg-emerald-500/5 border-emerald-500/20'
-                  : e.statut === 'EN_COURS'
-                    ? 'bg-amber-500/5 border-amber-500/20'
-                    : 'bg-blue-100 border-blue-200'}`}>
+            {/* Avatar */}
+            <div style={{
+              width:36, height:36, borderRadius:'50%', flexShrink:0,
+              background:'linear-gradient(135deg,#1E3A6E,#4A90E2)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:13, fontWeight:800, color:'#FFFFFF',
+              border:'1.5px solid #E8D5A3',
+            }}>
+              {(e.etudiant_prenom?.[0]||'?').toUpperCase()}
+            </div>
 
-              {/* Rang */}
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
-                ${idx === 0 ? 'bg-amber-500/20 text-amber-400' : idx === 1 ? 'bg-slate-500/20 text-slate-500' : idx === 2 ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-200 text-slate-500'}`}>
-                {idx + 1}
-              </span>
+            {/* Nom */}
+            <div style={{ flex:1, minWidth:0 }}>
+              <p style={{ fontSize:13, fontWeight:700, color:'#0A1628', margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                {e.etudiant_prenom} {e.etudiant_nom}
+              </p>
+              <p style={{ fontSize:11, color:'#94A3B8', margin:'2px 0 0' }}>
+                {e.nb} tentative{e.nb>1?'s':''}
+                {e.statut === 'EN_COURS' && ' · En cours'}
+              </p>
+            </div>
 
-              {/* Avatar + nom */}
-              <div className="w-9 h-9 rounded-full bg-blue-700/20 border border-violet-500/30 flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">
-                {(e.etudiant_prenom?.[0] || '?').toUpperCase()}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-100 truncate">
-                  {e.etudiant_prenom} {e.etudiant_nom}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {nbTentatives} tentative{nbTentatives > 1 ? 's' : ''}
-                  {e.statut === 'EN_COURS' && ' · En cours…'}
-                </p>
-              </div>
-
-              {/* Score + barre */}
-              <div className="flex-shrink-0 text-right">
-                {e.statut === 'EN_COURS' ? (
-                  <span className="text-xs text-amber-400 font-semibold">⏳ En cours</span>
-                ) : (
-                  <>
-                    <p className={`text-lg font-bold ${reussi ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {isNaN(pct) ? '—' : `${pct.toFixed(0)}%`}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {reussi ? '✅ Réussi' : '❌ Échoué'}
-                    </p>
-                  </>
-                )}
-              </div>
-
-              {/* Barre de score */}
-              {e.statut !== 'EN_COURS' && !isNaN(pct) && (
-                <div className="w-16 flex-shrink-0">
-                  <div className="h-1.5 bg-blue-200 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${reussi ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                      style={{ width: `${Math.min(100, pct)}%` }} />
-                  </div>
-                  <div className="flex justify-end mt-0.5">
-                    <span className="text-[10px] text-slate-600">{notePassage}%</span>
-                  </div>
-                </div>
+            {/* Score + barre */}
+            <div style={{ textAlign:'right', flexShrink:0 }}>
+              {e.statut === 'EN_COURS' ? (
+                <span style={{ fontSize:11, color:'#D97706', fontWeight:700 }}>⏳ En cours</span>
+              ) : (
+                <>
+                  <p style={{ fontSize:18, fontWeight:800, color: reussi?'#059669':'#DC2626', margin:0 }}>
+                    {isNaN(pct)?'—':`${pct.toFixed(0)}%`}
+                  </p>
+                  <p style={{ fontSize:10, color: reussi?'#059669':'#DC2626', margin:0, fontWeight:600 }}>
+                    {reussi ? '✅ Réussi' : '❌ Échoué'}
+                  </p>
+                </>
               )}
             </div>
-          )
-        })}
-      </div>
+
+            {/* Barre mini */}
+            {e.statut !== 'EN_COURS' && !isNaN(pct) && (
+              <div style={{ width:50, flexShrink:0 }}>
+                <div style={{ height:4, background:'#F5F0E6', borderRadius:99, overflow:'hidden' }}>
+                  <div style={{ height:'100%', width:`${Math.min(100,pct)}%`, background: reussi?'#059669':'#DC2626', borderRadius:99 }} />
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

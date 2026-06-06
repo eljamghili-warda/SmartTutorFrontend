@@ -8,7 +8,46 @@ import { useToast } from '../../hooks/useToast'
 const JOURS_COURT = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const JOURS_LONG  = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
-// Bloc disponibilités réutilisable
+// Parser date_specifique sans décalage UTC
+const parseDateLocal = (ds) => {
+  if (!ds) return null
+  const str = typeof ds === 'string' ? ds : ''
+  if (str.includes('T')) {
+    const d = new Date(str)
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  }
+  const [y, m, j] = str.slice(0,10).split('-').map(Number)
+  return new Date(y, m-1, j)
+}
+
+// Retourne SEULEMENT la prochaine disponibilité par jour de semaine
+const getProchainesDispos = (dispos) => {
+  const today = new Date()
+  today.setHours(0,0,0,0)
+
+  // Garder seulement les dispos futures ou aujourd'hui
+  const futures = dispos
+    .map(d => ({ ...d, _date: parseDateLocal(d.date_specifique) }))
+    .filter(d => d._date && d._date >= today)
+    .sort((a, b) => a._date - b._date || a.heure_debut.localeCompare(b.heure_debut))
+
+  // Grouper par jour_semaine — garder seulement la date la plus proche par jour
+  const byJour = {}
+  futures.forEach(d => {
+    const jour = d.jour_semaine
+    if (!byJour[jour]) {
+      byJour[jour] = { date: d._date, plages: [] }
+    }
+    // Si c'est la même date que déjà enregistrée, ajouter la plage
+    if (d._date.getTime() === byJour[jour].date.getTime()) {
+      byJour[jour].plages.push(d)
+    }
+  })
+
+  return byJour
+}
+
+// Bloc disponibilités — affiche la PROCHAINE occurrence par jour
 const DisposBlock = ({ tuteurId }) => {
   const [dispos,  setDispos]  = React.useState([])
   const [loading, setLoading] = React.useState(true)
@@ -21,63 +60,92 @@ const DisposBlock = ({ tuteurId }) => {
       .finally(() => setLoading(false))
   }, [tuteurId])
 
-  const byJour = JOURS_LONG.map((long, idx) => ({
-    idx, long, court: JOURS_COURT[idx],
-    plages: dispos.filter(d => d.jour_semaine === idx)
-                  .sort((a, b) => a.heure_debut.localeCompare(b.heure_debut)),
-  })).filter(j => j.idx >= 1)
-
-  const joursActifs = byJour.filter(j => j.plages.length > 0)
+  const prochainesDispos = getProchainesDispos(dispos)
+  const joursActifs = Object.entries(prochainesDispos)
+    .sort(([, a], [, b]) => a.date - b.date) // trier par date croissante
 
   if (loading) return (
-    <div className="bg-blue-50 rounded-xl p-2.5 text-center">
-      <p className="text-xs text-slate-400">Chargement des disponibilités…</p>
+    <div style={{ background:'#F5F0E6', borderRadius:12, padding:'10px 14px', textAlign:'center', border:'1px solid #E8D5A3' }}>
+      <p style={{ fontSize:12, color:'#94A3B8', margin:0 }}>Chargement des disponibilités…</p>
     </div>
   )
 
   if (joursActifs.length === 0) return (
-    <div className="bg-blue-50 rounded-xl p-2.5 text-center border border-blue-100">
-      <p className="text-xs text-slate-400">🗓️ Aucune disponibilité renseignée</p>
+    <div style={{ background:'#F5F0E6', borderRadius:12, padding:'10px 14px', textAlign:'center', border:'1px solid #E8D5A3' }}>
+      <p style={{ fontSize:12, color:'#94A3B8', margin:0 }}>Aucune disponibilité à venir</p>
     </div>
   )
 
   return (
-    <div className="flex flex-col gap-2">
+    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center justify-between w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl px-3 py-2 transition-colors"
+        style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          width:'100%', background:'#F5F0E6', border:'1px solid #E8D5A3',
+          borderRadius:12, padding:'8px 14px', cursor:'pointer',
+          fontFamily:'Plus Jakarta Sans, sans-serif',
+        }}
       >
-        <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
-          🗓️ Disponibilités · {joursActifs.length} jour{joursActifs.length > 1 ? 's' : ''}
+        <span style={{ fontSize:12, fontWeight:700, color:'#8B6914', textTransform:'uppercase', letterSpacing:1 }}>
+          Disponibilités · {joursActifs.length} jour{joursActifs.length > 1 ? 's' : ''}
         </span>
-        <span className="text-xs text-blue-500 font-bold">{open ? '▲ Masquer' : '▼ Voir'}</span>
+        <span style={{ fontSize:11, color:'#C5A059', fontWeight:700 }}>{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
-        <div className="rounded-xl border border-blue-200 bg-white overflow-hidden">
-          {joursActifs.map((jour, i) => (
-            <div key={jour.idx}
-              className={`flex items-start gap-3 px-3 py-2.5
-                ${i < joursActifs.length - 1 ? 'border-b border-blue-100' : ''}`}
-            >
-              {/* Badge jour */}
-              <div className="w-10 h-10 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-black text-blue-700">{jour.court}</span>
-              </div>
-              {/* Plages */}
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-ink-800 mb-1.5">{jour.long}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {jour.plages.map(p => (
-                    <span key={p.id}
-                      className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 border border-blue-200 text-blue-700">
-                      {p.heure_debut.slice(0, 5)} – {p.heure_fin.slice(0, 5)}
-                    </span>
-                  ))}
+        <div style={{ border:'1px solid #E8D5A3', borderRadius:12, background:'#FFFFFF', overflow:'hidden' }}>
+          {joursActifs.map(([jourIdx, { date, plages }], i) => {
+            const jour = parseInt(jourIdx)
+            const dateStr = date.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })
+            const isToday = date.toDateString() === new Date().toDateString()
+            return (
+              <div key={jourIdx}
+                style={{
+                  display:'flex', alignItems:'flex-start', gap:12,
+                  padding:'10px 14px',
+                  borderBottom: i < joursActifs.length-1 ? '1px solid #F5F0E6' : 'none',
+                }}
+              >
+                {/* Badge jour + date */}
+                <div style={{
+                  minWidth:44, borderRadius:10, flexShrink:0, textAlign:'center',
+                  background: isToday ? '#0A1628' : '#F5F0E6',
+                  border: `1px solid ${isToday ? '#C5A059' : '#E8D5A3'}`,
+                  padding:'4px 6px',
+                }}>
+                  <div style={{ fontSize:9, fontWeight:700, color: isToday ? '#C5A059' : '#8B6914', lineHeight:1, textTransform:'uppercase' }}>
+                    {JOURS_COURT[jour]}
+                  </div>
+                  <div style={{ fontSize:14, fontWeight:800, color: isToday ? '#E8D5A3' : '#0A1628', lineHeight:1.2 }}>
+                    {date.getDate()}
+                  </div>
+                  <div style={{ fontSize:9, color: isToday ? 'rgba(232,213,163,0.6)' : '#94A3B8', lineHeight:1 }}>
+                    {date.toLocaleDateString('fr-FR',{month:'short'})}
+                  </div>
+                </div>
+
+                {/* Plages horaires */}
+                <div style={{ flex:1 }}>
+                  <p style={{ fontSize:12, fontWeight:700, color:'#0A1628', margin:'0 0 6px', fontFamily:'Plus Jakarta Sans, sans-serif' }}>
+                    {JOURS_LONG[jour]}
+                    {isToday && <span style={{ marginLeft:6, fontSize:10, color:'#059669', fontWeight:600 }}>· Aujourd'hui</span>}
+                  </p>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                    {plages.map(p => (
+                      <span key={p.id} style={{
+                        fontSize:11, fontWeight:600, padding:'3px 10px', borderRadius:99,
+                        background:'#F5F0E6', border:'1px solid #E8D5A3', color:'#8B6914',
+                        fontFamily:'Plus Jakarta Sans, sans-serif',
+                      }}>
+                        {p.heure_debut.slice(0,5)} – {p.heure_fin.slice(0,5)}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
