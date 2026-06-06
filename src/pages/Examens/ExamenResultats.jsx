@@ -181,10 +181,9 @@ export default function ExamenResultats() {
           {/* Stats en ligne */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
             {[
-              { label: 'Résultat', value: reussi ? '✅ Réussi' : echoue ? '❌ Échoué' : '⏳' },
+              { label: 'Résultat', value: reussi ? '✅ Réussi' : echoue ? '❌ Échoué' : '⏰ Expiré' },
               score && { label: 'Score', value: `${score}%` },
               { label: 'Note de passage', value: `${notePass}%` },
-              { label: 'Tentatives', value: String(examen?.nb_tentatives_faites || 1) },
             ].filter(Boolean).map(({ label, value }) => (
               <div key={label} style={{
                 background: 'rgba(255,255,255,0.15)', borderRadius: 12,
