@@ -1033,8 +1033,8 @@ export default function Salle() {
   const hasTuteur = salle?.statut === 'ACTIVE_AVEC_TUTEUR'
   const canCall   = isTuteur || (isAdmin && !hasTuteur)
 
-  const statutBadge = { PLANIFIEE:'warning', EN_ATTENTE_PAIEMENT:'warning', CONFIRMEE:'primary', EN_COURS:'primary', REALISEE:'success', ANNULEE:'danger' }
-  const statutLabel  = { PLANIFIEE:'Planifiée', EN_ATTENTE_PAIEMENT:'⏳ En attente paiement', CONFIRMEE:'✅ Confirmée', EN_COURS:'🔴 En cours', REALISEE:'✅ Réalisée', ANNULEE:'❌ Annulée' }
+  const statutBadge = { PLANIFIEE:'warning', EN_ATTENTE_PAIEMENT:'warning', CONFIRMEE:'success', EN_COURS:'primary', REALISEE:'success', ANNULEE:'danger' }
+  const statutLabel  = { PLANIFIEE:'Planifiée', EN_ATTENTE_PAIEMENT:'⏳ En attente paiement', CONFIRMEE:'🔒 Confirmée & payée', EN_COURS:'🔴 En cours', REALISEE:'✅ Réalisée', ANNULEE:'❌ Annulée' }
 
   if (loading) return (
     <div className="h-screen bg-ink-950 flex items-center justify-center"><Spinner size="lg" /></div>
@@ -1227,27 +1227,27 @@ export default function Salle() {
                     <p className="text-xs text-violet-400 font-semibold">💰 {s.montant_total} DH</p>
                   )}
                   {/* Statut paiement → admin */}
-                  {isAdmin && (s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut_paiement === 'PAYE' || s.statut === 'CONFIRMEE') && (
+                  {isAdmin && (s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE') && (
                     <div className={`mt-1 p-2 rounded-lg border ${
-                      s.statut_paiement === 'PAYE' || s.statut === 'CONFIRMEE'
-                        ? 'bg-emerald-500/10 border-emerald-500/20'
+                      s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE'
+                        ? 'bg-blue-500/10 border-blue-500/20'
                         : 'bg-amber-500/10 border-amber-500/20'
                     }`}>
-                      {s.statut_paiement === 'PAYE' || s.statut === 'CONFIRMEE' ? (
+                      {s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? (
                         <>
-                          <p className="text-xs text-emerald-400 mb-1.5">✅ Séance payée</p>
+                          <p className="text-xs text-blue-400 mb-1.5">🔒 Fonds sécurisés — libération après réalisation</p>
                           <button
                             disabled
                             className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold"
                             style={{
-                              background: '#1a2e1a',
-                              color: '#4ade80',
-                              border: '1px solid #166534',
+                              background: '#1a1e2e',
+                              color: '#60a5fa',
+                              border: '1px solid #1e40af',
                               cursor: 'not-allowed',
-                              opacity: 0.7,
+                              opacity: 0.8,
                             }}
                           >
-                            ✅ Payé
+                            🔒 Payé — en escrow
                           </button>
                         </>
                       ) : (
@@ -1918,7 +1918,7 @@ export default function Salle() {
             setPaiementSeanceId(null)
             // Mettre à jour le statut de la séance localement → CONFIRMEE
             setSeances(prev => prev.map(s =>
-              s.id === paiementSeanceId ? { ...s, statut: 'CONFIRMEE', statut_paiement: 'PAYE' } : s
+              s.id === paiementSeanceId ? { ...s, statut: 'CONFIRMEE', statut_paiement: 'EN_ATTENTE_LIBERATION' } : s
             ))
             success('✅ Paiement confirmé — séance confirmée !')
           }}

@@ -19,13 +19,23 @@ const STATUT_SEANCE = {
     bg: 'rgba(245,158,11,0.10)',
     border: 'rgba(245,158,11,0.30)',
     text: '#F59E0B',
+    explication: "L'admin de la salle n'a pas encore payé cette séance. Le tuteur attend le paiement avant que la séance soit confirmée.",
   },
   PLANIFIEE: {
-    label: '✅ Planifiée (payée)',
-    dot: '#409be5',
+    label: '⏳ En attente de paiement',
+    dot: '#F59E0B',
+    bg: 'rgba(245,158,11,0.10)',
+    border: 'rgba(245,158,11,0.30)',
+    text: '#F59E0B',
+    explication: "L'admin de la salle n'a pas encore payé cette séance.",
+  },
+  CONFIRMEE: {
+    label: '🔒 Confirmée & payée',
+    dot: '#3B82F6',
     bg: 'rgba(59,130,246,0.10)',
     border: 'rgba(59,130,246,0.30)',
     text: '#3B82F6',
+    explication: "L'admin a payé la séance. Le montant est conservé en sécurité par SmartEdu et sera versé au tuteur après la réalisation de la séance.",
   },
   EN_COURS: {
     label: '🎙️ En cours',
@@ -33,6 +43,7 @@ const STATUT_SEANCE = {
     bg: 'rgba(167, 165, 61, 0.12)',
     border: 'rgba(237, 220, 95, 0.35)',
     text: '#eeee6b',
+    explication: "La séance est actuellement en cours. Les participants sont connectés en appel.",
   },
   REALISEE: {
     label: '✓ Réalisée',
@@ -40,6 +51,7 @@ const STATUT_SEANCE = {
     bg: 'rgba(16,185,129,0.10)',
     border: 'rgba(16,185,129,0.30)',
     text: '#10B981',
+    explication: "La séance s'est déroulée avec succès. Le paiement a été libéré : 85% versés au tuteur, 15% commission SmartEdu.",
   },
   ANNULEE: {
     label: '✕ Annulée',
@@ -47,6 +59,7 @@ const STATUT_SEANCE = {
     bg: 'rgba(239,68,68,0.08)',
     border: 'rgba(239,68,68,0.25)',
     text: '#F87171',
+    explication: "La séance a été annulée par le tuteur. Si un paiement avait été effectué, l'admin a été remboursé à 100%.",
   },
 }
 
@@ -61,12 +74,18 @@ const STATUT_EXAMEN = {
 
 // ── Légende ───────────────────────────────────────────────────────────────────
 const LEGENDE = [
-  { key: 'EN_ATTENTE_PAIEMENT', label: 'En attente paiement', color: '#F59E0B' },
-  { key: 'PLANIFIEE',           label: 'Planifiée (payée)',   color: '#409be5' },
-  { key: 'EN_COURS',            label: 'En cours',            color: '#d72cc6' },
-  { key: 'REALISEE',            label: 'Réalisée',            color: '#10B981' },
-  { key: 'ANNULEE',             label: 'Annulée',             color: '#EF4444' },
-  { key: 'EXAMEN',              label: 'Examen',              color: '#A855F7' },
+  { key: 'EN_ATTENTE_PAIEMENT', label: 'En attente paiement',   color: '#F59E0B',
+    explication: "L'admin de la salle n'a pas encore payé. Le tuteur attend avant de confirmer la séance." },
+  { key: 'CONFIRMEE',           label: 'Confirmée & payée',     color: '#3B82F6',
+    explication: "L'admin a payé. Le montant est conservé par SmartEdu jusqu'à la réalisation. Tuteur = 85%, SmartEdu = 15%." },
+  { key: 'EN_COURS',            label: 'En cours',              color: '#d72cc6',
+    explication: "La séance est active maintenant. Les participants sont en appel audio/vidéo." },
+  { key: 'REALISEE',            label: 'Réalisée',              color: '#10B981',
+    explication: "Séance terminée avec succès. Paiement libéré : 85% → tuteur, 15% → SmartEdu." },
+  { key: 'ANNULEE',             label: 'Annulée',               color: '#EF4444',
+    explication: "Séance annulée par le tuteur. L'admin est remboursé à 100% si paiement déjà effectué." },
+  { key: 'EXAMEN',              label: 'Examen',                color: '#A855F7',
+    explication: "Un examen est planifié ce jour. Les étudiants peuvent y participer depuis leur salle." },
 ]
 
 // ── Styles globaux ────────────────────────────────────────────────────────────
@@ -96,6 +115,7 @@ export default function EmploiDuTemps() {
   const [form, setForm]           = useState({ salleId:'', titre:'', matiere:'', dateDebut:'', duree:60 })
   const [loading, setLoading]     = useState(true)
   const [paiementSeanceId, setPaiementSeanceId] = useState(null)
+  const [activeLegende, setActiveLegende] = useState(null)
   const { toasts, success, error } = useToast()
 
   const loadData = () => {
@@ -178,14 +198,65 @@ export default function EmploiDuTemps() {
           </div>
         </div>
 
-        {/* ── Légende ────────────────────────────────────────────────────── */}
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap', flexShrink:0 }}>
-          {LEGENDE.map(l => (
-            <span key={l.key} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:`${l.color}18`, border:`1px solid ${l.color}40`, color:l.color }}>
-              <span style={{ width:6, height:6, borderRadius:'50%', background:l.color, flexShrink:0 }} />
-              {l.label}
-            </span>
-          ))}
+        {/* ── Légende cliquable ───────────────────────────────────────── */}
+        <div style={{ flexShrink:0 }}>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+            {LEGENDE.map(l => (
+              <button key={l.key}
+                onClick={() => setActiveLegende(activeLegende === l.key ? null : l.key)}
+                style={{
+                  display:'flex', alignItems:'center', gap:5,
+                  fontSize:11, fontWeight:600,
+                  padding:'4px 10px', borderRadius:20,
+                  background: activeLegende === l.key ? `${l.color}30` : `${l.color}18`,
+                  border: activeLegende === l.key ? `1.5px solid ${l.color}` : `1px solid ${l.color}40`,
+                  color: l.color, cursor:'pointer',
+                  transition:'all .15s',
+                  transform: activeLegende === l.key ? 'translateY(-1px)' : 'none',
+                  boxShadow: activeLegende === l.key ? `0 4px 12px ${l.color}25` : 'none',
+                }}>
+                <span style={{ width:6, height:6, borderRadius:'50%', background:l.color, flexShrink:0 }} />
+                {l.label}
+                <span style={{ fontSize:9, opacity:0.7, marginLeft:1 }}>{activeLegende === l.key ? '▲' : '▼'}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Fiche explicative */}
+          {activeLegende && (() => {
+            const l = LEGENDE.find(x => x.key === activeLegende)
+            if (!l) return null
+            return (
+              <div style={{
+                marginTop:8, padding:'12px 16px', borderRadius:12,
+                background: `${l.color}10`,
+                border: `1.5px solid ${l.color}40`,
+                display:'flex', alignItems:'flex-start', gap:12,
+                animation:'fadeIn .15s ease',
+              }}>
+                <span style={{
+                  width:32, height:32, borderRadius:'50%',
+                  background: `${l.color}20`,
+                  border: `1.5px solid ${l.color}50`,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:14, flexShrink:0,
+                }}>
+                  {l.key === 'EN_ATTENTE_PAIEMENT' ? '⏳'
+                    : l.key === 'CONFIRMEE' ? '🔒'
+                    : l.key === 'EN_COURS' ? '🎙️'
+                    : l.key === 'REALISEE' ? '✅'
+                    : l.key === 'ANNULEE' ? '❌'
+                    : '📝'}
+                </span>
+                <div>
+                  <p style={{ fontSize:12, fontWeight:700, color:l.color, margin:'0 0 4px' }}>{l.label}</p>
+                  <p style={{ fontSize:12, color:S.text, margin:0, lineHeight:1.6, opacity:0.8 }}>{l.explication}</p>
+                </div>
+                <button onClick={() => setActiveLegende(null)}
+                  style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:S.muted, fontSize:14, padding:'0 0 0 8px', flexShrink:0 }}>✕</button>
+              </div>
+            )
+          })()}
         </div>
 
         {/* ── Calendrier ─────────────────────────────────────────────────── */}

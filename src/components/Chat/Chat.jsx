@@ -32,11 +32,17 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] })
     return contenu.replace(/\s*seance_id:\d+/, '').trim()
   }
 
+  // Vérifie l'état réel d'une séance
+  const getSeanceStatut = (seanceId) => {
+    const s = seances.find(s => s.id === seanceId || String(s.id) === String(seanceId))
+    if (!s) return null
+    return s.statut
+  }
+
   // Vérifie si une séance est déjà payée/confirmée
   const isSeancePaye = (seanceId) => {
-    const s = seances.find(s => s.id === seanceId || String(s.id) === String(seanceId))
-    if (!s) return false
-    return s.statut_paiement === 'PAYE' || s.statut === 'CONFIRMEE' || s.statut === 'REALISEE' || s.statut === 'EN_COURS'
+    const statut = getSeanceStatut(seanceId)
+    return ['CONFIRMEE', 'EN_COURS', 'REALISEE'].includes(statut)
   }
 
   return (
@@ -78,52 +84,62 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] })
                   {renderContenu(msg.contenu)}
                 </div>
 
-                {/* Bouton Payer — admin seulement, séance pas encore payée */}
-                {isSeanceMsg && isAdmin && onPayer && !paye && (
-                  <div className="px-3 pb-2.5 pt-0">
-                    <button
-                      onClick={() => onPayer(seanceInfo.seanceId)}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all"
-                      style={{
-                        background: 'linear-gradient(135deg, #2C5F8A, #4A90E2)',
-                        color: '#fff',
-                        border: 'none',
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 12px rgba(44,95,138,0.4)',
-                      }}
-                    >
-                      💳 Payer cette séance
-                    </button>
-                  </div>
-                )}
+                {isSeanceMsg && (() => {
+                  const statut = getSeanceStatut(seanceInfo?.seanceId)
+                  const annulee = statut === 'ANNULEE'
+                  const paye = isSeancePaye(seanceInfo?.seanceId)
+                  const enAttente = !paye && !annulee
 
-                {/* Bouton désactivé — séance déjà payée */}
-                {isSeanceMsg && isAdmin && paye && (
-                  <div className="px-3 pb-2.5 pt-0">
-                    <button
-                      disabled
-                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold"
-                      style={{
-                        background: '#E8F5E9',
-                        color: '#2E7D32',
-                        border: '0.5px solid #A5D6A7',
-                        cursor: 'not-allowed',
-                        opacity: 0.85,
-                      }}
-                    >
-                      ✅ Séance payée
-                    </button>
-                  </div>
-                )}
+                  return (
+                    <div className="px-3 pb-2.5 pt-0">
+                      {/* Admin — bouton payer */}
+                      {isAdmin && enAttente && onPayer && (
+                        <button
+                          onClick={() => onPayer(seanceInfo.seanceId)}
+                          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all"
+                          style={{
+                            background: 'linear-gradient(135deg, #2C5F8A, #4A90E2)',
+                            color: '#fff', border: 'none', cursor: 'pointer',
+                            boxShadow: '0 2px 12px rgba(44,95,138,0.4)',
+                          }}
+                        >
+                          💳 Payer cette séance
+                        </button>
+                      )}
 
-                {/* Badge pour les non-admins */}
-                {isSeanceMsg && !isAdmin && (
-                  <div className="px-3 pb-2">
-                    <span className={`text-xs font-semibold ${paye ? 'text-green-600' : 'text-amber-600 opacity-75'}`}>
-                      {paye ? '✅ Séance confirmée' : '⏳ En attente de paiement'}
-                    </span>
-                  </div>
-                )}
+                      {/* Admin — déjà payée / confirmée */}
+                      {isAdmin && paye && (
+                        <button disabled
+                          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold"
+                          style={{ background:'#EFF6FF', color:'#1d4ed8', border:'0.5px solid #bfdbfe', cursor:'not-allowed', opacity:0.9 }}
+                        >
+                          🔒 Séance confirmée — fonds sécurisés
+                        </button>
+                      )}
+
+                      {/* Admin — annulée */}
+                      {isAdmin && annulee && (
+                        <button disabled
+                          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold"
+                          style={{ background:'#FEF2F2', color:'#dc2626', border:'0.5px solid #fecaca', cursor:'not-allowed', opacity:0.9 }}
+                        >
+                          ❌ Séance annulée — remboursement 100%
+                        </button>
+                      )}
+
+                      {/* Non-admin — badge statut */}
+                      {!isAdmin && (
+                        <span className="text-xs font-semibold" style={{
+                          color: annulee ? '#dc2626' : paye ? '#1d4ed8' : '#d97706'
+                        }}>
+                          {annulee ? '❌ Séance annulée'
+                            : paye ? '🔒 Séance confirmée'
+                            : '⏳ En attente de paiement'}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
               <span className="text-[10px] px-1" style={{ color: '#888780' }}>{fmt(msg.horodatage)}</span>
             </div>

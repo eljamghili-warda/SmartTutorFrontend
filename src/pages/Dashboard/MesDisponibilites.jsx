@@ -31,7 +31,9 @@ const toISO = (d) => {
 }
 
 const formatDate = (isoStr) => {
-  const d = new Date(isoStr + 'T00:00:00')
+  // Parser manuellement pour éviter tout décalage de fuseau horaire
+  const [y, m, j] = isoStr.slice(0,10).split('-').map(Number)
+  const d = new Date(y, m-1, j)
   return d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'long', year:'numeric' })
 }
 
@@ -312,12 +314,20 @@ export default function MesDisponibilites() {
                         <select value={val} onChange={e => setter(e.target.value)}
                           style={{
                             width:'100%', padding:'10px 14px', borderRadius:10,
-                            border:'1px solid #E8D5A3', background:'#FDF9F0',
+                            border:'1px solid #C5A059',
+                            background:'#FFFFFF',
                             fontSize:14, color:'#0A1628', fontWeight:600,
                             outline:'none', cursor:'pointer',
                             fontFamily:'Plus Jakarta Sans, sans-serif',
+                            WebkitAppearance:'none',
+                            MozAppearance:'none',
+                            appearance:'none',
+                            backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C5A059' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                            backgroundRepeat:'no-repeat',
+                            backgroundPosition:'right 12px center',
+                            paddingRight:36,
                           }}>
-                          {opts.map(h => <option key={h} value={h}>{h}</option>)}
+                          {opts.map(h => <option key={h} value={h} style={{color:'#0A1628', background:'#FFFFFF'}}>{h}</option>)}
                         </select>
                       </div>
                     ))}
@@ -415,18 +425,18 @@ export default function MesDisponibilites() {
                       }}>
                         <span style={{ fontSize:9, fontWeight:700, color:'#C5A059', lineHeight:1 }}>
                           {dateKey.startsWith('jour-') ? '—'
-                            : new Date(dateKey+'T00:00:00').toLocaleDateString('fr-FR',{month:'short'}).toUpperCase()}
+                            : (() => { const [y,m,j]=dateKey.slice(0,10).split('-').map(Number); return new Date(y,m-1,j).toLocaleDateString('fr-FR',{month:'short'}).toUpperCase() })()}
                         </span>
                         <span style={{ fontSize:15, fontWeight:800, color:'#E8D5A3', lineHeight:1 }}>
                           {dateKey.startsWith('jour-') ? ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'][parseInt(dateKey.split('-')[1])-1]
-                            : new Date(dateKey+'T00:00:00').getDate()}
+                            : parseInt(dateKey.slice(8,10))}
                         </span>
                       </div>
                       <div>
                         <p style={{ fontSize:13, fontWeight:700, color:'#FFFFFF', margin:0 }}>
                           {dateKey.startsWith('jour-')
                             ? ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'][parseInt(dateKey.split('-')[1])-1]
-                            : formatDate(dateKey)}
+                            : formatDate(dateKey.slice(0,10))}
                         </p>
                         <p style={{ fontSize:11, color:'rgba(255,255,255,0.45)', margin:0 }}>
                           {plages.length} plage{plages.length>1?'s':''}
