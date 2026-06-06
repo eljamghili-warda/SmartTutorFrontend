@@ -21,25 +21,18 @@ const STATUT_SEANCE = {
     text: '#F59E0B',
   },
   PLANIFIEE: {
-    label: '📅 Planifiée',
-    dot: '#C5A059',
-    bg: 'rgba(197,160,89,0.10)',
-    border: 'rgba(197,160,89,0.30)',
-    text: '#C5A059',
-  },
-  CONFIRMEE: {
-    label: '✅ Confirmée',
-    dot: '#3B82F6',
+    label: '✅ Planifiée (payée)',
+    dot: '#409be5',
     bg: 'rgba(59,130,246,0.10)',
     border: 'rgba(59,130,246,0.30)',
     text: '#3B82F6',
   },
   EN_COURS: {
     label: '🎙️ En cours',
-    dot: '#8B5CF6',
-    bg: 'rgba(139,92,246,0.12)',
-    border: 'rgba(139,92,246,0.35)',
-    text: '#A78BFA',
+    dot: '#f6e75c',
+    bg: 'rgba(167, 165, 61, 0.12)',
+    border: 'rgba(237, 220, 95, 0.35)',
+    text: '#eeee6b',
   },
   REALISEE: {
     label: '✓ Réalisée',
@@ -69,9 +62,8 @@ const STATUT_EXAMEN = {
 // ── Légende ───────────────────────────────────────────────────────────────────
 const LEGENDE = [
   { key: 'EN_ATTENTE_PAIEMENT', label: 'En attente paiement', color: '#F59E0B' },
-  { key: 'PLANIFIEE',           label: 'Planifiée',           color: '#C5A059' },
-  { key: 'CONFIRMEE',           label: 'Confirmée',           color: '#3B82F6' },
-  { key: 'EN_COURS',            label: 'En cours',            color: '#8B5CF6' },
+  { key: 'PLANIFIEE',           label: 'Planifiée (payée)',   color: '#409be5' },
+  { key: 'EN_COURS',            label: 'En cours',            color: '#d72cc6' },
   { key: 'REALISEE',            label: 'Réalisée',            color: '#10B981' },
   { key: 'ANNULEE',             label: 'Annulée',             color: '#EF4444' },
   { key: 'EXAMEN',              label: 'Examen',              color: '#A855F7' },
@@ -269,10 +261,10 @@ export default function EmploiDuTemps() {
                             }}>💳 Payer la séance</button>
                           )}
 
-                          {/* Payée */}
+                          {/* Payée
                           {s.statut_paiement === 'PAYE' && (
-                            <div style={{ fontSize:10, fontWeight:700, color:'#10B981', paddingLeft:12 }}>✅ Payée</div>
-                          )}
+                            <div style={{ fontSize:10, fontWeight:700, color:'#10B981', paddingLeft:12 }}>✅ </div>
+                          )} */}
 
                           {/* Info tuteur */}
                           {isTuteur && s.statut === 'EN_ATTENTE_PAIEMENT' && (
