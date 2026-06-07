@@ -308,8 +308,18 @@ function ExamenCardEtudiant({ examen, onCommencer, onVoirResultats }) {
   const naPasPasseMaisCorrige = corrigeDisponible && !dejaReussi && !aEchoue && examen.nb_tentatives_faites === 0
 
   // ── Badge statut étudiant ──
+  const aPasse = dejaReussi || aEchoue || expire
+  const resultMasque = aPasse && dateAffichage && maintenant < dateAffichage
+
   let statusBadge
-  if (dejaReussi) {
+  if (resultMasque) {
+    statusBadge = (
+      <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:99,
+        background:'#EDE9FE', color:'#7C3AED', border:'1px solid #C4B5FD' }}>
+        🔒 Réponses envoyées
+      </span>
+    )
+  } else if (dejaReussi) {
     statusBadge = (
       <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:99,
         background:'#ECFDF5', color:'#059669', border:'1px solid #86EFAC' }}>
@@ -399,14 +409,19 @@ function ExamenCardEtudiant({ examen, onCommencer, onVoirResultats }) {
             ▶ Commencer
           </Btn>
         )}
-        {(dejaReussi || aEchoue || expire) && (
+        {(dejaReussi || aEchoue || expire) && !resultMasque && (
           <Btn size="sm" variant="ghost" onClick={() => onVoirResultats(examen)}>
             {dejaReussi ? '🏆 Voir mon résultat' : expire ? '📊 Voir corrigé' : '📊 Mes résultats'}
           </Btn>
         )}
+        {resultMasque && corrigeDisponible && (
+          <Btn size="sm" variant="ghost" onClick={() => onVoirResultats(examen)}>
+            📊 Voir le corrigé
+          </Btn>
+        )}
         {naPasPasseMaisCorrige && (
           <Btn size="sm" variant="ghost" onClick={() => onVoirResultats(examen)}>
-            
+            📋 Voir le corrigé
           </Btn>
         )}
       </div>

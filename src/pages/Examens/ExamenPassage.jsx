@@ -37,6 +37,45 @@ function ProgressBar({ current, total }) {
   )
 }
 
+// ─── Bloc question ────────────────────────────────────────────────────────────
+function QuestionBlock({ question, idx, selected, onSelect }) {
+  return (
+    <div className="bg-ink-800 border border-ink-600 rounded-2xl p-5">
+      <div className="flex items-start gap-3 mb-4">
+        <span className="flex-shrink-0 w-7 h-7 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-violet-400">
+          {idx + 1}
+        </span>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-xs px-1.5 py-0.5 rounded font-semibold
+              ${question.type === 'QCM' ? 'bg-violet-500/20 text-violet-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
+              {question.type}
+            </span>
+            <span className="text-xs text-amber-400">{question.points} pt{question.points > 1 ? 's' : ''}</span>
+          </div>
+          <p className="text-sm font-medium text-slate-100 leading-relaxed">{question.texte}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {(question.reponses || []).map((r) => (
+          <button key={r.id} onClick={() => onSelect(r.id)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all border
+              ${selected === r.id
+                ? 'bg-violet-600/20 border-violet-500/50 text-violet-300'
+                : 'bg-ink-700 border-ink-600 text-slate-300 hover:bg-ink-600 hover:border-slate-500'}`}>
+            <span className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
+              ${selected === r.id ? 'bg-violet-500 border-violet-500' : 'border-slate-600'}`}>
+              {selected === r.id && <span className="w-2 h-2 rounded-full bg-white" />}
+            </span>
+            {r.texte}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Page principale ──────────────────────────────────────────────────────────
 export default function ExamenPassage() {
   const { id } = useParams()
@@ -190,62 +229,57 @@ export default function ExamenPassage() {
   )
 
   // ─── Écran de résultat ────────────────────────────────────────────────────
-  if (phase === 'result') return (
-    <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
-      <div className="bg-ink-800 border border-ink-600 rounded-3xl p-8 max-w-md w-full text-center">
-        <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4
-          ${result?.reussi ? 'bg-emerald-500/20 border-2 border-emerald-500/40' : 'bg-rose-500/20 border-2 border-rose-500/40'}`}>
-          {result?.reussi ? '🏆' : '😔'}
-        </div>
+    // ─── Écran de résultat ────────────────────────────────────────────────────
+  if (phase === 'result') {
+    const resultatsVisibles = result?.resultatsVisibles
+    const dateAff = result?.dateAffichageResultats
+      ? new Date(result.dateAffichageResultats).toLocaleDateString('fr-FR', {
+          day: '2-digit', month: 'long', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        })
+      : null
 
-        <h2 className={`text-2xl font-bold mb-1 ${result?.reussi ? 'text-emerald-400' : 'text-rose-400'}`}>
-          {result?.reussi ? 'Félicitations !' : 'Dommage…'}
-        </h2>
-        <p className="text-slate-400 text-sm mb-6">{examen?.titre}</p>
+    return (
+      <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
+        <div className="bg-ink-800 border border-ink-600 rounded-3xl p-8 max-w-md w-full text-center">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 bg-emerald-500/20 border-2 border-emerald-500/40">
+            ✅
+          </div>
+          <h2 className="text-2xl font-bold mb-2 text-emerald-400">
+            Vos réponses ont été envoyées avec succès !
+          </h2>
+          <p className="text-slate-400 text-sm mb-6">{examen?.titre}</p>
 
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-ink-700 rounded-2xl p-3">
-            <p className="text-xl font-bold text-slate-100">{result?.scoreObtenu}</p>
-            <p className="text-xs text-slate-500">Points obtenus</p>
-          </div>
-          <div className="bg-ink-700 rounded-2xl p-3">
-            <p className="text-xl font-bold text-violet-400">{parseFloat(result?.pourcentage || 0).toFixed(0)}%</p>
-            <p className="text-xs text-slate-500">Score</p>
-          </div>
-          <div className="bg-ink-700 rounded-2xl p-3">
-            <p className="text-xl font-bold text-slate-100">{result?.scoreMax}</p>
-            <p className="text-xs text-slate-500">Points max</p>
-          </div>
-        </div>
-
-        {result?.reussi && result?.certificat && (
-          <div className="bg-amber-500/10 border border-amber-400/30 rounded-2xl p-4 mb-6">
-            <p className="text-amber-400 font-semibold text-sm">🎓 Certificat obtenu !</p>
-            <p className="text-xs text-amber-400/70 mt-1">N° {result.certificat.numero_certificat}</p>
-            <p className="text-xs text-slate-400 mt-1">Vous recevrez un email de confirmation.</p>
-          </div>
-        )}
-
-        {!result?.resultatsVisibles && (
-          <div className="bg-ink-700 rounded-xl p-3 mb-4 text-xs text-slate-400">
-            ⏳ Le corrigé détaillé sera disponible le {' '}
-            {new Date(result?.dateAffichageResultats).toLocaleDateString('fr-FR', {
-              day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit'
-            })}
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2">
-          <Btn onClick={() => navigate('/dashboard/examens')}>↩ Retour aux examens</Btn>
-          {result?.resultatsVisibles && tentative && (
-            <Btn variant="ghost" onClick={() => navigate(`/examens/${id}/resultats`)}>
-              📊 Voir le corrigé
-            </Btn>
+          {dateAff && !resultatsVisibles && (
+            <div className="bg-ink-700 border border-violet-500/30 rounded-2xl p-4 mb-4">
+              <p className="text-violet-400 font-semibold text-sm mb-1">🔒 Résultats cachés</p>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Pour garantir l'équité, votre résultat et le corrigé seront révélés à tous les étudiants en même temps le
+              </p>
+              <p className="text-amber-400 font-bold text-sm mt-2">📅 {dateAff}</p>
+            </div>
           )}
+
+          {resultatsVisibles && result?.certificat && (
+            <div className="bg-amber-500/10 border border-amber-400/30 rounded-2xl p-4 mb-4">
+              <p className="text-amber-400 font-semibold text-sm">🎓 Certificat obtenu !</p>
+              <p className="text-xs text-amber-400/70 mt-1">N° {result.certificat.numero_certificat}</p>
+              <p className="text-xs text-slate-400 mt-1">Vous recevrez un email de confirmation.</p>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <Btn onClick={() => navigate('/dashboard/examens')}>↩ Retour aux examens</Btn>
+            {resultatsVisibles && (
+              <Btn variant="ghost" onClick={() => navigate(`/examens/${id}/resultats`)}>
+                📊 Voir le corrigé
+              </Btn>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   // ─── Écran examen ─────────────────────────────────────────────────────────
   const isListeComplete = examen?.mode_affichage === 'LISTE_COMPLETE'
@@ -356,45 +390,6 @@ export default function ExamenPassage() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-// ─── Bloc question ────────────────────────────────────────────────────────────
-function QuestionBlock({ question, idx, selected, onSelect }) {
-  return (
-    <div className="bg-ink-800 border border-ink-600 rounded-2xl p-5">
-      <div className="flex items-start gap-3 mb-4">
-        <span className="flex-shrink-0 w-7 h-7 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-violet-400">
-          {idx + 1}
-        </span>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs px-1.5 py-0.5 rounded font-semibold
-              ${question.type === 'QCM' ? 'bg-violet-500/20 text-violet-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
-              {question.type}
-            </span>
-            <span className="text-xs text-amber-400">{question.points} pt{question.points > 1 ? 's' : ''}</span>
-          </div>
-          <p className="text-sm font-medium text-slate-100 leading-relaxed">{question.texte}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        {(question.reponses || []).map((r) => (
-          <button key={r.id} onClick={() => onSelect(r.id)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all border
-              ${selected === r.id
-                ? 'bg-violet-600/20 border-violet-500/50 text-violet-300'
-                : 'bg-ink-700 border-ink-600 text-slate-300 hover:bg-ink-600 hover:border-slate-500'}`}>
-            <span className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
-              ${selected === r.id ? 'bg-violet-500 border-violet-500' : 'border-slate-600'}`}>
-              {selected === r.id && <span className="w-2 h-2 rounded-full bg-white" />}
-            </span>
-            {r.texte}
-          </button>
-        ))}
-      </div>
     </div>
   )
 }
