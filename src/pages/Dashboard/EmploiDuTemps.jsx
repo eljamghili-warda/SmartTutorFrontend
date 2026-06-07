@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import PaiementModal from '../Paiement/PaiementModal'
+import { sendMessage } from '../../services/socket'
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
@@ -181,12 +182,21 @@ export default function EmploiDuTemps() {
     if (!form.creneauDispo || !form.heureDebut) { error('Veuillez choisir un créneau et une heure de début.'); return }
     const dateDebut = `${form.creneauDispo.dateStr}T${form.heureDebut}`
     try {
-      await seancesAPI.create({ titre:form.titre, matiere:form.matiere, salleId:form.salleId, dateDebut, duree:form.duree })
+      const { data } = await seancesAPI.create({ titre:form.titre, matiere:form.matiere, salleId:form.salleId, dateDebut, duree:form.duree })
       success('Séance planifiée !')
       setCreate(false)
       setForm({ salleId:'', titre:'', matiere:'', dateDebut:'', duree:60, heureDebut:'', creneauDispo:null })
       setMesTarifs([]); setMesDispos([])
       loadData()
+
+      // ── Envoyer le message dans le chat de la salle (même format que Salle.jsx) ──
+      const [hh, mm] = form.heureDebut.split(':').map(Number)
+      const finMin   = hh * 60 + mm + Number(form.duree)
+      const heureFin = `${String(Math.floor(finMin/60)).padStart(2,'0')}:${String(finMin%60).padStart(2,'0')}`
+      const dateStr  = new Date(dateDebut).toLocaleString('fr-FR', {
+        weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'
+      })
+      sendMessage(form.salleId, `📅 Séance planifiée : ${form.titre} — ${dateStr} → ${heureFin} (${form.duree} min). seance_id:${data.id}`)
     } catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
 
@@ -497,7 +507,10 @@ export default function EmploiDuTemps() {
                       if (d.jour_semaine !== jourISO) continue
                       const [h, m] = d.heure_debut.split(':').map(Number)
                       const dateAvecHeure = new Date(date); dateAvecHeure.setHours(h, m, 0, 0)
-                      if (dateAvecHeure <= now) continue
+                      // Vérifier la fin du créneau (pas le début) — si la fin est déjà passée, on skip
+                      const [hf, mf] = d.heure_fin.split(':').map(Number)
+                      const dateFinCreneau = new Date(date); dateFinCreneau.setHours(hf, mf, 0, 0)
+                      if (dateFinCreneau <= now) continue
                       const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
                       const key = `${dateStr}-${d.heure_debut}`
                       if (seen.has(key)) continue
