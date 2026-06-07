@@ -55,10 +55,10 @@ const STATUT_SEANCE = {
   },
   EN_COURS: {
     label: '🎙️ En cours',
-    dot: '#e7bae0',
-    bg: 'rgb(233, 183, 227)',
-    border: 'rgb(245, 157, 239)',
-    text: '#a92b9e',
+    dot: '#f6e75c',
+    bg: 'rgba(167, 165, 61, 0.12)',
+    border: 'rgba(237, 220, 95, 0.35)',
+    text: '#eeee6b',
     explication: "La séance est actuellement en cours. Les participants sont connectés en appel.",
   },
   REALISEE: {
@@ -556,8 +556,9 @@ export default function EmploiDuTemps() {
                 const [hDeb,mDeb] = cr.heureDebut.split(':').map(Number)
                 const [hFin,mFin] = cr.heureFin.split(':').map(Number)
                 const totalMinFin = hFin*60+mFin
+                // Boutons rapides toutes les 30min (pour l'affichage)
                 const heures = []
-                for (let min = hDeb*60+mDeb; min <= totalMinFin-30; min+=30)
+                for (let min = hDeb*60+mDeb; min <= totalMinFin-5; min+=30)
                   heures.push(`${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`)
                 const [hC,mC] = (form.heureDebut||cr.heureDebut).split(':').map(Number)
                 const dureeMax = totalMinFin - (hC*60+mC)
@@ -565,23 +566,43 @@ export default function EmploiDuTemps() {
                 const heureFin = `${String(Math.floor(finMin/60)).padStart(2,'0')}:${String(finMin%60).padStart(2,'0')}`
                 return (
                   <StepBlock num="5" label="Heure & Durée">
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:12 }}>
+                    {/* Boutons rapides */}
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:8 }}>
                       {heures.map(h => {
                         const sel = form.heureDebut === h
                         return (
                           <button key={h} type="button"
-                            onClick={() => { const [hh,mm]=h.split(':').map(Number); const max=totalMinFin-(hh*60+mm); setForm(f=>({...f,heureDebut:h,duree:Math.min(f.duree,max),dateDebut:`${cr.dateStr}T${h}`})) }}
+                            onClick={() => { const [hh,mm]=h.split(':').map(Number); const max=totalMinFin-(hh*60+mm); setForm(f=>({...f,heureDebut:h,duree:Math.min(f.duree||5,max),dateDebut:`${cr.dateStr}T${h}`})) }}
                             style={{ padding:'7px 16px', borderRadius:9, cursor:'pointer', fontSize:13, fontWeight:700, transition:'all 0.15s', background:sel?S.gold:'transparent', border:sel?`2px solid ${S.gold}`:`1.5px solid ${S.border}`, color:sel?'#fff':S.muted }}>
                             {h}
                           </button>
                         )
                       })}
                     </div>
+                    {/* Saisie manuelle de l'heure */}
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                      <span style={{ fontSize:11, color:S.muted, fontWeight:600 }}>Ou saisir manuellement :</span>
+                      <input
+                        type="time"
+                        value={form.heureDebut || ''}
+                        min={cr.heureDebut}
+                        max={cr.heureFin}
+                        onChange={e => {
+                          const h = e.target.value
+                          if (!h) return
+                          const [hh,mm] = h.split(':').map(Number)
+                          const max = totalMinFin - (hh*60+mm)
+                          if (max < 5) return // heure trop tardive
+                          setForm(f=>({...f, heureDebut:h, duree:Math.min(f.duree||5, max), dateDebut:`${cr.dateStr}T${h}`}))
+                        }}
+                        style={{ padding:'7px 12px', borderRadius:9, border:`1.5px solid ${S.border}`, background:S.surface, color:S.text, fontSize:13, fontWeight:700, outline:'none', cursor:'pointer' }}
+                      />
+                    </div>
                     {form.heureDebut && (
                       <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:8, background:S.surface, border:`1.5px solid ${S.border}`, borderRadius:10, padding:'6px 12px' }}>
                           <span style={{ fontSize:11, color:S.muted }}>Durée :</span>
-                          <input type="number" min={30} max={dureeMax} step={30} value={form.duree}
+                          <input type="number" min={5} max={dureeMax} step={5} value={form.duree}
                             onChange={e => setForm(f=>({...f,duree:Math.min(Number(e.target.value),dureeMax)}))}
                             style={{ width:60, border:'none', background:'transparent', color:S.text, fontSize:13, fontWeight:700, outline:'none', textAlign:'center' }} />
                           <span style={{ fontSize:11, color:S.muted }}>min</span>
