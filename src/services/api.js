@@ -128,6 +128,7 @@ export const examensAPI = {
   // Étudiant
   getMesExamensEtudiant: ()               => api.get('/examens/mes-examens-etudiant'),
   getMesTentatives:      (id)             => api.get(`/examens/${id}/mes-tentatives`),
+  getCorrige:            (id)             => api.get(`/examens/${id}/corrige`),
   demarrer:              (id)             => api.post(`/examens/${id}/tentatives`),
   soumettre:             (tentativeId, reponses) => api.put(
     `/tentatives/${tentativeId}/soumettre`,

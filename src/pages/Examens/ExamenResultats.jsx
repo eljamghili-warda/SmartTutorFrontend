@@ -92,41 +92,34 @@ export default function ExamenResultats() {
   useEffect(() => {
     const load = async () => {
       try {
-        // 1) Récupérer mes tentatives pour cet examen
-        const { data: tentatives } = await examensAPI.getMesTentatives(examenId)
-        if (!tentatives || tentatives.length === 0) {
-          setError("Aucune tentative trouvée pour cet examen.")
-          return
-        }
-        // Prendre la tentative terminée la plus récente
-        const tentative = tentatives.find(t => t.statut === 'REUSSI' || t.statut === 'ECHOUE')
-          || tentatives[0]
-
-        // 2) Récupérer les infos de l'examen directement
-        let examen = null
-        try {
-          const { data: examData } = await examensAPI.getById(examenId)
-          examen = examData
-        } catch {}
-
-        // 3) Charger le corrigé détaillé
-        let questions = null
-        let tentativeDetail = null
-        let dateAffichageMsg = null
-        try {
-          const { data: res } = await examensAPI.getResultats(tentative.id)
-          questions      = res.questions
-          tentativeDetail = res.tentative
-        } catch (err) {
-          // Si 403 → résultats pas encore disponibles → afficher la date
-          if (err.response?.status === 403 && err.response?.data?.dateAffichage) {
-            dateAffichageMsg = err.response.data.dateAffichage
-          }
-        }
-
-        setData({ tentative, examen, questions, tentativeDetail, dateAffichageMsg })
+        // Appel unique : getCorrige gère tout (avec ou sans tentative, date d'affichage)
+        const { data: res } = await examensAPI.getCorrige(examenId)
+        setData({
+          examen:         res.examen,
+          tentative:      res.tentative,   // null si l'étudiant n'a pas passé
+          questions:      res.questions,
+          aPasse:         res.aPasse,
+          tentativeDetail: res.tentative,
+          dateAffichageMsg: null,
+        })
       } catch (err) {
-        setError("Impossible de charger les résultats.")
+        if (err.response?.status === 403) {
+          // Date pas encore passée → afficher la date
+          const da = err.response?.data?.dateAffichage
+          // Essayer quand même de récupérer la tentative pour le score
+          let tentative = null
+          try {
+            const { data: t } = await examensAPI.getMesTentatives(examenId)
+            tentative = (t||[])[0] || null
+          } catch {}
+          setData({
+            examen: null, tentative, questions: null, aPasse: !!tentative,
+            tentativeDetail: null,
+            dateAffichageMsg: da,
+          })
+        } else {
+          setError("Impossible de charger le corrigé.")
+        }
       } finally {
         setLoading(false)
       }
@@ -157,10 +150,12 @@ export default function ExamenResultats() {
     </div>
   )
 
-  const { tentative, examen, questions, tentativeDetail, dateAffichageMsg } = data
-  const reussi   = tentative.statut === 'REUSSI'
-  const echoue   = tentative.statut === 'ECHOUE'
-  const score    = tentative.pourcentage != null ? parseFloat(tentative.pourcentage).toFixed(1) : null
+  const { tentative, examen, questions, tentativeDetail, dateAffichageMsg, aPasse } = data
+  const reussi   = tentative?.statut === 'REUSSI'
+  const echoue   = tentative?.statut === 'ECHOUE'
+  const expire   = tentative?.statut === 'EN_COURS' && new Date() > new Date(tentative?.expires_at)
+  const naPasPassé = !aPasse
+  const score    = tentative?.pourcentage != null ? parseFloat(tentative.pourcentage).toFixed(1) : null
   const notePass = examen?.note_passage || tentativeDetail?.note_passage || 70
 
   return (
@@ -173,14 +168,18 @@ export default function ExamenResultats() {
             ? 'linear-gradient(135deg, #065F46 0%, #059669 100%)'
             : echoue
             ? 'linear-gradient(135deg, #991B1B 0%, #DC2626 100%)'
+            : expire
+            ? 'linear-gradient(135deg, #7C2D12 0%, #B45309 100%)'
+            : naPasPassé
+            ? 'linear-gradient(135deg, #1E3A6E 0%, #2C5F8A 100%)'
             : 'linear-gradient(135deg, #0F2040 0%, #162B55 100%)',
           borderRadius: 20, padding: '32px 28px', marginBottom: 20,
           color: '#FFFFFF', textAlign: 'center',
           boxShadow: reussi ? '0 8px 32px rgba(5,150,105,0.3)' : '0 8px 32px rgba(10,22,40,0.3)',
         }}>
-          <div style={{ fontSize: 56, marginBottom: 12 }}>{reussi ? '🏆' : echoue ? '😔' : '⏳'}</div>
+          <div style={{ fontSize: 56, marginBottom: 12 }}>{reussi ? '🏆' : echoue ? '😔' : expire ? '⏰' : naPasPassé ? '📋' : '⏳'}</div>
           <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
-            {reussi ? 'Félicitations !' : echoue ? 'Pas cette fois…' : 'En cours'}
+            {reussi ? 'Félicitations !' : echoue ? 'Pas cette fois…' : expire ? 'Temps écoulé' : naPasPassé ? 'Corrigé disponible' : 'En cours'}
           </h1>
           <p style={{ opacity: 0.85, fontSize: 15, marginBottom: 20 }}>
             {examen?.titre || tentativeDetail?.examen_titre}
@@ -189,7 +188,7 @@ export default function ExamenResultats() {
           {/* Stats en ligne */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
             {[
-              { label: 'Résultat', value: reussi ? '✅ Réussi' : echoue ? '❌ Échoué' : '⏰ Expiré' },
+              { label: 'Résultat', value: reussi ? '✅ Réussi' : echoue ? '❌ Échoué' : expire ? '⏰ Temps écoulé' : naPasPassé ? '📋 Non passé' : '⏳ Non soumis' },
               score && { label: 'Score', value: `${score}%` },
               { label: 'Note de passage', value: `${notePass}%` },
             ].filter(Boolean).map(({ label, value }) => (
@@ -203,6 +202,25 @@ export default function ExamenResultats() {
             ))}
           </div>
         </div>
+
+        {/* Bannière pour étudiant qui n'a pas passé */}
+        {naPasPassé && (
+          <div style={{
+            background:'#EFF6FF', border:'1.5px solid #BFDBFE', borderRadius:14,
+            padding:'14px 18px', marginBottom:20,
+            display:'flex', alignItems:'center', gap:12,
+          }}>
+            <span style={{ fontSize:24 }}></span>
+            <div>
+              <p style={{ fontWeight:700, color:'#1D4ED8', fontSize:14, margin:0 }}>
+                Vous n'avez pas passé cet examen
+              </p>
+              <p style={{ fontSize:12, color:'#3B82F6', marginTop:4 }}>
+                La date d'affichage est passée — voici le corrigé complet pour réviser.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Certificat si réussi */}
         {reussi && (

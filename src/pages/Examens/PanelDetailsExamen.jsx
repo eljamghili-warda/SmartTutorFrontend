@@ -207,10 +207,19 @@ function TabQuestions({ questions }) {
 
 // ─── Onglet Étudiants ─────────────────────────────────────────────────────────
 function TabEtudiants({ tentatives, stats, notePassage }) {
-  if (!tentatives.length) return (
-    <div style={{ textAlign:'center', padding:40 }}>
-      <div style={{ fontSize:40, marginBottom:12 }}>👥</div>
-      <p style={{ fontSize:14, fontWeight:700, color:'#0A1628' }}>Aucun étudiant n'a encore passé cet examen.</p>
+  if (!tentatives || !tentatives.length) return (
+    <div style={{
+      textAlign:'center', padding:'48px 24px',
+      background:'linear-gradient(135deg,#F5F0E6,#FAF7F0)',
+      borderRadius:16, border:'1px solid #E8D5A3',
+    }}>
+      <div style={{ fontSize:48, marginBottom:16 }}>👥</div>
+      <p style={{ fontSize:15, fontWeight:700, color:'#1A3A5C', marginBottom:6 }}>
+        Aucun étudiant n'a encore passé cet examen
+      </p>
+      <p style={{ fontSize:13, color:'#8B9DB0' }}>
+        Les résultats apparaîtront ici une fois que des étudiants auront soumis leurs réponses.
+      </p>
     </div>
   )
 

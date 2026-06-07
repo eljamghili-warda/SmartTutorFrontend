@@ -301,6 +301,12 @@ function ExamenCardEtudiant({ examen, onCommencer, onVoirResultats }) {
   const notYet     = dateDebut && maintenant < dateDebut
   const disponible = !dejaReussi && !aEchoue && !expire && !notYet && examen.statut === 'PUBLIE'
 
+  // Corrigé disponible si date_affichage_resultats est passée
+  const dateAffichage = examen.date_affichage_resultats ? new Date(examen.date_affichage_resultats) : null
+  const corrigeDisponible = dateAffichage && maintenant >= dateAffichage
+  // Étudiant qui n'a pas passé mais le corrigé est maintenant visible
+  const naPasPasseMaisCorrige = corrigeDisponible && !dejaReussi && !aEchoue && examen.nb_tentatives_faites === 0
+
   // ── Badge statut étudiant ──
   let statusBadge
   if (dejaReussi) {
@@ -396,6 +402,11 @@ function ExamenCardEtudiant({ examen, onCommencer, onVoirResultats }) {
         {(dejaReussi || aEchoue || expire) && (
           <Btn size="sm" variant="ghost" onClick={() => onVoirResultats(examen)}>
             {dejaReussi ? '🏆 Voir mon résultat' : expire ? '📊 Voir corrigé' : '📊 Mes résultats'}
+          </Btn>
+        )}
+        {naPasPasseMaisCorrige && (
+          <Btn size="sm" variant="ghost" onClick={() => onVoirResultats(examen)}>
+            
           </Btn>
         )}
       </div>
