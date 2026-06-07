@@ -18,6 +18,8 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day:'2-digi
 const fmtDatetime = (d) => d ? new Date(d).toLocaleString('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—'
 
 // ─── Formulaire création / modification examen ───────────────────────────────
+// ─── Formulaire création / modification examen (thème golden/bleu - VERSION CORRIGÉE) ──
+// ─── Formulaire création / modification examen (thème bleu foncé + doré) ──
 function FormExamen({ salles, onSave, onClose, initial = null }) {
   const [form, setForm] = useState({
     titre: initial?.titre || '',
@@ -59,81 +61,216 @@ function FormExamen({ salles, onSave, onClose, initial = null }) {
     } finally { setSaving(false) }
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <FormGroup label="Titre *">
-        <input className="input w-full" value={form.titre} onChange={e => set('titre', e.target.value)} placeholder="Ex: Algorithmique Chapitre 2" />
-      </FormGroup>
+  const inputStyle = {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: 8,
+    border: '2px solid #C5A059',
+    backgroundColor: '#0A1628',
+    color: '#FFFFFF',
+    fontSize: 14,
+    outline: 'none',
+    boxSizing: 'border-box'
+  }
 
+  const labelStyle = {
+    display: 'block',
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#C5A059',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Titre */}
+      <div>
+        <label style={labelStyle}>Titre *</label>
+        <input 
+          style={inputStyle}
+          value={form.titre} 
+          onChange={e => set('titre', e.target.value)} 
+          placeholder="Ex: Algorithmique Chapitre 2"
+          onFocus={e => e.target.style.borderColor = '#D4AF37'}
+          onBlur={e => e.target.style.borderColor = '#C5A059'}
+        />
+      </div>
+
+      {/* Salle */}
       {!initial && (
-        <FormGroup label="Salle associée *">
-          <select className="input w-full" value={form.salleId} onChange={e => set('salleId', e.target.value)}>
-            <option value="">— Choisir une salle —</option>
-            {salles.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+        <div>
+          <label style={labelStyle}>Salle associée *</label>
+          <select 
+            style={{ ...inputStyle, backgroundColor: '#0A1628', cursor: 'pointer' }}
+            value={form.salleId} 
+            onChange={e => set('salleId', e.target.value)}
+            onFocus={e => e.target.style.borderColor = '#D4AF37'}
+            onBlur={e => e.target.style.borderColor = '#C5A059'}
+          >
+            <option value="" style={{ backgroundColor: '#0A1628', color: '#8B9CB5' }}>— Choisir une salle —</option>
+            {salles.map(s => <option key={s.id} value={s.id} style={{ backgroundColor: '#0A1628', color: '#FFFFFF' }}>{s.nom}</option>)}
           </select>
-        </FormGroup>
+        </div>
       )}
 
-      <FormGroup label="Description">
-        <textarea className="input w-full resize-none" rows={2} value={form.description}
-          onChange={e => set('description', e.target.value)} placeholder="Description optionnelle..." />
-      </FormGroup>
-
-      <div className="grid grid-cols-2 gap-3">
-        <FormGroup label="Durée (minutes)">
-          <input type="number" min={5} max={180} className="input w-full" value={form.dureeMinutes}
-            onChange={e => set('dureeMinutes', e.target.value)} />
-        </FormGroup>
-        <FormGroup label="Note de passage (%)">
-          <input type="number" min={0} max={100} className="input w-full" value={form.notePassage}
-            onChange={e => set('notePassage', e.target.value)} />
-        </FormGroup>
+      {/* Description */}
+      <div>
+        <label style={labelStyle}>Description</label>
+        <textarea 
+          style={{ ...inputStyle, resize: 'none' }}
+          rows={2} 
+          value={form.description}
+          onChange={e => set('description', e.target.value)} 
+          placeholder="Description optionnelle..."
+          onFocus={e => e.target.style.borderColor = '#D4AF37'}
+          onBlur={e => e.target.style.borderColor = '#C5A059'}
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-
-        <FormGroup label="Mode affichage">
-          <select className="input w-full" value={form.modeAffichage} onChange={e => set('modeAffichage', e.target.value)}>
-            <option value="UNE_PAR_UNE">Question par question</option>
-            <option value="LISTE_COMPLETE">Liste complète</option>
-          </select>
-        </FormGroup>
+      {/* Durée + Note */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Durée (minutes)</label>
+          <input 
+            type="number" min={5} max={180} 
+            style={inputStyle}
+            value={form.dureeMinutes}
+            onChange={e => set('dureeMinutes', e.target.value)} 
+            onFocus={e => e.target.style.borderColor = '#D4AF37'}
+            onBlur={e => e.target.style.borderColor = '#C5A059'}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Note de passage (%)</label>
+          <input 
+            type="number" min={0} max={100} 
+            style={inputStyle}
+            value={form.notePassage}
+            onChange={e => set('notePassage', e.target.value)} 
+            onFocus={e => e.target.style.borderColor = '#D4AF37'}
+            onBlur={e => e.target.style.borderColor = '#C5A059'}
+          />
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <FormGroup label="Disponible à partir du">
-          <input type="datetime-local" className="input w-full" value={form.dateDebut}
-            onChange={e => set('dateDebut', e.target.value)} />
-        </FormGroup>
-        <FormGroup label="Date limite">
-          <input type="datetime-local" className="input w-full" value={form.dateLimite}
-            onChange={e => set('dateLimite', e.target.value)} />
-        </FormGroup>
+      {/* Mode affichage */}
+      <div>
+        <label style={labelStyle}>Mode affichage</label>
+        <select 
+          style={{ ...inputStyle, backgroundColor: '#0A1628', cursor: 'pointer' }}
+          value={form.modeAffichage} 
+          onChange={e => set('modeAffichage', e.target.value)}
+          onFocus={e => e.target.style.borderColor = '#D4AF37'}
+          onBlur={e => e.target.style.borderColor = '#C5A059'}
+        >
+          <option value="UNE_PAR_UNE" style={{ backgroundColor: '#0A1628', color: '#FFFFFF' }}>Question par question</option>
+          <option value="LISTE_COMPLETE" style={{ backgroundColor: '#0A1628', color: '#FFFFFF' }}>Liste complète</option>
+        </select>
       </div>
 
-      <FormGroup label="Afficher résultats à partir du">
-        <input type="datetime-local" className="input w-full" value={form.dateAffichageResultats}
-          onChange={e => set('dateAffichageResultats', e.target.value)} />
-      </FormGroup>
+      {/* Dates optionnelles */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Disponible à partir du</label>
+          <input 
+            type="datetime-local" 
+            style={inputStyle}
+            value={form.dateDebut}
+            onChange={e => set('dateDebut', e.target.value)} 
+            onFocus={e => e.target.style.borderColor = '#D4AF37'}
+            onBlur={e => e.target.style.borderColor = '#C5A059'}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Date limite</label>
+          <input 
+            type="datetime-local" 
+            style={inputStyle}
+            value={form.dateLimite}
+            onChange={e => set('dateLimite', e.target.value)} 
+            onFocus={e => e.target.style.borderColor = '#D4AF37'}
+            onBlur={e => e.target.style.borderColor = '#C5A059'}
+          />
+        </div>
+      </div>
 
-      <div className="flex gap-4">
-        <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-          <input type="checkbox" checked={form.melangerQuestions}
-            onChange={e => set('melangerQuestions', e.target.checked)} className="w-4 h-4 accent-amber-500" />
+      {/* Date affichage résultats */}
+      <div>
+        <label style={labelStyle}>Afficher résultats à partir du</label>
+        <input 
+          type="datetime-local" 
+          style={inputStyle}
+          value={form.dateAffichageResultats}
+          onChange={e => set('dateAffichageResultats', e.target.value)} 
+          onFocus={e => e.target.style.borderColor = '#D4AF37'}
+          onBlur={e => e.target.style.borderColor = '#C5A059'}
+        />
+      </div>
+
+      {/* Checkboxes */}
+      <div style={{ display: 'flex', gap: 20, marginTop: 8 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#FFFFFF', cursor: 'pointer' }}>
+          <input 
+            type="checkbox" 
+            checked={form.melangerQuestions}
+            onChange={e => set('melangerQuestions', e.target.checked)} 
+            style={{ width: 16, height: 16, accentColor: '#C5A059', cursor: 'pointer' }}
+          />
           Mélanger les questions
         </label>
-        <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-          <input type="checkbox" checked={form.melangerReponses}
-            onChange={e => set('melangerReponses', e.target.checked)} className="w-4 h-4 accent-amber-500" />
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#FFFFFF', cursor: 'pointer' }}>
+          <input 
+            type="checkbox" 
+            checked={form.melangerReponses}
+            onChange={e => set('melangerReponses', e.target.checked)} 
+            style={{ width: 16, height: 16, accentColor: '#C5A059', cursor: 'pointer' }}
+          />
           Mélanger les réponses
         </label>
       </div>
 
-      <div className="flex gap-3 justify-end pt-2 border-t border-amber-200">
-        <Btn variant="ghost" onClick={onClose}>Annuler</Btn>
-        <Btn onClick={handleSubmit} disabled={saving}>
+      {/* Boutons */}
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', paddingTop: 12, borderTop: '1px solid #C5A059', marginTop: 4 }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            padding: '8px 20px',
+            borderRadius: 8,
+            border: '2px solid #C5A059',
+            background: 'transparent',
+            color: '#C5A059',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={e => { e.target.style.background = '#C5A059'; e.target.style.color = '#0A1628' }}
+          onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = '#C5A059' }}
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={saving}
+          style={{
+            padding: '8px 24px',
+            borderRadius: 8,
+            border: 'none',
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: saving ? 'not-allowed' : 'pointer',
+            background: '#C5A059',
+            color: '#0A1628',
+            opacity: saving ? 0.6 : 1,
+            transition: 'all 0.2s'
+          }}
+        >
           {saving ? 'Enregistrement…' : (initial ? '💾 Modifier' : '💾 Créer brouillon')}
-        </Btn>
+        </button>
       </div>
     </div>
   )
@@ -421,7 +558,7 @@ function ExamenCardEtudiant({ examen, onCommencer, onVoirResultats }) {
         )}
         {naPasPasseMaisCorrige && (
           <Btn size="sm" variant="ghost" onClick={() => onVoirResultats(examen)}>
-            📋 Voir le corrigé
+            
           </Btn>
         )}
       </div>
@@ -788,11 +925,11 @@ export default function Examens() {
       {/* Overlay plein écran — Questions */}
       {!!manageExamen && (
         <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto">
-          <div className="min-h-screen flex items-start justify-center p-6">
+          <div className="min-h-screen flexamanitems-start justify-center p-6">
             <div className="w-full max-w-2xl bg-white border border-amber-200 rounded-2xl shadow-xl my-8">
-              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-amber-200">
+              <div className="flcreeitems-center justify-between px-6 pt-5 pb-4 border-b border-amber-200">
                 <h2 className="font-bold text-lg text-slate-800">📝 Questions — {manageExamen.titre}</h2>
-                <button onClick={() => setManageExamen(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors">✕</button>
+                <button onClick={() => setManageExamen(null)} className="w-8 h-8 flCréer un examenitems-center justify-center rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors">✕</button>
               </div>
               <div className="px-6 py-5">
                 <PanelQuestions examen={manageExamen} onClose={() => setManageExamen(null)} onUpdate={loadExamens} />
