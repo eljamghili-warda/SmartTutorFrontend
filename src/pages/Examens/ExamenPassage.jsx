@@ -5,9 +5,9 @@ import { Btn, Spinner } from '../../components/UI'
 
 // ─── Timer ────────────────────────────────────────────────────────────────────
 function useCountdown(expiresAt) {
-  const [remaining, setRemaining] = useState(0)
+  const [remaining, setRemaining] = useState(null)
   useEffect(() => {
-    if (!expiresAt) return
+    if (!expiresAt) { setRemaining(null); return }
     const tick = () => {
       const diff = Math.max(0, new Date(expiresAt) - new Date())
       setRemaining(diff)
@@ -16,10 +16,10 @@ function useCountdown(expiresAt) {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [expiresAt])
-  const mins = Math.floor(remaining / 60000)
-  const secs = Math.floor((remaining % 60000) / 1000)
-  const isUrgent = remaining < 5 * 60 * 1000 && remaining > 0
-  const expired  = remaining === 0
+  const mins = Math.floor((remaining || 0) / 60000)
+  const secs = Math.floor(((remaining || 0) % 60000) / 1000)
+  const isUrgent = remaining !== null && remaining < 5 * 60 * 1000 && remaining > 0
+  const expired  = remaining !== null && remaining === 0
   return { mins, secs, isUrgent, expired, remaining }
 }
 
@@ -78,17 +78,14 @@ export default function ExamenPassage() {
   const handleDemarrer = async () => {
     setError('')
     try {
-      // Le backend gère tous les cas :
-      // - nouvelle tentative créée
-      // - tentative EN_COURS non expirée → retournée directement
-      // - tentative expirée / déjà soumise → erreur claire
       const { data: tentData } = await examensAPI.demarrer(id)
       const tent      = tentData.tentative || tentData
       const expiresAt = tentData.expiresAt || tentData.expires_at || tent.expires_at
 
-      // Sécurité : vérifier que le timer est encore valide
-      if (new Date(expiresAt) <= new Date()) {
-        setError('Votre tentative a expiré. Consultez vos résultats.')
+      // Si la tentative retournée est déjà expirée (edge case),
+      // on affiche une erreur claire mais on ne bloque pas
+      if (expiresAt && new Date(expiresAt) <= new Date()) {
+        setError('Ce passage est expiré. Contactez votre tuteur.')
         return
       }
 
@@ -105,7 +102,6 @@ export default function ExamenPassage() {
         return
       }
 
-      // Tout setter avant de changer de phase
       autoSubmittedRef.current = false
       setTentative({ ...tent, id: tent.id, expiresAt })
       setQuestions(qs)

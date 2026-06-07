@@ -98,25 +98,33 @@ export default function ExamenResultats() {
           setError("Aucune tentative trouvée pour cet examen.")
           return
         }
-        // Prendre la plus récente tentative terminée
-        const tentative = tentatives.find(t => t.statut !== 'EN_COURS') || tentatives[0]
+        // Prendre la tentative terminée la plus récente
+        const tentative = tentatives.find(t => t.statut === 'REUSSI' || t.statut === 'ECHOUE')
+          || tentatives[0]
 
-        // 2) Récupérer les infos de l'examen
-        const { data: examens } = await examensAPI.getMesExamensEtudiant()
-        const examen = examens.find(e => String(e.id) === String(examenId))
+        // 2) Récupérer les infos de l'examen directement
+        let examen = null
+        try {
+          const { data: examData } = await examensAPI.getById(examenId)
+          examen = examData
+        } catch {}
 
-        // 3) Essayer de charger le corrigé détaillé
+        // 3) Charger le corrigé détaillé
         let questions = null
         let tentativeDetail = null
+        let dateAffichageMsg = null
         try {
           const { data: res } = await examensAPI.getResultats(tentative.id)
-          questions = res.questions
+          questions      = res.questions
           tentativeDetail = res.tentative
-        } catch {
-          // Résultats pas encore visibles (date_affichage_resultats)
+        } catch (err) {
+          // Si 403 → résultats pas encore disponibles → afficher la date
+          if (err.response?.status === 403 && err.response?.data?.dateAffichage) {
+            dateAffichageMsg = err.response.data.dateAffichage
+          }
         }
 
-        setData({ tentative, examen, questions, tentativeDetail })
+        setData({ tentative, examen, questions, tentativeDetail, dateAffichageMsg })
       } catch (err) {
         setError("Impossible de charger les résultats.")
       } finally {
@@ -149,7 +157,7 @@ export default function ExamenResultats() {
     </div>
   )
 
-  const { tentative, examen, questions, tentativeDetail } = data
+  const { tentative, examen, questions, tentativeDetail, dateAffichageMsg } = data
   const reussi   = tentative.statut === 'REUSSI'
   const echoue   = tentative.statut === 'ECHOUE'
   const score    = tentative.pourcentage != null ? parseFloat(tentative.pourcentage).toFixed(1) : null
@@ -232,10 +240,18 @@ export default function ExamenResultats() {
             padding: '20px', textAlign: 'center', marginBottom: 16,
           }}>
             <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>🔒</span>
-            <p style={{ color: '#8B6914', fontWeight: 600, fontSize: 14 }}>Corrigé non disponible pour l'instant</p>
-            <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 4 }}>
-              Le tuteur a configuré une date d'affichage pour le corrigé.
+            <p style={{ color: '#8B6914', fontWeight: 600, fontSize: 14 }}>
+              Corrigé non disponible pour l'instant
             </p>
+            {dateAffichageMsg ? (
+              <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 4 }}>
+                Disponible le {fmtDate(dateAffichageMsg)}
+              </p>
+            ) : (
+              <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 4 }}>
+                Le tuteur a configuré une date d'affichage pour le corrigé.
+              </p>
+            )}
           </div>
         )}
 
