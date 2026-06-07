@@ -55,10 +55,10 @@ const STATUT_SEANCE = {
   },
   EN_COURS: {
     label: '🎙️ En cours',
-    dot: '#f6e75c',
-    bg: 'rgba(167, 165, 61, 0.12)',
-    border: 'rgba(237, 220, 95, 0.35)',
-    text: '#eeee6b',
+    dot: '#e7bae0',
+    bg: 'rgb(233, 183, 227)',
+    border: 'rgb(245, 157, 239)',
+    text: '#a92b9e',
     explication: "La séance est actuellement en cours. Les participants sont connectés en appel.",
   },
   REALISEE: {
