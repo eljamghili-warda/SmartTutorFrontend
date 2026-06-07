@@ -5,7 +5,7 @@ import { Btn, Spinner } from '../../components/UI'
 
 // ─── Timer ────────────────────────────────────────────────────────────────────
 function useCountdown(expiresAt) {
-  const [remaining, setRemaining] = useState(0)
+  const [remaining, setRemaining] = useState(null)  // null = pas encore calculé
   useEffect(() => {
     if (!expiresAt) return
     const tick = () => {
@@ -16,10 +16,10 @@ function useCountdown(expiresAt) {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [expiresAt])
-  const mins = Math.floor(remaining / 60000)
-  const secs = Math.floor((remaining % 60000) / 1000)
-  const isUrgent = remaining < 5 * 60 * 1000 && remaining > 0
-  const expired  = remaining === 0
+  const mins = remaining !== null ? Math.floor(remaining / 60000) : 0
+  const secs = remaining !== null ? Math.floor((remaining % 60000) / 1000) : 0
+  const isUrgent = remaining !== null && remaining < 5 * 60 * 1000 && remaining > 0
+  const expired  = remaining !== null && remaining === 0  // null = pas encore prêt
   return { mins, secs, isUrgent, expired, remaining }
 }
 
@@ -56,14 +56,14 @@ export default function ExamenPassage() {
 
   const { mins, secs, isUrgent, expired } = useCountdown(tentative?.expiresAt)
 
-  // Auto-soumettre si temps écoulé
+  // Auto-soumettre si temps écoulé (seulement si remaining a été calculé, pas au départ)
   const autoSubmittedRef = useRef(false)
   useEffect(() => {
-    if (expired && phase === 'examen' && !autoSubmittedRef.current) {
+    if (expired && remaining !== null && remaining === 0 && phase === 'examen' && !autoSubmittedRef.current) {
       autoSubmittedRef.current = true
       handleSoumettre(true)
     }
-  }, [expired, phase])
+  }, [expired, phase, remaining])
 
   // Charger l'examen au départ
   useEffect(() => {

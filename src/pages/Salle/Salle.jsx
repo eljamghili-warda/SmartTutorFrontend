@@ -236,7 +236,7 @@ export default function Salle() {
   const [examens,          setExamens]         = useState([])
   const [examensLoaded,    setExamensLoaded]   = useState(false)
   const [showCreateExamen, setShowCreateExamen]= useState(false)
-  const [examForm,         setExamForm]        = useState({ titre:'', description:'', notePassage:70, dureeMinutes:30, maxTentatives:'', dateDebut:'', dateLimite:'', dateAffichageResultats:'', modeAffichage:'UNE_PAR_UNE' })
+  const [examForm,         setExamForm]        = useState({ titre:'', description:'', notePassage:70, dureeMinutes:30, dateDebut:'', dateLimite:'', dateAffichageResultats:'', modeAffichage:'UNE_PAR_UNE' })
   const [editingExamen,    setEditingExamen]   = useState(null)
   const [questionForm,     setQuestionForm]    = useState({ texte:'', type:'QCM', points:1, reponses:[{texte:'',estCorrecte:false},{texte:'',estCorrecte:false}] })
   const [savingExamen,     setSavingExamen]    = useState(false)
@@ -850,7 +850,7 @@ export default function Salle() {
               {!tentativeActive && !resultats && (() => (
                 <>
                   {isTuteur && (
-                    <Btn size="sm" onClick={() => { setShowCreateExamen(true); setEditingExamen(null); setExamForm({ titre:'', description:'', notePassage:70, dureeMinutes:30, maxTentatives:'', dateDebut:'', dateLimite:'', dateAffichageResultats:'', modeAffichage:'UNE_PAR_UNE' }) }} className="w-full justify-center">
+                    <Btn size="sm" onClick={() => { setShowCreateExamen(true); setEditingExamen(null); setExamForm({ titre:'', description:'', notePassage:70, dureeMinutes:30, dateDebut:'', dateLimite:'', dateAffichageResultats:'', modeAffichage:'UNE_PAR_UNE' }) }} className="w-full justify-center">
                       ➕ Créer un examen
                     </Btn>
                   )}
@@ -865,7 +865,7 @@ export default function Salle() {
                           <div><label className="text-[10px] text-slate-500">Durée (min)</label><input type="number" min={5} max={180} value={examForm.dureeMinutes} onChange={e=>setExamForm(f=>({...f,dureeMinutes:Number(e.target.value)}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" /></div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          <div><label className="text-[10px] text-slate-500">Max tentatives</label><input type="number" min={1} value={examForm.maxTentatives} placeholder="illimité" onChange={e=>setExamForm(f=>({...f,maxTentatives:e.target.value}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600" /></div>
+
                           <div><label className="text-[10px] text-slate-500">Mode</label><select value={examForm.modeAffichage} onChange={e=>setExamForm(f=>({...f,modeAffichage:e.target.value}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs"><option value="UNE_PAR_UNE">Une par une</option><option value="LISTE">Liste complète</option></select></div>
                         </div>
                         <div><label className="text-[10px] text-slate-500">Date de début</label><input type="datetime-local" value={examForm.dateDebut} onChange={e=>setExamForm(f=>({...f,dateDebut:e.target.value}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" /></div>
@@ -917,44 +917,43 @@ export default function Salle() {
                     </div>
                   )}
                   {examens.map(ex => {
-                    const estTuteurExamen = ex.tuteur_id === user?.id
-                    const now = new Date()
-                    const apresDebut = !ex.date_debut || now >= new Date(ex.date_debut)
-                    const avantLimite = !ex.date_limite || now <= new Date(ex.date_limite)
-                    const peutPasser  = ex.statut === 'PUBLIE' && apresDebut && avantLimite && !ex.deja_reussi && !isTuteur
-                    const tentativesRestantes = ex.max_tentatives ? ex.max_tentatives - (ex.nb_tentatives_faites||0) : null
-                    return (
-                      <div key={ex.id} className={`rounded-xl border p-3 flex flex-col gap-2 ${ex.statut==='PUBLIE'?'bg-ink-800 border-ink-700':'bg-ink-800/60 border-dashed border-ink-600'}`}>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${ex.statut==='BROUILLON'?'bg-amber-500/20 text-amber-400':ex.statut==='PUBLIE'?'bg-emerald-500/20 text-emerald-400':'bg-slate-500/20 text-slate-500'}`}>{ex.statut}</span>
-                              {ex.deja_reussi > 0 && <span className="text-[10px] text-amber-400">🏆 Réussi</span>}
-                            </div>
-                            <p className="text-xs font-bold text-white truncate">{ex.titre}</p>
-                            <p className="text-[10px] text-slate-500 mt-0.5">{ex.nb_questions||0} questions · {ex.duree_minutes} min · {ex.note_passage}% requis</p>
-                            {tentativesRestantes !== null && !ex.deja_reussi && (<p className="text-[10px] text-slate-600 mt-0.5">{tentativesRestantes} tentative(s) restante(s)</p>)}
-                          </div>
-                        </div>
-                        {estTuteurExamen && ex.statut === 'BROUILLON' && (
-                          <button onClick={async()=>{const{data}=await examensAPI.getById(ex.id);setEditingExamen(data);setShowCreateExamen(false)}} className="w-full py-1.5 rounded-xl text-xs font-semibold bg-violet-600/15 border border-violet-500/30 text-violet-400 hover:bg-violet-600/25 transition-all">✏️ Gérer les questions</button>
-                        )}
-                        {!isTuteur && ex.statut === 'PUBLIE' && (
-                          peutPasser && (tentativesRestantes === null || tentativesRestantes > 0) ? (
-                            <button onClick={() => handleDemarrerExamen(ex.id)} className="w-full py-2 rounded-xl text-xs font-bold transition-all" style={{background:'linear-gradient(135deg,#7c3aed,#4f46e5)',color:'#fff'}}>▶ Commencer l'examen</button>
-                          ) : ex.deja_reussi ? (
-                            <div className="text-center py-1.5 rounded-xl text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">✅ Examen réussi — certificat disponible</div>
-                          ) : !avantLimite ? (
-                            <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">❌ Période de passage terminée</div>
-                          ) : !apresDebut ? (
-                            <div className="text-center py-1.5 rounded-xl text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20">⏳ Pas encore disponible</div>
-                          ) : (
-                            <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">❌ Nombre maximum de tentatives atteint</div>
-                          )
-                        )}
-                      </div>
-                    )
-                  })}
+  const estTuteurExamen = ex.tuteur_id === user?.id
+  const now = new Date()
+  const apresDebut = !ex.date_debut || now >= new Date(ex.date_debut)
+  const avantLimite = !ex.date_limite || now <= new Date(ex.date_limite)
+  const peutPasser  = ex.statut === 'PUBLIE' && apresDebut && avantLimite && !ex.deja_reussi && !isTuteur
+
+  return (
+    <div key={ex.id} className={`rounded-xl border p-3 flex flex-col gap-2 ${ex.statut==='PUBLIE'?'bg-ink-800 border-ink-700':'bg-ink-800/60 border-dashed border-ink-600'}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${ex.statut==='BROUILLON'?'bg-amber-500/20 text-amber-400':ex.statut==='PUBLIE'?'bg-emerald-500/20 text-emerald-400':'bg-slate-500/20 text-slate-500'}`}>{ex.statut}</span>
+            {ex.deja_reussi > 0 && <span className="text-[10px] text-amber-400">🏆 Réussi</span>}
+          </div>
+          <p className="text-xs font-bold text-white truncate">{ex.titre}</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">{ex.nb_questions||0} questions · {ex.duree_minutes} min · {ex.note_passage}% requis</p>
+        </div>
+      </div>
+      {estTuteurExamen && ex.statut === 'BROUILLON' && (
+        <button onClick={async()=>{const{data}=await examensAPI.getById(ex.id);setEditingExamen(data);setShowCreateExamen(false)}} className="w-full py-1.5 rounded-xl text-xs font-semibold bg-violet-600/15 border border-violet-500/30 text-violet-400 hover:bg-violet-600/25 transition-all">✏️ Gérer les questions</button>
+      )}
+      {!isTuteur && ex.statut === 'PUBLIE' && (
+        peutPasser ? (
+          <button onClick={() => handleDemarrerExamen(ex.id)} className="w-full py-2 rounded-xl text-xs font-bold transition-all" style={{background:'linear-gradient(135deg,#7c3aed,#4f46e5)',color:'#fff'}}>▶ Commencer l'examen</button>
+        ) : ex.deja_reussi ? (
+          <div className="text-center py-1.5 rounded-xl text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">✅ Examen réussi — certificat disponible</div>
+        ) : !avantLimite ? (
+          <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">❌ Période de passage terminée</div>
+        ) : !apresDebut ? (
+          <div className="text-center py-1.5 rounded-xl text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20">⏳ Pas encore disponible</div>
+        ) : (
+          <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">❌ Examen non disponible</div>
+        )
+      )}
+    </div>
+  )
+})}
                   {examens.length === 0 && (<p className="text-xs text-slate-600 text-center py-4">{isTuteur?'Aucun examen créé.':'Aucun examen disponible dans cette salle.'}</p>)}
                 </>
               ))()}
