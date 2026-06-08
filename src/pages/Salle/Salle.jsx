@@ -14,7 +14,177 @@ import { Avatar, Badge, Btn, Spinner, Modal, FormGroup, ToastContainer } from '.
 import { useToast } from '../../hooks/useToast'
 import PaiementModal from '../Paiement/PaiementModal'
 
-// ─── Hook: timer ──────────────────────────────────────────────────────────────
+// ─── FormExamenSalle : même thème que la page Examens (blanc/doré) ─────────────
+function FormExamenSalle({ onSave, onClose }) {
+  const [form, setForm] = React.useState({
+    titre: '',
+    description: '',
+    notePassage: 70,
+    dureeMinutes: 30,
+    dateDebut: '',
+    dateLimite: '',
+    dateAffichageResultats: '',
+    modeAffichage: 'UNE_PAR_UNE',
+    melangerQuestions: true,
+    melangerReponses: true,
+  })
+  const [saving, setSaving] = React.useState(false)
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleSubmit = async () => {
+    if (!form.titre.trim()) return alert('Titre obligatoire')
+    setSaving(true)
+    try {
+      await onSave({
+        titre: form.titre,
+        description: form.description,
+        notePassage: parseFloat(form.notePassage),
+        dureeMinutes: parseInt(form.dureeMinutes),
+        dateDebut: form.dateDebut || null,
+        dateLimite: form.dateLimite || null,
+        dateAffichageResultats: form.dateAffichageResultats || null,
+        modeAffichage: form.modeAffichage,
+        melangerQuestions: form.melangerQuestions,
+        melangerReponses: form.melangerReponses,
+      })
+    } finally { setSaving(false) }
+  }
+
+  const inputStyle = {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: 8,
+    border: '2px solid #C5A059',
+    backgroundColor: '#FFFFFF',
+    color: '#1A3A5C',
+    fontSize: 14,
+    outline: 'none',
+    boxSizing: 'border-box',
+  }
+  const labelStyle = {
+    display: 'block',
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#C5A059',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(4px)' }}>
+      <div className="min-h-screen flex items-start justify-center p-6">
+        <div className="w-full max-w-2xl bg-white border border-amber-200 rounded-2xl shadow-xl my-8">
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-amber-200">
+            <h2 className="font-bold text-lg text-slate-800">➕ Créer un examen</h2>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors">✕</button>
+          </div>
+          <div className="px-6 py-5" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Titre */}
+            <div>
+              <label style={labelStyle}>Titre *</label>
+              <input style={inputStyle} value={form.titre} onChange={e => set('titre', e.target.value)}
+                placeholder="Ex: Algorithmique Chapitre 2"
+                onFocus={e => e.target.style.borderColor = '#D4AF37'}
+                onBlur={e => e.target.style.borderColor = '#C5A059'} />
+            </div>
+            {/* Description */}
+            <div>
+              <label style={labelStyle}>Description</label>
+              <textarea style={{ ...inputStyle, resize: 'none' }} rows={2} value={form.description}
+                onChange={e => set('description', e.target.value)} placeholder="Description optionnelle..."
+                onFocus={e => e.target.style.borderColor = '#D4AF37'}
+                onBlur={e => e.target.style.borderColor = '#C5A059'} />
+            </div>
+            {/* Durée + Note */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Durée (minutes)</label>
+                <input type="number" min={5} max={180} style={inputStyle} value={form.dureeMinutes}
+                  onChange={e => set('dureeMinutes', e.target.value)}
+                  onFocus={e => e.target.style.borderColor = '#D4AF37'}
+                  onBlur={e => e.target.style.borderColor = '#C5A059'} />
+              </div>
+              <div>
+                <label style={labelStyle}>Note de passage (%)</label>
+                <input type="number" min={0} max={100} style={inputStyle} value={form.notePassage}
+                  onChange={e => set('notePassage', e.target.value)}
+                  onFocus={e => e.target.style.borderColor = '#D4AF37'}
+                  onBlur={e => e.target.style.borderColor = '#C5A059'} />
+              </div>
+            </div>
+            {/* Mode affichage */}
+            <div>
+              <label style={labelStyle}>Mode affichage</label>
+              <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.modeAffichage}
+                onChange={e => set('modeAffichage', e.target.value)}
+                onFocus={e => e.target.style.borderColor = '#D4AF37'}
+                onBlur={e => e.target.style.borderColor = '#C5A059'}>
+                <option value="UNE_PAR_UNE">Question par question</option>
+                <option value="LISTE_COMPLETE">Liste complète</option>
+              </select>
+            </div>
+            {/* Dates */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Disponible à partir du</label>
+                <input type="datetime-local" style={inputStyle} value={form.dateDebut}
+                  onChange={e => set('dateDebut', e.target.value)}
+                  onFocus={e => e.target.style.borderColor = '#D4AF37'}
+                  onBlur={e => e.target.style.borderColor = '#C5A059'} />
+              </div>
+              <div>
+                <label style={labelStyle}>Date limite</label>
+                <input type="datetime-local" style={inputStyle} value={form.dateLimite}
+                  onChange={e => set('dateLimite', e.target.value)}
+                  onFocus={e => e.target.style.borderColor = '#D4AF37'}
+                  onBlur={e => e.target.style.borderColor = '#C5A059'} />
+              </div>
+            </div>
+            <div>
+              <label style={labelStyle}>Afficher résultats à partir du</label>
+              <input type="datetime-local" style={inputStyle} value={form.dateAffichageResultats}
+                onChange={e => set('dateAffichageResultats', e.target.value)}
+                onFocus={e => e.target.style.borderColor = '#D4AF37'}
+                onBlur={e => e.target.style.borderColor = '#C5A059'} />
+            </div>
+            {/* Checkboxes */}
+            <div style={{ display: 'flex', gap: 20, marginTop: 4 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#1A3A5C', cursor: 'pointer' }}>
+                <input type="checkbox" checked={form.melangerQuestions}
+                  onChange={e => set('melangerQuestions', e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: '#C5A059', cursor: 'pointer' }} />
+                Mélanger les questions
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#1A3A5C', cursor: 'pointer' }}>
+                <input type="checkbox" checked={form.melangerReponses}
+                  onChange={e => set('melangerReponses', e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: '#C5A059', cursor: 'pointer' }} />
+                Mélanger les réponses
+              </label>
+            </div>
+            {/* Boutons */}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', paddingTop: 12, borderTop: '1px solid #C5A059', marginTop: 4 }}>
+              <button type="button" onClick={onClose}
+                style={{ padding: '8px 20px', borderRadius: 8, border: '2px solid #C5A059', background: 'transparent', color: '#C5A059', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                onMouseEnter={e => { e.target.style.background = '#C5A059'; e.target.style.color = '#1A3A5C' }}
+                onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = '#C5A059' }}>
+                Annuler
+              </button>
+              <button type="button" onClick={handleSubmit} disabled={saving}
+                style={{ padding: '8px 24px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', background: '#C5A059', color: '#1A3A5C', opacity: saving ? 0.6 : 1, transition: 'all 0.2s' }}>
+                {saving ? 'Enregistrement…' : '💾 Créer brouillon'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 function useCallTimer(active) {
   const [seconds, setSeconds] = useState(0)
   const intervalRef = useRef(null)
@@ -34,53 +204,198 @@ function useCallTimer(active) {
 }
 
 // ─── Panneau d'appel flottant ─────────────────────────────────────────────────
+// ─── Panneau d'appel flottant — thème navy/gold ─────────────────────────────────
 function CallPanel({ callParticipants, isMuted, onToggleMute, onEnd, onLeave, canEnd, callTime, isSharing, onShareToggle, isTuteur }) {
   return (
-    <div className="fixed bottom-4 right-4 z-40 bg-ink-800 border border-emerald-500/30 rounded-2xl shadow-2xl p-4 w-72 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">Appel en cours</span>
+    <div style={{
+      position: 'fixed',
+      bottom: '20px',
+      right: '20px',
+      zIndex: 40,
+      width: '300px',
+      background: 'linear-gradient(135deg, #0A1628 0%, #1A3A5C 100%)',
+      border: '1px solid #C5A059',
+      borderRadius: '20px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(197,160,89,0.2)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+      padding: '16px',
+    }}>
+      {/* En-tête */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: '#4CAF50',
+            display: 'inline-block',
+            animation: 'pulse 1.5s infinite',
+          }} />
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#C5A059', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Appel en cours
+          </span>
         </div>
-        <span className="text-xs font-mono text-slate-400 bg-ink-700 px-2 py-0.5 rounded-lg">{callTime}</span>
+        <span style={{
+          fontSize: '11px',
+          fontFamily: 'monospace',
+          color: '#D4B06A',
+          backgroundColor: 'rgba(197,160,89,0.12)',
+          padding: '2px 8px',
+          borderRadius: '20px',
+          border: '1px solid rgba(197,160,89,0.25)',
+        }}>{callTime}</span>
       </div>
-      <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto">
+
+      {/* Liste des participants */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        maxHeight: '150px',
+        overflowY: 'auto',
+      }}>
         {callParticipants.length === 0 ? (
-          <p className="text-xs text-slate-500 text-center py-2">En attente de participants…</p>
+          <p style={{ fontSize: '11px', color: '#8B9CB5', textAlign: 'center', padding: '12px 0' }}>
+            En attente de participants…
+          </p>
         ) : callParticipants.map(p => (
-          <div key={p.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl bg-ink-700">
-            <div className="w-7 h-7 rounded-full bg-violet-600/30 border border-violet-500/40 flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0">
+          <div key={p.id} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '8px 10px',
+            borderRadius: '12px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(197,160,89,0.12)',
+          }}>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #C5A059, #D4B06A)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: '#0A1628',
+              flexShrink: 0,
+            }}>
               {p.prenom?.[0]?.toUpperCase()}{p.nom?.[0]?.toUpperCase()}
             </div>
-            <p className="text-xs font-semibold text-slate-200 flex-1 truncate">
-              {p.prenom} {p.nom}{p.isMe && <span className="text-violet-400 ml-1">(vous)</span>}
+            <p style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#E2E8F0',
+              flex: 1,
+              margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>
+              {p.prenom} {p.nom}
+              {p.isMe && <span style={{ color: '#C5A059', marginLeft: '4px', fontSize: '10px' }}>(vous)</span>}
             </p>
-            <span className="text-xs flex-shrink-0">{p.muted ? '🔇' : '🎙️'}</span>
+            <span style={{ fontSize: '12px', flexShrink: 0 }}>{p.muted ? '🔇' : '🎙️'}</span>
           </div>
         ))}
       </div>
-      <div className="flex gap-2 pt-1 border-t border-ink-600">
+
+      {/* Boutons d'action */}
+      <div style={{ display: 'flex', gap: '8px', paddingTop: '4px', borderTop: '1px solid rgba(197,160,89,0.15)' }}>
         <button onClick={onToggleMute}
-          className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all
-            ${isMuted ? 'bg-rose-500/20 border border-rose-500/40 text-rose-400' : 'bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600'}`}>
-          {isMuted ? '🔇' : '🎙️'}
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            padding: '8px 0',
+            borderRadius: '10px',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+            background: isMuted ? 'rgba(220,38,38,0.15)' : 'rgba(197,160,89,0.08)',
+            border: isMuted ? '1px solid rgba(220,38,38,0.4)' : '1px solid rgba(197,160,89,0.25)',
+            color: isMuted ? '#ef5350' : '#C5A059',
+          }}
+          onMouseEnter={e => {
+            if (isMuted) e.currentTarget.style.background = 'rgba(220,38,38,0.25)'
+            else e.currentTarget.style.background = 'rgba(197,160,89,0.16)'
+          }}
+          onMouseLeave={e => {
+            if (isMuted) e.currentTarget.style.background = 'rgba(220,38,38,0.15)'
+            else e.currentTarget.style.background = 'rgba(197,160,89,0.08)'
+          }}>
+          {isMuted ? '🔇 Muet' : '🎙️ Micro'}
         </button>
+
         {isTuteur && (
           <button onClick={onShareToggle}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all
-              ${isSharing ? 'bg-violet-500/30 border border-violet-400/60 text-violet-300 animate-pulse' : 'bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600'}`}>
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '8px 0',
+              borderRadius: '10px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              background: isSharing ? 'rgba(197,160,89,0.15)' : 'rgba(197,160,89,0.08)',
+              border: isSharing ? '1px solid #C5A059' : '1px solid rgba(197,160,89,0.25)',
+              color: '#C5A059',
+            }}>
             {isSharing ? '⏹ Écran' : '🖥️ Écran'}
           </button>
         )}
+
         {canEnd ? (
           <button onClick={onEnd}
-            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold bg-rose-500/20 border border-rose-500/40 text-rose-400 hover:bg-rose-500/30 transition-all">
-            📵
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '8px 0',
+              borderRadius: '10px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              background: 'rgba(220,38,38,0.12)',
+              border: '1px solid rgba(220,38,38,0.35)',
+              color: '#ef5350',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,0.22)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(220,38,38,0.12)' }}>
+            📵 Terminer
           </button>
         ) : (
           <button onClick={onLeave}
-            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold bg-ink-700 border border-ink-600 text-slate-300 hover:bg-ink-600 transition-all">
-            🚪
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '8px 0',
+              borderRadius: '10px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              background: 'rgba(197,160,89,0.08)',
+              border: '1px solid rgba(197,160,89,0.25)',
+              color: '#C5A059',
+            }}>
+            🚪 Quitter
           </button>
         )}
       </div>
@@ -161,58 +476,192 @@ function ScreenShareViewer({ sharerNom, videoRef, onClose }) {
 }
 
 // ─── Modal inviter tuteur ─────────────────────────────────────────────────────
+// ─── Modal inviter tuteur — thème navy/gold ────────────────────────────────────
 function InviteTuteurModal({ salleId, hasTuteur, onClose, onSuccess, onError }) {
   const [tuteurs, setTuteurs]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [selected, setSelected]   = useState('')
   const [sending, setSending]     = useState(false)
   const [confirmed, setConfirmed] = useState(false)
+  
   useEffect(() => { tuteursAPI.getAll().then(({ data }) => setTuteurs(data)).finally(() => setLoading(false)) }, [])
+  
   const doSend = async () => {
     setSending(true)
-    try { await invitationsAPI.send({ salleId, destinataireId: Number(selected), typeInvitation: 'VERS_TUTEUR' }); onSuccess('Invitation envoyée au tuteur !'); onClose() }
+    try { 
+      await invitationsAPI.send({ salleId, destinataireId: Number(selected), typeInvitation: 'VERS_TUTEUR' }); 
+      onSuccess('Invitation envoyée au tuteur !'); 
+      onClose() 
+    }
     catch (err) { onError(err.response?.data?.error || "Erreur lors de l'envoi") }
     finally { setSending(false) }
   }
-  const handleSend = () => { if (!selected) return onError('Choisissez un tuteur'); if (hasTuteur && !confirmed) { setConfirmed(true); return }; doSend() }
+  
+  const handleSend = () => { 
+    if (!selected) return onError('Choisissez un tuteur'); 
+    if (hasTuteur && !confirmed) { setConfirmed(true); return }; 
+    doSend() 
+  }
+  
   if (confirmed) return (
-    <div className="flex flex-col gap-4">
-      <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-4 flex gap-3">
-        <span className="text-xl">⚠️</span>
-        <div><p className="text-sm font-semibold text-amber-400 mb-1">Cette salle a déjà un tuteur</p><p className="text-sm text-slate-400">L'ancien tuteur sera retiré dès que le nouveau accepte.</p></div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{
+        background: 'rgba(197,160,89,0.1)',
+        border: '1px solid #C5A059',
+        borderRadius: '12px',
+        padding: '16px',
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'flex-start',
+      }}>
+        <span style={{ fontSize: '20px' }}>⚠️</span>
+        <div>
+          <p style={{ fontSize: '14px', fontWeight: 700, color: '#C5A059', marginBottom: '4px' }}>Cette salle a déjà un tuteur</p>
+          <p style={{ fontSize: '13px', color: '#8B9CB5' }}>L'ancien tuteur sera retiré dès que le nouveau accepte.</p>
+        </div>
       </div>
-      <div className="flex gap-3 justify-end">
-        <Btn variant="secondary" onClick={() => setConfirmed(false)}>← Retour</Btn>
-        <Btn onClick={doSend} disabled={sending}>{sending ? 'Envoi...' : '✅ Confirmer'}</Btn>
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+        <button onClick={() => setConfirmed(false)} style={{
+          padding: '8px 20px', borderRadius: '8px', border: '1px solid #E8D5A3',
+          background: 'transparent', color: '#8B9CB5', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+        }}>← Retour</button>
+        <button onClick={doSend} disabled={sending} style={{
+          padding: '8px 20px', borderRadius: '8px', border: 'none',
+          background: '#C5A059', color: '#0A1628', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+        }}>{sending ? 'Envoi...' : '✅ Confirmer'}</button>
       </div>
     </div>
   )
+  
   return (
-    <div className="flex flex-col gap-4">
-      {hasTuteur && (<div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-3 flex gap-2 items-center"><span>⚠️</span><p className="text-xs text-amber-400">Cette salle a déjà un tuteur. Le sélectionner le remplacera.</p></div>)}
-      {loading ? (<div className="flex justify-center py-4"><span className="text-slate-400 text-sm">Chargement...</span></div>)
-      : tuteurs.length === 0 ? (<p className="text-sm text-slate-500 bg-ink-700 rounded-xl p-3 text-center">Aucun tuteur disponible.</p>)
-      : (
-        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
-          {tuteurs.map(t => (
-            <button key={t.id} type="button" onClick={() => setSelected(String(t.id))}
-              className="flex items-center gap-3 p-3 rounded-xl text-left transition-all"
-              style={{ background: selected === String(t.id) ? 'rgba(124,58,237,0.15)' : '#1e1b2e', border: selected === String(t.id) ? '2px solid #7c3aed' : '2px solid #2d2d4a' }}>
-              <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(124,58,237,0.2)',border:'1px solid rgba(124,58,237,0.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#a78bfa',flexShrink:0}}>
-                {t.prenom?.[0]}{t.nom?.[0]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate" style={{color:'#F1F5F9'}}>{t.prenom} {t.nom}</p>
-                {t.specialites?.length > 0 && <p className="text-xs truncate" style={{color:'#64748b'}}>{t.specialites.slice(0,3).join(', ')}</p>}
-              </div>
-              {selected === String(t.id) && <span style={{color:'#a78bfa'}}>✓</span>}
-            </button>
-          ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {hasTuteur && (
+        <div style={{
+          background: 'rgba(197,160,89,0.08)',
+          border: '1px solid rgba(197,160,89,0.3)',
+          borderRadius: '10px',
+          padding: '12px',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+        }}>
+          <span style={{ fontSize: '14px' }}>⚠️</span>
+          <p style={{ fontSize: '12px', color: '#C5A059', margin: 0 }}>Cette salle a déjà un tuteur. Le sélectionner le remplacera.</p>
         </div>
       )}
-      <div className="flex gap-3 justify-end pt-1 border-t border-ink-700">
-        <Btn variant="secondary" onClick={onClose}>Annuler</Btn>
-        <Btn onClick={handleSend} disabled={!selected || sending}>{sending ? 'Envoi...' : hasTuteur ? '🔄 Remplacer' : "✉️ Inviter"}</Btn>
+      
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <span style={{ color: '#8B9CB5', fontSize: '13px' }}>Chargement...</span>
+        </div>
+      ) : tuteurs.length === 0 ? (
+        <div style={{
+          background: '#F5F0E6',
+          borderRadius: '12px',
+          padding: '16px',
+          textAlign: 'center',
+          border: '1px solid #E8D5A3',
+        }}>
+          <p style={{ fontSize: '13px', color: '#8B9CB5', margin: 0 }}>Aucun tuteur disponible.</p>
+        </div>
+      ) : (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          maxHeight: '260px',
+          overflowY: 'auto',
+        }}>
+          {tuteurs.map(t => {
+            const isSelected = selected === String(t.id)
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setSelected(String(t.id))}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  background: isSelected ? 'rgba(197,160,89,0.12)' : '#F5F0E6',
+                  border: isSelected ? '2px solid #C5A059' : '1px solid #E8D5A3',
+                }}
+                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = '#C5A059' }}
+                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = '#E8D5A3' }}
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #C5A059, #D4B06A)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  color: '#0A1628',
+                  flexShrink: 0,
+                }}>
+                  {t.prenom?.[0]?.toUpperCase()}{t.nom?.[0]?.toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: '14px', fontWeight: 700, color: '#0A1628', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {t.prenom} {t.nom}
+                  </p>
+                  {t.specialites?.length > 0 && (
+                    <p style={{ fontSize: '11px', color: '#8B9CB5', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {t.specialites.slice(0, 3).join(', ')}
+                    </p>
+                  )}
+                </div>
+                {isSelected && <span style={{ color: '#C5A059', fontSize: '16px', flexShrink: 0 }}>✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        justifyContent: 'flex-end',
+        paddingTop: '8px',
+        borderTop: '1px solid #E8D5A3',
+      }}>
+        <button onClick={onClose} style={{
+          padding: '8px 20px',
+          borderRadius: '8px',
+          border: '1px solid #E8D5A3',
+          background: 'transparent',
+          color: '#8B9CB5',
+          fontSize: '13px',
+          fontWeight: 600,
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+        }}
+          onMouseEnter={e => { e.target.style.borderColor = '#C5A059'; e.target.style.color = '#C5A059' }}
+          onMouseLeave={e => { e.target.style.borderColor = '#E8D5A3'; e.target.style.color = '#8B9CB5' }}
+        >
+          Annuler
+        </button>
+        <button onClick={handleSend} disabled={!selected || sending} style={{
+          padding: '8px 20px',
+          borderRadius: '8px',
+          border: 'none',
+          background: !selected || sending ? '#E8D5A3' : '#C5A059',
+          color: !selected || sending ? '#8B9CB5' : '#0A1628',
+          fontSize: '13px',
+          fontWeight: 700,
+          cursor: !selected || sending ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s',
+        }}>
+          {sending ? 'Envoi...' : hasTuteur ? '🔄 Remplacer' : "✉️ Inviter"}
+        </button>
       </div>
     </div>
   )
@@ -472,16 +921,15 @@ export default function Salle() {
     try { await examensAPI.deleteQuestion(editingExamen.id, qid); setEditingExamen(prev => ({ ...prev, questions: prev.questions.filter(q => q.id !== qid) })); setExamens(prev => prev.map(ex => ex.id === editingExamen.id ? { ...ex, nb_questions: Math.max(0,(ex.nb_questions||1)-1) } : ex)) }
     catch (err) { error(err.response?.data?.error || 'Erreur') }
   }
-  const handleDemarrerExamen = async (examenId) => {
-    try {
-      const { data } = await examensAPI.demarrer(examenId)
-      const { data: examDetail } = await examensAPI.getById(examenId)
-      const questions = (examDetail.questions || []).map(q => ({ ...q, reponses: (q.reponses || []).map(r => ({ ...r, id: Number(r.id) })) }))
-      if (!questions.length) { error('Cet examen ne contient aucune question.'); return }
-      setTentativeActive({ tentative: data.tentative, examen: { ...data.examen, mode_affichage: examDetail.mode_affichage }, questions, currentIdx: 0, expiresAt: new Date(data.tentative.expires_at) })
-      setReponsesEnCours({}); setResultats(null)
-      setTimerLeft(Math.max(0, Math.floor((new Date(data.tentative.expires_at) - Date.now()) / 1000)))
-    } catch (err) { error(err.response?.data?.error || 'Erreur') }
+  const handleDemarrerExamen = (examenId) => {
+    navigate(`/examens/${examenId}/passer`)
+  }
+  const handleCreateExamenFromSalle = async (formData) => {
+    const { data } = await examensAPI.create({ ...formData, salleId: id })
+    setExamens(prev => [data, ...prev])
+    setEditingExamen(data)
+    setShowCreateExamen(false)
+    success('Examen créé — ajoutez vos questions')
   }
   useEffect(() => {
     if (timerLeft === null) return
@@ -597,24 +1045,96 @@ export default function Salle() {
       {activeCall && <CallPanel callParticipants={callParticipants} isMuted={isMuted} onToggleMute={handleToggleMute} onEnd={handleEndCall} onLeave={handleLeaveCall} canEnd={canCall} callTime={callTime} isSharing={isSharing} onShareToggle={handleShareToggle} isTuteur={isTuteur} />}
       {screenShare && <ScreenShareViewer sharerNom={screenShare.sharerNom} videoRef={screenVideoRef} onClose={() => setScreenShare(null)} />}
 
-      {/* Top bar */}
-      <div className="h-12 flex-shrink-0 flex items-center justify-between px-4 bg-ink-900 border-b border-ink-700">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <Btn variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>← Retour</Btn>
-          <div className="w-px h-5 bg-ink-700" />
-          <h2 className="font-bold text-white text-sm truncate">{salle?.nom}</h2>
-          {salle?.matiere && <span className="text-xs text-violet-400 hidden sm:block">📖 {salle.matiere}</span>}
-          <Badge variant={hasTuteur ? 'primary' : 'default'}>{hasTuteur ? '👨‍🏫 Avec tuteur' : '📚 Sans tuteur'}</Badge>
+      {/* ── En-tête Salle — thème navy/doré ───────────────────────────────── */}
+      <div style={{
+        height: 52, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 20px',
+        background: 'linear-gradient(135deg, #0A1628 0%, #1A3A5C 100%)',
+        borderBottom: '1px solid #C5A059',
+        boxShadow: '0 2px 12px rgba(197,160,89,0.12)',
+      }}>
+        {/* Gauche : retour + nom salle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, overflow: 'hidden' }}>
+          <button onClick={() => navigate('/dashboard')} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '5px 12px', borderRadius: 8,
+            background: 'rgba(197,160,89,0.10)', border: '1px solid rgba(197,160,89,0.30)',
+            color: '#C5A059', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.20)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(197,160,89,0.10)'}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6L7.5 10" stroke="#C5A059" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Tableau de bord
+          </button>
+
+          <div style={{ width: 1, height: 22, background: 'rgba(197,160,89,0.25)' }} />
+
+          {/* Icône salle */}
+          <div style={{
+            width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+            background: 'linear-gradient(135deg, #C5A059, #D4B06A)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="#0A1628" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="9 22 9 12 15 12 15 22" stroke="#0A1628" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </div>
+
+          <div style={{ overflow: 'hidden' }}>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }}>
+              {salle?.nom}
+            </h2>
+            {salle?.matiere && (
+              <p style={{ fontSize: 11, color: '#C5A059', marginTop: 1 }}>{salle.matiere}</p>
+            )}
+          </div>
+
+          {/* Badge tuteur */}
+          <div style={{
+            padding: '3px 10px', borderRadius: 20, flexShrink: 0,
+            background: hasTuteur ? 'rgba(46,125,50,0.15)' : 'rgba(107,123,141,0.15)',
+            border: `1px solid ${hasTuteur ? 'rgba(46,125,50,0.35)' : 'rgba(107,123,141,0.3)'}`,
+            fontSize: 11, fontWeight: 600,
+            color: hasTuteur ? '#4CAF50' : '#6B7B8D',
+          }}>
+            {hasTuteur ? 'Avec tuteur' : 'Sans tuteur'}
+          </div>
+
+          {/* Indicateur écran partagé */}
           {screenShare && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-              <span className="text-xs text-violet-400 font-medium">Écran partagé</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 20, background: 'rgba(197,160,89,0.12)', border: '1px solid rgba(197,160,89,0.30)' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#C5A059', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+              <span style={{ fontSize: 11, color: '#C5A059', fontWeight: 600 }}>Écran partagé</span>
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {!activeCall && canCall && <Btn variant="success" size="sm" onClick={() => startCall(id, null)}>📞 Appel</Btn>}
-          <Btn variant="secondary" size="sm" onClick={handleQuitter}>🚪 Quitter</Btn>
+
+        {/* Droite : actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {!activeCall && canCall && (
+            <button onClick={() => startCall(id, null)} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', borderRadius: 8, border: 'none',
+              background: 'linear-gradient(135deg, #2E7D32, #388E3C)',
+              color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(46,125,50,0.3)',
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.1 6.1l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Appel
+            </button>
+          )}
+          <button onClick={handleQuitter} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 14px', borderRadius: 8,
+            background: 'rgba(198,40,40,0.12)', border: '1px solid rgba(198,40,40,0.30)',
+            color: '#ef5350', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(198,40,40,0.22)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(198,40,40,0.12)'}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="#ef5350" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="16 17 21 12 16 7" stroke="#ef5350" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="21" y1="12" x2="9" y2="12" stroke="#ef5350" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Quitter
+          </button>
         </div>
       </div>
 
@@ -625,64 +1145,105 @@ export default function Salle() {
         </div>
         <div className="flex-1 overflow-hidden"><Whiteboard salleId={id} isTuteur={isTuteur} /></div>
 
-        {/* Panneau droit */}
-        <div className="w-60 flex-shrink-0 border-l border-ink-700 flex flex-col bg-ink-900">
-          {/* Tabs */}
-          <div className="flex border-b border-ink-700 flex-shrink-0">
+        {/* ── Panneau droit — thème navy/doré ─────────────────────────── */}
+        <div style={{
+          width: 248, flexShrink: 0,
+          borderLeft: '1px solid rgba(197,160,89,0.20)',
+          display: 'flex', flexDirection: 'column',
+          background: 'linear-gradient(180deg, #0D1F36 0%, #0A1628 100%)',
+        }}>
+
+          {/* Onglets */}
+          <div style={{ display: 'flex', borderBottom: '1px solid rgba(197,160,89,0.15)', flexShrink: 0 }}>
             {[
-              { id:'participants', icon:'👥', label:`${participants.length}` },
-              { id:'fichiers',     icon:'📁', label:`${fichiers.length}` },
-              { id:'seances',      icon:'📅', label:`${seances.length}` },
-              { id:'examens',      icon:'📝', label:`${examens.length}` },
+              { id: 'participants', icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>), label: `${participants.length}` },
+              { id: 'fichiers',     icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>), label: `${fichiers.length}` },
+              { id: 'seances',      icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>), label: `${seances.length}` },
+              { id: 'examens',      icon: (<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>), label: `${examens.length}` },
             ].map(t => (
-              <button key={t.id} onClick={() => setRightTab(t.id)}
-                className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-xs transition-all border-b-2
-                  ${rightTab === t.id ? 'border-violet-500 text-violet-400 bg-violet-600/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
-                <span className="text-base">{t.icon}</span>
+              <button key={t.id} onClick={() => setRightTab(t.id)} style={{
+                flex: 1, padding: '10px 4px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                transition: 'all 0.15s', border: 'none',
+                borderBottom: rightTab === t.id ? '2px solid #C5A059' : '2px solid transparent',
+                color: rightTab === t.id ? '#C5A059' : 'rgba(197,160,89,0.35)',
+                background: rightTab === t.id ? 'rgba(197,160,89,0.06)' : 'transparent',
+              }}
+                onMouseEnter={e => { if (rightTab !== t.id) e.currentTarget.style.color = 'rgba(197,160,89,0.65)' }}
+                onMouseLeave={e => { if (rightTab !== t.id) e.currentTarget.style.color = 'rgba(197,160,89,0.35)' }}>
+                {t.icon}
                 <span>{t.label}</span>
               </button>
             ))}
           </div>
 
-          {/* ── Participants ─────────────────────────────────────────── */}
+          {/* ── Participants ──────────────────────────────────────────── */}
           {rightTab === 'participants' && (
-            <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+            <div style={{ flex: 1, overflowY: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {isAdmin && (
-                <Btn size="sm" variant="secondary" className="w-full justify-center mb-1" onClick={() => setShowInviteTuteur(true)}>
-                  ➕ Inviter un tuteur
-                </Btn>
+                <button onClick={() => setShowInviteTuteur(true)} style={{
+                  width: '100%', padding: '8px 12px', borderRadius: 10, marginBottom: 6,
+                  background: 'rgba(197,160,89,0.08)', border: '1px dashed rgba(197,160,89,0.35)',
+                  color: '#C5A059', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  transition: 'all 0.15s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.14)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(197,160,89,0.08)'}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/></svg>
+                  Inviter un tuteur
+                </button>
               )}
               {participants.map(p => {
                 const inCall  = callParticipants.some(cp => String(cp.id) === String(p.id))
                 const isMe    = String(p.id) === String(user?.id)
                 const canKick = isAdmin && !isMe && p.role_salle !== 'ADMIN'
                 return (
-                  <div key={p.id} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-ink-800 transition-colors group">
-                    <div className="relative flex-shrink-0">
+                  <div key={p.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '8px 10px', borderRadius: 10,
+                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(197,160,89,0.08)',
+                    transition: 'background 0.15s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.05)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
                       <Avatar user={p} size="sm" />
-                      {inCall && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border border-ink-900" />}
+                      {inCall && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', border: '1.5px solid #0A1628' }} />}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate" style={{color:'#E2E8F0'}}>
-                        {p.prenom} {p.nom} {isMe && <span style={{color:'#a78bfa'}}>(vous)</span>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: '#E2E8F0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {p.prenom} {p.nom} {isMe && <span style={{ color: '#C5A059', fontSize: 10 }}>(vous)</span>}
                       </p>
-                      <p className="text-xs text-slate-600 capitalize">{p.role_salle?.toLowerCase()}</p>
+                      <p style={{ fontSize: 10, color: 'rgba(197,160,89,0.5)', textTransform: 'capitalize', marginTop: 1 }}>{p.role_salle?.toLowerCase()}</p>
                     </div>
-                    {inCall && <span className="text-xs text-emerald-400 flex-shrink-0">🎙️</span>}
+                    {inCall && (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="#4CAF50"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke="#4CAF50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
                     {canKick && (
                       <button
-                        title={`Retirer ${p.prenom} de la salle`}
+                        title={`Retirer ${p.prenom}`}
                         onClick={async () => {
                           if (!confirm(`Retirer ${p.prenom} ${p.nom} de la salle ?`)) return
                           try {
                             await sallesAPI.kickMembre(id, p.id)
                             setParticipants(prev => prev.filter(m => String(m.id) !== String(p.id)))
-                            sendMessage(id, `⚠️ ${p.prenom} ${p.nom} a été retiré(e) de la salle par l'administrateur.`)
+                            sendMessage(id, `${p.prenom} ${p.nom} a été retiré(e) de la salle par l'administrateur.`)
                             success(`${p.prenom} ${p.nom} a été retiré(e).`)
                           } catch (err) { error(err.response?.data?.error || 'Erreur lors du retrait.') }
                         }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-xs"
-                        style={{ background:'rgba(220,38,38,0.15)', color:'#f87171' }}>
+                        style={{
+                          flexShrink: 0, width: 22, height: 22, borderRadius: 6,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'rgba(198,40,40,0.10)', border: '1px solid rgba(198,40,40,0.20)',
+                          color: '#ef5350', fontSize: 11, cursor: 'pointer', opacity: 0, transition: 'opacity 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'rgba(198,40,40,0.20)' }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.background = 'rgba(198,40,40,0.10)' }}>
                         ✕
                       </button>
                     )}
@@ -692,269 +1253,316 @@ export default function Salle() {
             </div>
           )}
 
-          {/* ── Fichiers ─────────────────────────────────────────────── */}
+          {/* ── Fichiers ──────────────────────────────────────────────── */}
           {rightTab === 'fichiers' && (
-            <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
-              <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dashed border-ink-600 text-xs text-slate-500 hover:border-violet-500/50 hover:text-violet-400 transition-all cursor-pointer">
-                ⬆️ Uploader un fichier
-                <input type="file" className="hidden" onChange={uploadFichier} />
+            <div style={{ flex: 1, overflowY: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
+                background: 'rgba(197,160,89,0.05)', border: '1px dashed rgba(197,160,89,0.30)',
+                color: '#C5A059', fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.12)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(197,160,89,0.05)'}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#C5A059" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="17 8 12 3 7 8" stroke="#C5A059" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="#C5A059" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Téléverser un fichier
+                <input type="file" style={{ display: 'none' }} onChange={uploadFichier} />
               </label>
               {fichiers.map(f => (
-                <div key={f.id} className="flex items-center gap-2 px-2 py-2 rounded-xl bg-ink-800 border border-ink-700">
-                  <span className="text-base">📄</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-200 truncate font-medium">{f.nom_fichier}</p>
-                    <p className="text-xs text-slate-600">{f.uploader_nom}</p>
+                <div key={f.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 12px', borderRadius: 10,
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(197,160,89,0.10)',
+                }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                    background: 'rgba(197,160,89,0.10)', border: '1px solid rgba(197,160,89,0.20)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#C5A059" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="#C5A059" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </div>
-                  <a href={`http://localhost:5000/${f.url_telechargement}`} download className="text-xs px-1.5 py-1 rounded-lg bg-ink-700 text-violet-400 hover:bg-violet-600/20 transition-colors flex-shrink-0">⬇</a>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 12, color: '#E2E8F0', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.nom_fichier}</p>
+                    <p style={{ fontSize: 10, color: 'rgba(197,160,89,0.45)', marginTop: 2 }}>{f.uploader_nom}</p>
+                  </div>
+                  <a href={`http://localhost:5000/${f.url_telechargement}`} download style={{
+                    flexShrink: 0, width: 28, height: 28, borderRadius: 7,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(197,160,89,0.10)', border: '1px solid rgba(197,160,89,0.25)',
+                    color: '#C5A059', textDecoration: 'none', transition: 'all 0.15s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.22)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(197,160,89,0.10)'}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#C5A059" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="7 10 12 15 17 10" stroke="#C5A059" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="#C5A059" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </a>
                 </div>
               ))}
-              {fichiers.length === 0 && <p className="text-xs text-slate-600 text-center py-4">Aucun fichier partagé</p>}
+              {fichiers.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(197,160,89,0.30)', fontSize: 12 }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  Aucun fichier partagé
+                </div>
+              )}
             </div>
           )}
 
-          {/* ── Séances ──────────────────────────────────────────────── */}
+          {/* ── Séances ───────────────────────────────────────────────── */}
           {rightTab === 'seances' && (
-            <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+            <div style={{ flex: 1, overflowY: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {isTuteur && (
-                <Btn size="sm" onClick={async () => {
+                <button onClick={async () => {
                   setShowPlan(true)
                   try {
                     const [tarifsRes, disposRes] = await Promise.all([tarifsAPI.getMesTarifs(), seancesAPI.getDisponibilites()])
                     setMesTarifs(tarifsRes.data); setMesDispos(disposRes.data)
                     if (tarifsRes.data.length === 1) setPlanForm(f => ({ ...f, matiere: tarifsRes.data[0].matiere }))
                   } catch { setMesTarifs([]); setMesDispos([]) }
-                }} className="w-full justify-center">➕ Planifier une séance</Btn>
+                }} style={{
+                  width: '100%', padding: '8px 12px', borderRadius: 10,
+                  background: 'rgba(197,160,89,0.08)', border: '1px dashed rgba(197,160,89,0.35)',
+                  color: '#C5A059', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  transition: 'all 0.15s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.14)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(197,160,89,0.08)'}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/></svg>
+                  Planifier une séance
+                </button>
               )}
-              {seances.map(s => (
-                <div key={s.id} className="rounded-xl bg-ink-800 border border-ink-700 p-3 flex flex-col gap-1.5">
-                  <p className="text-xs font-bold text-slate-200 leading-tight">{s.titre}</p>
-                  <p className="text-xs text-slate-500">{new Date(s.date_debut).toLocaleString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</p>
-                  <p className="text-xs text-slate-500">⏱ {s.duree} min</p>
-                  <Badge variant={statutBadge[s.statut] || 'default'}>{statutLabel[s.statut] || s.statut}</Badge>
-                  {s.montant_total > 0 && <p className="text-xs text-violet-400 font-semibold">💰 {s.montant_total} DH</p>}
-                  {isAdmin && (s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE') && (
-                    <div className={`mt-1 p-2 rounded-lg border ${s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? 'bg-blue-500/10 border-blue-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
-                      {s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? (
-                        <>
-                          <p className="text-xs text-blue-400 mb-1.5">🔒 Fonds sécurisés — libération après réalisation</p>
-                          <button disabled className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold" style={{ background:'#1a1e2e', color:'#60a5fa', border:'1px solid #1e40af', cursor:'not-allowed', opacity:0.8 }}>🔒 Payé — en escrow</button>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-xs text-amber-400 mb-1.5">⚠️ En attente de votre paiement</p>
-                          <button onClick={() => setPaiementSeanceId(s.id)} className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all" style={{ background:'linear-gradient(135deg, #7c3aed, #4f46e5)', color:'#fff', border:'none', cursor:'pointer', boxShadow:'0 2px 12px rgba(124,58,237,0.4)' }}>💳 Payer maintenant</button>
-                        </>
+              {seances.map(s => {
+                const sStatutColor = { PLANIFIEE: '#C5A059', EN_ATTENTE_PAIEMENT: '#F59E0B', CONFIRMEE: '#4CAF50', EN_COURS: '#2196F3', REALISEE: '#4CAF50', ANNULEE: '#ef5350' }
+                const sStatutLabel = { PLANIFIEE: 'Planifiée', EN_ATTENTE_PAIEMENT: 'En attente paiement', CONFIRMEE: 'Confirmée', EN_COURS: 'En cours', REALISEE: 'Réalisée', ANNULEE: 'Annulée' }
+                const col = sStatutColor[s.statut] || '#6B7B8D'
+                return (
+                  <div key={s.id} style={{
+                    borderRadius: 12, background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(197,160,89,0.12)', overflow: 'hidden',
+                  }}>
+                    {/* Barre colorée en haut */}
+                    <div style={{ height: 3, background: col }} />
+                    <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: '#E2E8F0', lineHeight: 1.3 }}>{s.titre}</p>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: col, flexShrink: 0, padding: '2px 7px', borderRadius: 20, background: `${col}18`, border: `1px solid ${col}35` }}>
+                          {sStatutLabel[s.statut] || s.statut}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'rgba(197,160,89,0.55)' }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" strokeWidth="2"/></svg>
+                          {new Date(s.date_debut).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'rgba(197,160,89,0.55)' }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><polyline points="12 6 12 12 16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                          {s.duree} min
+                        </div>
+                      </div>
+                      {s.montant_total > 0 && (
+                        <p style={{ fontSize: 11, color: '#C5A059', fontWeight: 600 }}>{s.montant_total} DH</p>
+                      )}
+                      {isAdmin && (s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE') && (
+                        <div style={{ marginTop: 2, padding: '8px 10px', borderRadius: 8, background: s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? 'rgba(33,150,243,0.08)' : 'rgba(245,158,11,0.08)', border: `1px solid ${s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? 'rgba(33,150,243,0.20)' : 'rgba(245,158,11,0.20)'}` }}>
+                          {s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? (
+                            <>
+                              <p style={{ fontSize: 10, color: '#60a5fa', marginBottom: 6 }}>Fonds sécurisés — libération après réalisation</p>
+                              <button disabled style={{ width: '100%', padding: '6px', borderRadius: 8, background: '#0f172a', color: '#60a5fa', border: '1px solid #1e40af', fontSize: 11, fontWeight: 600, cursor: 'not-allowed', opacity: 0.8 }}>Payé — en escrow</button>
+                            </>
+                          ) : (
+                            <>
+                              <p style={{ fontSize: 10, color: '#F59E0B', marginBottom: 6 }}>En attente de votre paiement</p>
+                              <button onClick={() => setPaiementSeanceId(s.id)} style={{ width: '100%', padding: '7px', borderRadius: 8, background: 'linear-gradient(135deg, #C5A059, #D4B06A)', color: '#0A1628', border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Payer maintenant</button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {(s.statut === 'PLANIFIEE' || s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut === 'CONFIRMEE') && isTuteur && (
+                        <button onClick={() => handleAnnulerSeance(s.id)} style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(198,40,40,0.08)', border: '1px solid rgba(198,40,40,0.20)', color: '#ef5350', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(198,40,40,0.16)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(198,40,40,0.08)'}>
+                          Annuler la séance
+                        </button>
+                      )}
+                      {s.statut === 'EN_COURS' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4CAF50', display: 'inline-block' }} />
+                            <p style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600 }}>Séance en cours</p>
+                          </div>
+                          {isTuteur && activeCall && (
+                            <button onClick={handleEndCall} style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(198,40,40,0.08)', border: '1px solid rgba(198,40,40,0.20)', color: '#ef5350', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                              Terminer la séance
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                  {(s.statut === 'PLANIFIEE' || s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut === 'CONFIRMEE') && isTuteur && (
-                    <button onClick={() => handleAnnulerSeance(s.id)} className="mt-1 w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition-all">❌ Annuler la séance</button>
-                  )}
-                  {s.statut === 'EN_COURS' && (
-                    <div className="flex flex-col gap-1 mt-0.5">
-                      <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /><p className="text-xs text-emerald-400">Séance en cours</p></div>
-                      {isTuteur && activeCall && (<button onClick={handleEndCall} className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition-all">⏹ Terminer la séance</button>)}
-                    </div>
-                  )}
-                  {s.statut === 'REALISEE' && <p className="text-xs text-emerald-500 mt-0.5">✅ Séance réalisée</p>}
-                  {s.statut === 'ANNULEE'  && <p className="text-xs text-rose-400 mt-0.5">❌ Séance annulée</p>}
+                  </div>
+                )
+              })}
+              {seances.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(197,160,89,0.30)', fontSize: 12 }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }}><rect x="3" y="4" width="18" height="18" rx="2" stroke="#C5A059" strokeWidth="1.5"/><line x1="3" y1="10" x2="21" y2="10" stroke="#C5A059" strokeWidth="1.5"/><line x1="8" y1="2" x2="8" y2="6" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  Aucune séance planifiée
                 </div>
-              ))}
-              {seances.length === 0 && <p className="text-xs text-slate-600 text-center py-4">Aucune séance planifiée</p>}
+              )}
             </div>
           )}
 
           {/* ── Examens ───────────────────────────────────────────────── */}
           {rightTab === 'examens' && (
-            <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
-              {tentativeActive && (
-                <div className="fixed inset-0 z-[100] bg-ink-950 flex flex-col overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-ink-700 bg-ink-900 flex-shrink-0">
-                    <div><p className="text-xs text-slate-500">Examen en cours</p><p className="font-bold text-white text-sm">{tentativeActive.examen.titre}</p></div>
-                    <div className={`text-xl font-mono font-bold px-4 py-1.5 rounded-xl ${timerLeft < 60 ? 'text-rose-400 bg-rose-500/10 animate-pulse' : 'text-violet-400 bg-violet-500/10'}`}>⏱ {fmtTimer(timerLeft)}</div>
-                    <div className="text-xs text-slate-500">{Object.keys(reponsesEnCours).length}/{tentativeActive.questions.length} répondues</div>
-                  </div>
-                  <div className="h-1 bg-ink-800 flex-shrink-0"><div className="h-1 bg-violet-500 transition-all duration-500" style={{ width:`${(Object.keys(reponsesEnCours).length/tentativeActive.questions.length)*100}%` }} /></div>
-                  <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-6">
-                    {(() => {
-                      const q = tentativeActive.questions[tentativeActive.currentIdx]; if (!q) return null
-                      return (
-                        <div className="w-full max-w-xl flex flex-col gap-5">
-                          <div className="flex items-start gap-3">
-                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-violet-600/20 border border-violet-500/50 flex items-center justify-center text-xs font-bold text-violet-400">{tentativeActive.currentIdx+1}</span>
-                            <p className="text-white font-semibold text-base leading-relaxed">{q.texte}</p>
-                          </div>
-                          <div className="flex flex-col gap-2.5">
-                            {(q.reponses||[]).map(r => {
-                              const selected = reponsesEnCours[String(q.id)] === Number(r.id)
-                              return (
-                                <button key={r.id} onClick={() => handleSelectReponse(q.id, r.id)} className="w-full text-left px-4 py-3 rounded-xl transition-all text-sm"
-                                  style={{ background:selected?'rgba(124,58,237,0.2)':'rgba(255,255,255,0.03)', border:selected?'1.5px solid #7c3aed':'1px solid rgba(255,255,255,0.08)', color:selected?'#c4b5fd':'#94a3b8', fontWeight:selected?600:400 }}>
-                                  {selected&&<span className="mr-2">✓</span>}{r.texte}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )
-                    })()}
-                  </div>
-                  <div className="flex items-center justify-between px-5 py-3 border-t border-ink-700 bg-ink-900 flex-shrink-0 gap-3">
-                    <button onClick={() => setTentativeActive(prev => ({...prev,currentIdx:Math.max(0,prev.currentIdx-1)}))} disabled={tentativeActive.currentIdx===0} className="px-4 py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 disabled:opacity-30 hover:bg-ink-600 transition-all">← Précédent</button>
-                    <div className="flex gap-1 flex-wrap justify-center flex-1">
-                      {tentativeActive.questions.map((q,i) => (
-                        <button key={q.id} onClick={() => setTentativeActive(prev => ({...prev,currentIdx:i}))} className="w-6 h-6 rounded-md text-[10px] font-bold transition-all"
-                          style={{ background:reponsesEnCours[String(q.id)]?'#7c3aed':tentativeActive.currentIdx===i?'#312e81':'#1e1b4b', color:reponsesEnCours[String(q.id)]||tentativeActive.currentIdx===i?'#fff':'#6b7280', border:tentativeActive.currentIdx===i?'1px solid #7c3aed':'1px solid transparent' }}>
-                          {i+1}
-                        </button>
-                      ))}
-                    </div>
-                    {tentativeActive.currentIdx < tentativeActive.questions.length-1 ? (
-                      <button onClick={() => setTentativeActive(prev => ({...prev,currentIdx:prev.currentIdx+1}))} className="px-4 py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 hover:bg-ink-600 transition-all">Suivant →</button>
-                    ) : (
-                      <button onClick={() => setShowConfirmSoum(true)} className="px-4 py-2 rounded-xl text-xs font-bold transition-all" style={{background:'linear-gradient(135deg,#7c3aed,#4f46e5)',color:'#fff'}}>✅ Terminer et envoyer</button>
-                    )}
-                  </div>
-                  {showConfirmSoum && (
-                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
-                      <div className="bg-ink-800 border border-ink-600 rounded-2xl p-6 max-w-sm w-full mx-4 flex flex-col gap-4">
-                        <p className="font-bold text-white text-center">Soumettre l'examen ?</p>
-                        <p className="text-xs text-slate-400 text-center">{Object.keys(reponsesEnCours).length}/{tentativeActive.questions.length} questions répondues.<br/>Après validation, vous ne pourrez plus modifier vos réponses.</p>
-                        <div className="flex gap-3">
-                          <button onClick={() => setShowConfirmSoum(false)} className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 hover:bg-ink-600">Annuler</button>
-                          <button onClick={() => handleSoumettreExamen(false)} className="flex-1 py-2.5 rounded-xl text-xs font-bold" style={{background:'linear-gradient(135deg,#7c3aed,#4f46e5)',color:'#fff'}}>Confirmer</button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {resultats && !tentativeActive && (
-                <div className={`rounded-xl p-4 border flex flex-col gap-3 ${resultats.reussi?'bg-emerald-500/10 border-emerald-500/30':'bg-rose-500/10 border-rose-500/30'}`}>
-                  <div className="text-center">
-                    <div className="text-3xl mb-1">{resultats.reussi?'🏆':'😞'}</div>
-                    <p className="font-bold text-white">{resultats.reussi?'Félicitations !':'Pas encore...'}</p>
-                    <p className={`text-2xl font-mono font-bold mt-1 ${resultats.reussi?'text-emerald-400':'text-rose-400'}`}>{resultats.pourcentage}%</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{resultats.scoreObtenu}/{resultats.scoreMax} pts — passage à {resultats.notePassage}%</p>
-                  </div>
-                  {resultats.reussi && resultats.certificat && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
-                      <p className="text-xs font-bold text-amber-400">🎓 Certificat généré !</p>
-                      <p className="text-xs text-slate-400 mt-1 font-mono">{resultats.certificat.numero_certificat}</p>
-                    </div>
-                  )}
-                  <button onClick={() => setResultats(null)} className="w-full py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-300 hover:bg-ink-600">Retour aux examens</button>
-                </div>
-              )}
+            <div style={{ flex: 1, overflowY: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {!tentativeActive && !resultats && (() => (
                 <>
                   {isTuteur && (
-                    <Btn size="sm" onClick={() => { setShowCreateExamen(true); setEditingExamen(null); setExamForm({ titre:'', description:'', notePassage:70, dureeMinutes:30, dateDebut:'', dateLimite:'', dateAffichageResultats:'', modeAffichage:'UNE_PAR_UNE' }) }} className="w-full justify-center">
-                      ➕ Créer un examen
-                    </Btn>
+                    <button onClick={() => { setShowCreateExamen(true); setEditingExamen(null); setExamForm({ titre:'', description:'', notePassage:70, dureeMinutes:30, dateDebut:'', dateLimite:'', dateAffichageResultats:'', modeAffichage:'UNE_PAR_UNE' }) }} style={{
+                      width: '100%', padding: '8px 12px', borderRadius: 10,
+                      background: 'rgba(197,160,89,0.08)', border: '1px dashed rgba(197,160,89,0.35)',
+                      color: '#C5A059', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      transition: 'all 0.15s',
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.14)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(197,160,89,0.08)'}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/></svg>
+                      Créer un examen
+                    </button>
                   )}
                   {showCreateExamen && !editingExamen?.statut && (
-                    <div className="rounded-xl bg-ink-800 border border-violet-500/30 p-3 flex flex-col gap-2">
-                      <p className="text-xs font-bold text-violet-400">Nouvel examen</p>
-                      <form onSubmit={handleSaveExamen} className="flex flex-col gap-2">
-                        <input required value={examForm.titre} onChange={e=>setExamForm(f=>({...f,titre:e.target.value}))} placeholder="Titre de l'examen *" className="w-full px-3 py-2 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600" />
-                        <textarea value={examForm.description} onChange={e=>setExamForm(f=>({...f,description:e.target.value}))} placeholder="Description" rows={2} className="w-full px-3 py-2 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600 resize-none" />
-                        <div className="grid grid-cols-2 gap-2">
-                          <div><label className="text-[10px] text-slate-500">Note de passage (%)</label><input type="number" min={0} max={100} value={examForm.notePassage} onChange={e=>setExamForm(f=>({...f,notePassage:Number(e.target.value)}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" /></div>
-                          <div><label className="text-[10px] text-slate-500">Durée (min)</label><input type="number" min={5} max={180} value={examForm.dureeMinutes} onChange={e=>setExamForm(f=>({...f,dureeMinutes:Number(e.target.value)}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" /></div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-
-                          <div><label className="text-[10px] text-slate-500">Mode</label><select value={examForm.modeAffichage} onChange={e=>setExamForm(f=>({...f,modeAffichage:e.target.value}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs"><option value="UNE_PAR_UNE">Une par une</option><option value="LISTE">Liste complète</option></select></div>
-                        </div>
-                        <div><label className="text-[10px] text-slate-500">Date de début</label><input type="datetime-local" value={examForm.dateDebut} onChange={e=>setExamForm(f=>({...f,dateDebut:e.target.value}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" /></div>
-                        <div><label className="text-[10px] text-slate-500">Date limite</label><input type="datetime-local" value={examForm.dateLimite} onChange={e=>setExamForm(f=>({...f,dateLimite:e.target.value}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" /></div>
-                        <div><label className="text-[10px] text-slate-500">Affichage résultats</label><input type="datetime-local" value={examForm.dateAffichageResultats} onChange={e=>setExamForm(f=>({...f,dateAffichageResultats:e.target.value}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" /></div>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => setShowCreateExamen(false)} className="flex-1 py-2 rounded-xl text-xs font-semibold bg-ink-700 text-slate-400 hover:bg-ink-600">Annuler</button>
-                          <button type="submit" disabled={savingExamen} className="flex-1 py-2 rounded-xl text-xs font-bold" style={{background:'linear-gradient(135deg,#7c3aed,#4f46e5)',color:'#fff'}}>{savingExamen?'...':'💾 Enregistrer brouillon'}</button>
-                        </div>
-                      </form>
-                    </div>
+                    <FormExamenSalle
+                      onSave={handleCreateExamenFromSalle}
+                      onClose={() => setShowCreateExamen(false)}
+                    />
                   )}
                   {editingExamen && editingExamen.statut === 'BROUILLON' && (
-                    <div className="rounded-xl bg-ink-800 border border-violet-500/40 p-3 flex flex-col gap-3">
-                      <div className="flex items-center justify-between">
-                        <div><p className="text-xs font-bold text-white">{editingExamen.titre}</p><p className="text-[10px] text-slate-500">{(editingExamen.questions||[]).length} question(s)</p></div>
-                        <button onClick={() => setEditingExamen(null)} className="text-slate-600 hover:text-slate-400 text-xs">✕</button>
-                      </div>
-                      {(editingExamen.questions || []).map((q, qi) => (
-                        <div key={q.id} className="bg-ink-700 rounded-xl p-3 flex flex-col gap-1.5 border border-ink-600">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-xs text-white flex-1 leading-relaxed"><span className="text-violet-400 font-bold mr-1">Q{qi+1}.</span>{q.texte}</p>
-                            <button onClick={() => handleDeleteQuestion(q.id)} className="text-rose-400/60 hover:text-rose-400 text-xs flex-shrink-0">🗑</button>
+                    <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(197,160,89,0.20)', overflow: 'hidden' }}>
+                      <div style={{ height: 3, background: 'linear-gradient(90deg, #C5A059, #D4B06A)' }} />
+                      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                          <div>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: '#E2E8F0' }}>{editingExamen.titre}</p>
+                            <p style={{ fontSize: 10, color: 'rgba(197,160,89,0.50)', marginTop: 2 }}>{(editingExamen.questions||[]).length} question(s)</p>
                           </div>
-                          {(q.reponses||[]).map(r => (<div key={r.id} className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-lg ${r.est_correcte?'text-emerald-400 bg-emerald-500/10':'text-slate-500'}`}><span>{r.est_correcte?'✓':'○'}</span><span>{r.texte}</span></div>))}
+                          <button onClick={() => setEditingExamen(null)} style={{ color: 'rgba(197,160,89,0.40)', fontSize: 14, background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}>✕</button>
                         </div>
-                      ))}
-                      <div className="border-t border-ink-600 pt-3 flex flex-col gap-2">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ajouter une question</p>
-                        <select value={questionForm.type} onChange={e=>setQuestionForm(f=>({...f,type:e.target.value,reponses:e.target.value==='VRAI_FAUX'?[{texte:'Vrai',estCorrecte:false},{texte:'Faux',estCorrecte:false}]:[{texte:'',estCorrecte:false},{texte:'',estCorrecte:false}]}))} className="w-full px-2 py-1.5 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs"><option value="QCM">QCM</option><option value="VRAI_FAUX">Vrai / Faux</option></select>
-                        <textarea value={questionForm.texte} onChange={e=>setQuestionForm(f=>({...f,texte:e.target.value}))} placeholder="Texte de la question *" rows={2} className="w-full px-3 py-2 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600 resize-none" />
-                        <div className="flex items-center gap-2"><label className="text-[10px] text-slate-500">Points :</label><input type="number" min={0.5} step={0.5} value={questionForm.points} onChange={e=>setQuestionForm(f=>({...f,points:Number(e.target.value)}))} className="w-16 px-2 py-1 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs" /></div>
-                        <div className="flex flex-col gap-1.5">
-                          {questionForm.reponses.map((r, ri) => (
-                            <div key={ri} className="flex items-center gap-2">
-                              <input type="checkbox" checked={r.estCorrecte} onChange={e=>setQuestionForm(f=>({...f,reponses:f.reponses.map((rr,i)=>i===ri?{...rr,estCorrecte:e.target.checked}:rr)}))} className="w-3.5 h-3.5 accent-violet-500 flex-shrink-0" />
-                              <input value={r.texte} readOnly={questionForm.type==='VRAI_FAUX'} onChange={e=>setQuestionForm(f=>({...f,reponses:f.reponses.map((rr,i)=>i===ri?{...rr,texte:e.target.value}:rr)}))} placeholder={`Réponse ${ri+1}`} className="flex-1 px-2 py-1 rounded-lg bg-ink-700 border border-ink-600 text-white text-xs placeholder-slate-600" />
-                              {questionForm.type==='QCM'&&ri>1&&(<button type="button" onClick={()=>setQuestionForm(f=>({...f,reponses:f.reponses.filter((_,i)=>i!==ri)}))} className="text-rose-400/60 hover:text-rose-400 text-xs">✕</button>)}
+
+                        {(editingExamen.questions || []).map((q, qi) => (
+                          <div key={q.id} style={{ background: 'rgba(197,160,89,0.04)', border: '1px solid rgba(197,160,89,0.12)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                              <p style={{ fontSize: 11, color: '#E2E8F0', flex: 1, lineHeight: 1.4 }}>
+                                <span style={{ color: '#C5A059', fontWeight: 700, marginRight: 4 }}>Q{qi+1}.</span>{q.texte}
+                              </p>
+                              <button onClick={() => handleDeleteQuestion(q.id)} style={{ color: 'rgba(239,83,80,0.55)', fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>✕</button>
                             </div>
-                          ))}
-                          {questionForm.type==='QCM'&&questionForm.reponses.length<6&&(<button type="button" onClick={()=>setQuestionForm(f=>({...f,reponses:[...f.reponses,{texte:'',estCorrecte:false}]}))} className="text-[10px] text-violet-400 hover:text-violet-300 text-left mt-0.5">+ Ajouter une réponse</button>)}
+                            {(q.reponses||[]).map(r => (
+                              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, padding: '3px 6px', borderRadius: 5, background: r.est_correcte ? 'rgba(76,175,80,0.10)' : 'transparent', color: r.est_correcte ? '#4CAF50' : 'rgba(197,160,89,0.40)' }}>
+                                <span style={{ fontWeight: 700 }}>{r.est_correcte ? '✓' : '○'}</span>
+                                <span>{r.texte}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+
+                        {/* Ajouter question */}
+                        <div style={{ borderTop: '1px solid rgba(197,160,89,0.12)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(197,160,89,0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ajouter une question</p>
+                          <select value={questionForm.type} onChange={e=>setQuestionForm(f=>({...f,type:e.target.value,reponses:e.target.value==='VRAI_FAUX'?[{texte:'Vrai',estCorrecte:false},{texte:'Faux',estCorrecte:false}]:[{texte:'',estCorrecte:false},{texte:'',estCorrecte:false}]}))}
+                            style={{ width: '100%', padding: '6px 8px', borderRadius: 7, background: 'rgba(197,160,89,0.06)', border: '1px solid rgba(197,160,89,0.20)', color: '#E2E8F0', fontSize: 11 }}>
+                            <option value="QCM">QCM</option>
+                            <option value="VRAI_FAUX">Vrai / Faux</option>
+                          </select>
+                          <textarea value={questionForm.texte} onChange={e=>setQuestionForm(f=>({...f,texte:e.target.value}))} placeholder="Texte de la question *" rows={2}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: 7, background: 'rgba(197,160,89,0.06)', border: '1px solid rgba(197,160,89,0.20)', color: '#E2E8F0', fontSize: 11, resize: 'none', outline: 'none', boxSizing: 'border-box' }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <label style={{ fontSize: 10, color: 'rgba(197,160,89,0.50)' }}>Points :</label>
+                            <input type="number" min={0.5} step={0.5} value={questionForm.points} onChange={e=>setQuestionForm(f=>({...f,points:Number(e.target.value)}))}
+                              style={{ width: 52, padding: '4px 8px', borderRadius: 6, background: 'rgba(197,160,89,0.06)', border: '1px solid rgba(197,160,89,0.20)', color: '#E2E8F0', fontSize: 11, outline: 'none' }} />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {questionForm.reponses.map((r, ri) => (
+                              <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <input type="checkbox" checked={r.estCorrecte} onChange={e=>setQuestionForm(f=>({...f,reponses:f.reponses.map((rr,i)=>i===ri?{...rr,estCorrecte:e.target.checked}:rr)}))}
+                                  style={{ width: 13, height: 13, accentColor: '#C5A059', flexShrink: 0, cursor: 'pointer' }} />
+                                <input value={r.texte} readOnly={questionForm.type==='VRAI_FAUX'} onChange={e=>setQuestionForm(f=>({...f,reponses:f.reponses.map((rr,i)=>i===ri?{...rr,texte:e.target.value}:rr)}))} placeholder={`Réponse ${ri+1}`}
+                                  style={{ flex: 1, padding: '5px 8px', borderRadius: 6, background: 'rgba(197,160,89,0.06)', border: '1px solid rgba(197,160,89,0.20)', color: '#E2E8F0', fontSize: 11, outline: 'none' }} />
+                                {questionForm.type==='QCM'&&ri>1&&(<button type="button" onClick={()=>setQuestionForm(f=>({...f,reponses:f.reponses.filter((_,i)=>i!==ri)}))} style={{ color: 'rgba(239,83,80,0.60)', fontSize: 11, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>)}
+                              </div>
+                            ))}
+                            {questionForm.type==='QCM'&&questionForm.reponses.length<6&&(
+                              <button type="button" onClick={()=>setQuestionForm(f=>({...f,reponses:[...f.reponses,{texte:'',estCorrecte:false}]}))}
+                                style={{ fontSize: 10, color: '#C5A059', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', marginTop: 2 }}>
+                                + Ajouter une réponse
+                              </button>
+                            )}
+                          </div>
+                          <button onClick={handleAddQuestion} style={{ width: '100%', padding: '7px', borderRadius: 8, background: 'linear-gradient(135deg, #C5A059, #D4B06A)', color: '#0A1628', border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginTop: 2 }}>
+                            Enregistrer la question
+                          </button>
                         </div>
-                        <button onClick={handleAddQuestion} className="w-full py-2 rounded-xl text-xs font-bold mt-1" style={{background:'linear-gradient(135deg,#7c3aed,#4f46e5)',color:'#fff'}}>+ Enregistrer la question</button>
-                      </div>
-                      <div className="flex gap-2 border-t border-ink-600 pt-3">
-                        <button onClick={() => handleDeleteExamen(editingExamen.id)} className="flex-1 py-2 rounded-xl text-xs font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20">🗑 Supprimer</button>
-                        <button onClick={() => handlePublierExamen(editingExamen.id)} disabled={(editingExamen.questions||[]).length===0} className="flex-1 py-2 rounded-xl text-xs font-bold disabled:opacity-40" style={{background:'linear-gradient(135deg,#059669,#047857)',color:'#fff'}}>🚀 Publier l'examen</button>
+
+                        {/* Publier / Supprimer */}
+                        <div style={{ display: 'flex', gap: 6, borderTop: '1px solid rgba(197,160,89,0.12)', paddingTop: 10 }}>
+                          <button onClick={() => handleDeleteExamen(editingExamen.id)} style={{ flex: 1, padding: '7px', borderRadius: 8, background: 'rgba(198,40,40,0.08)', border: '1px solid rgba(198,40,40,0.20)', color: '#ef5350', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                            Supprimer
+                          </button>
+                          <button onClick={() => handlePublierExamen(editingExamen.id)} disabled={(editingExamen.questions||[]).length===0} style={{ flex: 1, padding: '7px', borderRadius: 8, background: 'linear-gradient(135deg,#2E7D32,#388E3C)', color: '#fff', border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer', opacity: (editingExamen.questions||[]).length===0 ? 0.4 : 1 }}>
+                            Publier
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
-                  {examens.map(ex => {
-  const estTuteurExamen = ex.tuteur_id === user?.id
-  const now = new Date()
-  const apresDebut = !ex.date_debut || now >= new Date(ex.date_debut)
-  const avantLimite = !ex.date_limite || now <= new Date(ex.date_limite)
-  const peutPasser  = ex.statut === 'PUBLIE' && apresDebut && avantLimite && !ex.deja_reussi && !isTuteur
 
-  return (
-    <div key={ex.id} className={`rounded-xl border p-3 flex flex-col gap-2 ${ex.statut==='PUBLIE'?'bg-ink-800 border-ink-700':'bg-ink-800/60 border-dashed border-ink-600'}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${ex.statut==='BROUILLON'?'bg-amber-500/20 text-amber-400':ex.statut==='PUBLIE'?'bg-emerald-500/20 text-emerald-400':'bg-slate-500/20 text-slate-500'}`}>{ex.statut}</span>
-            {ex.deja_reussi > 0 && <span className="text-[10px] text-amber-400">🏆 Réussi</span>}
-          </div>
-          <p className="text-xs font-bold text-white truncate">{ex.titre}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">{ex.nb_questions||0} questions · {ex.duree_minutes} min · {ex.note_passage}% requis</p>
-        </div>
-      </div>
-      {estTuteurExamen && ex.statut === 'BROUILLON' && (
-        <button onClick={async()=>{const{data}=await examensAPI.getById(ex.id);setEditingExamen(data);setShowCreateExamen(false)}} className="w-full py-1.5 rounded-xl text-xs font-semibold bg-violet-600/15 border border-violet-500/30 text-violet-400 hover:bg-violet-600/25 transition-all">✏️ Gérer les questions</button>
-      )}
-      {!isTuteur && ex.statut === 'PUBLIE' && (
-        peutPasser ? (
-          <button onClick={() => handleDemarrerExamen(ex.id)} className="w-full py-2 rounded-xl text-xs font-bold transition-all" style={{background:'linear-gradient(135deg,#7c3aed,#4f46e5)',color:'#fff'}}>▶ Commencer l'examen</button>
-        ) : ex.deja_reussi ? (
-          <div className="text-center py-1.5 rounded-xl text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">✅ Examen réussi — certificat disponible</div>
-        ) : !avantLimite ? (
-          <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">❌ Période de passage terminée</div>
-        ) : !apresDebut ? (
-          <div className="text-center py-1.5 rounded-xl text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20">⏳ Pas encore disponible</div>
-        ) : (
-          <div className="text-center py-1.5 rounded-xl text-xs text-slate-500 bg-ink-700 border border-ink-600">❌ Examen non disponible</div>
-        )
-      )}
-    </div>
-  )
-})}
-                  {examens.length === 0 && (<p className="text-xs text-slate-600 text-center py-4">{isTuteur?'Aucun examen créé.':'Aucun examen disponible dans cette salle.'}</p>)}
+                  {examens.map(ex => {
+                    const estTuteurExamen = ex.tuteur_id === user?.id
+                    const now = new Date()
+                    const apresDebut = !ex.date_debut || now >= new Date(ex.date_debut)
+                    const avantLimite = !ex.date_limite || now <= new Date(ex.date_limite)
+                    const peutPasser  = ex.statut === 'PUBLIE' && apresDebut && avantLimite && !ex.deja_reussi && !isTuteur
+                    const exColor = ex.statut === 'BROUILLON' ? '#F59E0B' : ex.statut === 'PUBLIE' ? '#4CAF50' : '#6B7B8D'
+
+                    return (
+                      <div key={ex.id} style={{ borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,0.03)', border: `1px solid ${ex.statut==='PUBLIE'?'rgba(76,175,80,0.15)':'rgba(197,160,89,0.10)'}` }}>
+                        <div style={{ height: 3, background: exColor }} />
+                        <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: '#E2E8F0', flex: 1, lineHeight: 1.3 }}>{ex.titre}</p>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: exColor, padding: '2px 7px', borderRadius: 20, background: `${exColor}18`, border: `1px solid ${exColor}35`, flexShrink: 0, textTransform: 'uppercase' }}>
+                              {ex.statut}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 10 }}>
+                            <span style={{ fontSize: 10, color: 'rgba(197,160,89,0.45)' }}>{ex.nb_questions||0} questions</span>
+                            <span style={{ fontSize: 10, color: 'rgba(197,160,89,0.45)' }}>{ex.duree_minutes} min</span>
+                            <span style={{ fontSize: 10, color: 'rgba(197,160,89,0.45)' }}>{ex.note_passage}% requis</span>
+                          </div>
+                          {ex.deja_reussi > 0 && (
+                            <span style={{ fontSize: 10, color: '#C5A059', fontWeight: 600 }}>Réussi</span>
+                          )}
+                          {estTuteurExamen && ex.statut === 'BROUILLON' && (
+                            <button onClick={async()=>{const{data}=await examensAPI.getById(ex.id);setEditingExamen(data);setShowCreateExamen(false)}} style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(197,160,89,0.08)', border: '1px solid rgba(197,160,89,0.25)', color: '#C5A059', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.16)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'rgba(197,160,89,0.08)'}>
+                              Gérer les questions
+                            </button>
+                          )}
+                         {!isTuteur && ex.statut === 'PUBLIE' && (
+  peutPasser ? (
+    <button onClick={() => handleDemarrerExamen(ex.id)} style={{ width: '100%', padding: '7px', borderRadius: 8, background: 'linear-gradient(135deg, #C5A059, #D4B06A)', color: '#0A1628', border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+      Commencer l'examen
+    </button>
+  ) : null
+)}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {examens.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(197,160,89,0.30)', fontSize: 12 }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }}><path d="M9 11l3 3L22 4" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      {isTuteur ? 'Aucun examen créé.' : 'Aucun examen disponible.'}
+                    </div>
+                  )}
                 </>
               ))()}
             </div>
@@ -963,23 +1571,127 @@ export default function Salle() {
       </div>
 
       {/* Appel entrant */}
-      {incomingCall && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-ink-800 border border-ink-600 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-sm w-full mx-4">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-violet-600/20 border-2 border-violet-500 flex items-center justify-center text-3xl">👨‍🏫</div>
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-ink-800 animate-pulse" />
-            </div>
-            <div className="text-center">
-              {incomingCall.isOngoing ? (<><p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mb-1">🔴 Appel en cours</p><p className="font-bold text-white text-lg">{incomingCall.initiateurNom}</p><p className="text-sm text-slate-500 mt-1">Un appel est déjà actif dans cette salle</p></>) : (<><p className="text-xs text-violet-400 font-semibold uppercase tracking-wider mb-1">Appel entrant</p><p className="font-bold text-white text-lg">{incomingCall.initiateurNom}</p><p className="text-sm text-slate-500 mt-1">vous invite à rejoindre l'appel</p></>)}
-            </div>
-            <div className="flex gap-4 mt-2">
-              <button onClick={() => refuseCallRef.current?.(incomingCall.sessionId)} className="w-14 h-14 rounded-full bg-rose-500/20 border-2 border-rose-500 text-rose-400 text-2xl flex items-center justify-center hover:bg-rose-500/40 transition-all active:scale-95">📵</button>
-              <button onClick={() => acceptCallRef.current?.(incomingCall.sessionId)} className="w-14 h-14 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 text-2xl flex items-center justify-center hover:bg-emerald-500/40 transition-all active:scale-95">📞</button>
-            </div>
-          </div>
+   {incomingCall && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div style={{
+      background: 'linear-gradient(135deg, #FFFFFF 0%, #F5F0E6 100%)',
+      border: '2px solid #C5A059',
+      borderRadius: '24px',
+      padding: '32px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '20px',
+      boxShadow: '0 25px 50px rgba(0,0,0,0.3)',
+      maxWidth: '320px',
+      width: '100%',
+      margin: '16px',
+    }}>
+      <div className="relative">
+        <div style={{
+          width: '80px',
+          height: '80px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #C5A059, #D4B06A)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '36px',
+          boxShadow: '0 4px 20px rgba(197,160,89,0.3)',
+        }}>
+          👨‍🏫
         </div>
-      )}
+        <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
+      </div>
+      <div className="text-center">
+        {incomingCall.isOngoing ? (
+          <>
+            <p style={{ fontSize: '11px', fontWeight: 700, color: '#4CAF50', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+              🔴 Appel en cours
+            </p>
+            <p style={{ fontSize: '18px', fontWeight: 800, color: '#0A1628', marginBottom: '4px' }}>
+              {incomingCall.initiateurNom}
+            </p>
+            <p style={{ fontSize: '13px', color: '#8B9CB5', margin: 0 }}>
+              Un appel est déjà actif dans cette salle
+            </p>
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: '11px', fontWeight: 700, color: '#C5A059', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+              📞 Appel entrant
+            </p>
+            <p style={{ fontSize: '18px', fontWeight: 800, color: '#0A1628', marginBottom: '4px' }}>
+              {incomingCall.initiateurNom}
+            </p>
+            <p style={{ fontSize: '13px', color: '#8B9CB5', margin: 0 }}>
+              vous invite à rejoindre l'appel
+            </p>
+          </>
+        )}
+      </div>
+      <div className="flex gap-4 mt-2">
+        <button 
+          onClick={() => refuseCallRef.current?.(incomingCall.sessionId)} 
+          style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'rgba(220,38,38,0.12)',
+            border: '2px solid rgba(220,38,38,0.4)',
+            color: '#DC2626',
+            fontSize: '26px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(220,38,38,0.25)'
+            e.currentTarget.style.borderColor = '#DC2626'
+            e.currentTarget.style.transform = 'scale(1.05)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(220,38,38,0.12)'
+            e.currentTarget.style.borderColor = 'rgba(220,38,38,0.4)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          📵
+        </button>
+        <button 
+          onClick={() => acceptCallRef.current?.(incomingCall.sessionId)} 
+          style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #C5A059, #D4B06A)',
+            border: 'none',
+            color: '#0A1628',
+            fontSize: '26px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 12px rgba(197,160,89,0.3)',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'scale(1.05)'
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(197,160,89,0.4)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(197,160,89,0.3)'
+          }}
+        >
+          📞
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* ── Modal planifier séance — thème navy+gold (même que EmploiDuTemps) ── */}
       <Modal open={showPlan} onClose={() => { setShowPlan(false); setPlanForm({ titre:'', matiere:'', dateDebut:'', duree:60, heureDebut:'', creneauDispo:null }); setMesTarifs([]); setMesDispos([]) }} title="📅 Planifier une séance" width="max-w-xl">

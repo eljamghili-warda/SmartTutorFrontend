@@ -46,18 +46,18 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] })
   }
 
   return (
-    <div className="flex flex-col h-full" style={{ background: '#D6E6F5' }}> {/* T.blue100 */}
+    <div className="flex flex-col h-full" style={{ background: '#0f3d69' }}> {/* T.blue100 */}
       {/* Header */}
-      <div className="px-4 py-3 border-b flex items-center gap-2 flex-shrink-0" style={{ borderBottomColor: '#E0D5C0', background: '#FFFFFF' }}>
-        <span className="text-sm font-display font-semibold" style={{ color: '#1A3A5C' }}>💬 Chat</span>
-        <span className="text-xs" style={{ color: '#6B7B8D' }}>{messages.length} messages</span>
+      <div className="px-4 py-3 border-b flex items-center gap-2 flex-shrink-0" style={{ borderBottomColor: '#9f8416', background: '#05193ab1' }}>
+        <span className="text-sm font-display font-semibold" style={{ color: '#cbd5df' }}>💬 Chat</span>
+        <span className="text-xs" style={{ color: '#9c890ee9' }}>{messages.length} messages</span>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2">
         {messages.length === 0 && (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-xs text-center" style={{ color: '#888780' }}>Aucun message.<br />Soyez le premier à écrire !</p>
+            <p className="text-xs text-center" style={{ color: '#999a90' }}>Aucun message.<br />Soyez le premier à écrire !</p>
           </div>
         )}
         {messages.map(msg => {
@@ -69,7 +69,7 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] })
           return (
             <div key={msg.id} className={`flex flex-col gap-0.5 ${mine ? 'items-end' : 'items-start'}`}>
               {!mine && (
-                <span className="text-xs px-1 font-medium" style={{ color: '#5F5E5A' }}>{msg.expediteur_nom}</span>
+                <span className="text-xs px-1 font-medium" style={{ color: '#e8e6de' }}>{msg.expediteur_nom}</span>
               )}
               <div className={`max-w-[85%] rounded-2xl text-sm leading-relaxed break-words overflow-hidden
                 ${mine
@@ -77,8 +77,8 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] })
                   : 'rounded-bl-sm'
                 }`}
                 style={mine
-                  ? { background: '#2C5F8A', color: '#FFFFFF' }
-                  : { background: '#FFFFFF', color: '#1A3A5C', border: '0.5px solid #E0D5C0' }
+                  ? { background: '#5fa6e0', color: '#330e0ed5' }
+                  : { background: '#98b7d3', color: '#1A3A5C', border: '0.5px solid #E0D5C0' }
                 }>
                 <div className="px-3 py-2">
                   {renderContenu(msg.contenu)}
@@ -98,8 +98,8 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] })
                           onClick={() => onPayer(seanceInfo.seanceId)}
                           className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all"
                           style={{
-                            background: 'linear-gradient(135deg, #2C5F8A, #4A90E2)',
-                            color: '#fff', border: 'none', cursor: 'pointer',
+                            background: 'linear-gradient(135deg, #659369, #074d1ec7)',
+                            color: '#e2d5d5', border: 'none', cursor: 'pointer',
                             boxShadow: '0 2px 12px rgba(44,95,138,0.4)',
                           }}
                         >
@@ -141,7 +141,7 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] })
                   )
                 })()}
               </div>
-              <span className="text-[10px] px-1" style={{ color: '#888780' }}>{fmt(msg.horodatage)}</span>
+              <span className="text-[10px] px-1" style={{ color: '#e9e9d96c' }}>{fmt(msg.horodatage)}</span>
             </div>
           )
         })}
@@ -156,7 +156,7 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] })
           placeholder="Message..."
           className="!flex-1 !py-2 !text-sm !rounded-xl"
           style={{
-            background: '#F5F0E6',
+            background: '#e8e1d5',
             border: '0.5px solid #D3D1C7',
             color: '#1A3A5C',
             outline: 'none',
@@ -177,7 +177,7 @@ const Chat = ({ messages, onSend, currentUser, isAdmin, onPayer, seances = [] })
           type="submit"
           className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors flex-shrink-0 text-sm"
           style={{
-            background: '#2C5F8A',
+            background: '#214c88',
             color: '#FFFFFF',
             border: 'none',
             cursor: 'pointer',

@@ -57,7 +57,7 @@ const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir, userRol
               {demandeEnvoyee ? '⏳ Demande envoyée' : '📨 Demander à rejoindre'}
             </Btn>
           ) : (
-            <Btn size="sm" className="w-full justify-center" style={{color:"#fff"}}
+            <Btn size="sm" className="w-full justify-center" style={{color:"#b81d1d"}}
               onClick={() => onRejoindre(salle)}>
               ➕ Rejoindre
             </Btn>
@@ -76,34 +76,158 @@ const CreateModal = ({ open, onClose, onCreate }) => {
     await onCreate(form)
     setForm({ nom: '', type: 'PUBLIQUE', matiere: '', description: '' })
   }
+
+  // Styles thème navy/gold
+  const inputStyle = {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: '10px',
+    border: '2px solid #E8D5A3',
+    backgroundColor: '#FFFFFF',
+    color: '#0A1628',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'all 0.2s',
+    boxSizing: 'border-box',
+  }
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#C5A059',
+    marginBottom: '6px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  }
+
   return (
     <Modal open={open} onClose={onClose} title="✨ Créer une salle">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <FormGroup label="Nom de la salle *">
-          <input required value={form.nom} onChange={set('nom')} placeholder="ex: Maths Terminale S" />
-        </FormGroup>
-        <FormGroup label="Type de salle">
-          <div className="grid grid-cols-2 gap-3">
-            {[{ v:'PUBLIQUE', icon:'🔓', label:'Publique', desc:'Accès libre' },
-              { v:'PRIVEE',   icon:'🔒', label:'Privée',   desc:'Sur invitation' }].map(t => (
-              <button key={t.v} type="button" onClick={() => setForm(f => ({ ...f, type: t.v }))}
-                className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all text-left
-                  ${form.type === t.v ? 'border-violet-500 bg-blue-700/10 text-blue-700' : 'border-blue-200 text-slate-500 hover:border-blue-200'}`}>
-                <div>{t.icon} {t.label}</div>
-                <div className="text-xs font-normal mt-0.5 opacity-70">{t.desc}</div>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div>
+          <label style={labelStyle}>Nom de la salle *</label>
+          <input 
+            required 
+            value={form.nom} 
+            onChange={set('nom')} 
+            placeholder="ex: Maths Terminale S"
+            style={inputStyle}
+            onFocus={e => e.target.style.borderColor = '#C5A059'}
+            onBlur={e => e.target.style.borderColor = '#E8D5A3'}
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Type de salle</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            {[
+              { v: 'PUBLIQUE', icon: '🔓', label: 'Publique', desc: 'Accès libre' },
+              { v: 'PRIVEE',   icon: '🔒', label: 'Privée',   desc: 'Sur invitation' }
+            ].map(t => (
+              <button 
+                key={t.v} 
+                type="button" 
+                onClick={() => setForm(f => ({ ...f, type: t.v }))}
+                style={{
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: form.type === t.v ? '2px solid #C5A059' : '1px solid #E8D5A3',
+                  background: form.type === t.v ? 'rgba(197,160,89,0.08)' : '#FFFFFF',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={e => {
+                  if (form.type !== t.v) e.currentTarget.style.borderColor = '#C5A059'
+                }}
+                onMouseLeave={e => {
+                  if (form.type !== t.v) e.currentTarget.style.borderColor = '#E8D5A3'
+                }}
+              >
+                <div style={{ fontSize: '14px', fontWeight: 700, color: form.type === t.v ? '#C5A059' : '#0A1628' }}>
+                  {t.icon} {t.label}
+                </div>
+                <div style={{ fontSize: '11px', color: '#8B9CB5', marginTop: '2px' }}>
+                  {t.desc}
+                </div>
               </button>
             ))}
           </div>
-        </FormGroup>
-        <FormGroup label="Matière">
-          <input value={form.matiere} onChange={set('matiere')} placeholder="ex: Mathématiques" />
-        </FormGroup>
-        <FormGroup label="Description">
-          <textarea rows={3} value={form.description} onChange={set('description')} placeholder="Décrivez l'objectif de la salle..." />
-        </FormGroup>
-        <div className="flex gap-3 justify-end pt-1">
-          <Btn variant="secondary" onClick={onClose}>Annuler</Btn>
-          <Btn type="submit">Créer la salle</Btn>
+        </div>
+
+        <div>
+          <label style={labelStyle}>Matière</label>
+          <input 
+            value={form.matiere} 
+            onChange={set('matiere')} 
+            placeholder="ex: Mathématiques"
+            style={inputStyle}
+            onFocus={e => e.target.style.borderColor = '#C5A059'}
+            onBlur={e => e.target.style.borderColor = '#E8D5A3'}
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Description</label>
+          <textarea 
+            rows={3} 
+            value={form.description} 
+            onChange={set('description')} 
+            placeholder="Décrivez l'objectif de la salle..."
+            style={{ ...inputStyle, resize: 'none' }}
+            onFocus={e => e.target.style.borderColor = '#C5A059'}
+            onBlur={e => e.target.style.borderColor = '#E8D5A3'}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid #E8D5A3', marginTop: '4px' }}>
+          <button 
+            type="button" 
+            onClick={onClose}
+            style={{
+              padding: '8px 20px',
+              borderRadius: '8px',
+              border: '2px solid #C5A059',
+              background: 'transparent',
+              color: '#C5A059',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.target.style.background = '#C5A059'
+              e.target.style.color = '#0A1628'
+            }}
+            onMouseLeave={e => {
+              e.target.style.background = 'transparent'
+              e.target.style.color = '#C5A059'
+            }}
+          >
+            Annuler
+          </button>
+          <button 
+            type="submit"
+            style={{
+              padding: '8px 24px',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#C5A059',
+              color: '#0A1628',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.target.style.background = '#D4B06A'
+            }}
+            onMouseLeave={e => {
+              e.target.style.background = '#C5A059'
+            }}
+          >
+            Créer la salle
+          </button>
         </div>
       </form>
     </Modal>
