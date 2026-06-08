@@ -249,7 +249,7 @@ export default function AdminDashboard(){
   const { toasts, success, error } = useToast()
 
   useEffect(()=>{
-    Promise.allSettled([
+    Promise.all([
       adminAPI.getStats(),
       adminAPI.getTuteursPending(),
       adminAPI.getRevenus(),
@@ -258,14 +258,10 @@ export default function AdminDashboard(){
       adminAPI.getSeancesStats(),
       adminAPI.getRevenusDetails(),
     ]).then(([s,p,r,e,t,ss,rd])=>{
-      if(s.status==='fulfilled')  setStats(s.value.data)
-      if(p.status==='fulfilled')  setPending(p.value.data)
-      if(r.status==='fulfilled')  setRevenus(r.value.data)
-      if(e.status==='fulfilled')  setExamens(e.value.data)
-      if(t.status==='fulfilled')  setTuteursActivite(t.value.data)
-      if(ss.status==='fulfilled') setSeancesStats(ss.value.data)
-      if(rd.status==='fulfilled') setRevenusDetails(rd.value.data)
-    }).finally(()=>setLoading(false))
+      setStats(s.data); setPending(p.data); setRevenus(r.data)
+      setExamens(e.data); setTuteursActivite(t.data); setSeancesStats(ss.data)
+      setRevenusDetails(rd.data)
+    }).catch(()=>{}).finally(()=>setLoading(false))
   },[])
 
   const valider=async(id,accepte)=>{

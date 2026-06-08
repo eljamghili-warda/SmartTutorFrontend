@@ -4,8 +4,10 @@ import Header from '../../components/Header/Header'
 import { Spinner } from '../../components/UI'
 
 const STATUT = {
-  COMPLETE:  { label: 'Reçu',      color: 'text-emerald-600', bg: 'bg-emerald-50',  border: 'border-emerald-200' },
+  REALISEE:  { label: 'Reçu',      color: 'text-emerald-600', bg: 'bg-emerald-50',  border: 'border-emerald-200' },
+  ANNULEE:   { label: 'Remboursé', color: 'text-rose-500',    bg: 'bg-rose-50',     border: 'border-rose-200'    },
   REMBOURSE: { label: 'Remboursé', color: 'text-rose-500',    bg: 'bg-rose-50',     border: 'border-rose-200'    },
+  COMPLETE:  { label: 'Reçu',      color: 'text-emerald-600', bg: 'bg-emerald-50',  border: 'border-emerald-200' },
 }
 
 export default function MesRevenus() {
@@ -75,7 +77,7 @@ export default function MesRevenus() {
                   <p className="text-sm">Aucun paiement reçu pour l'instant</p>
                 </div>
               ) : paiements.map((p, i) => {
-                const st = STATUT[p.statut] || STATUT.COMPLETE
+                const st = STATUT[p.seance_statut] || STATUT[p.statut] || STATUT.COMPLETE
                 return (
                   <div key={p.id}
                     className={`flex items-center gap-4 px-5 py-4 hover:bg-blue-50/50 transition-colors
@@ -84,7 +86,7 @@ export default function MesRevenus() {
                     {/* Icône */}
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0
                       ${st.bg} border ${st.border}`}>
-                      {p.statut === 'REMBOURSE' ? '↩️' : '💸'}
+                      {p.seance_statut === 'ANNULEE' ? '↩️' : '💸'}
                     </div>
 
                     {/* Infos */}
@@ -101,9 +103,11 @@ export default function MesRevenus() {
                     {/* Montant */}
                     <div className="text-right flex-shrink-0">
                       <p className={`font-black text-lg ${st.color}`}>
-                        {p.statut === 'REMBOURSE' ? '-' : '+'}{parseFloat(p.gain_tuteur).toFixed(2)} DH
+                        {p.seance_statut === 'ANNULEE' ? '-' : '+'}{parseFloat(p.seance_statut === 'ANNULEE' ? p.montant_total : p.gain_tuteur).toFixed(2)} DH
                       </p>
-                      <p className="text-xs text-slate-400">Total: {p.montant_total} DH</p>
+                      <p className="text-xs text-slate-400">
+                        {p.seance_statut === 'REALISEE' ? `Total payé: ${p.montant_total} DH` : 'Remboursé'}
+                      </p>
                       <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-semibold
                         ${st.bg} ${st.color} border ${st.border}`}>
                         {st.label}
