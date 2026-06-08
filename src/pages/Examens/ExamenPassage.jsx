@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { examensAPI } from '../../services/api'
-import { Btn, Spinner } from '../../components/UI'
+import { Btn, Spinner, C } from '../../components/UI'
 
 // ─── Timer ────────────────────────────────────────────────────────────────────
 function useCountdown(expiresAt) {
@@ -28,11 +28,16 @@ function ProgressBar({ current, total }) {
   const pct = total > 0 ? Math.round((current / total) * 100) : 0
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 h-2 bg-ink-700 rounded-full overflow-hidden">
-        <div className="h-full bg-violet-500 transition-all duration-300 rounded-full"
-          style={{ width: `${pct}%` }} />
+      <div style={{ flex: 1, height: 6, background: '#D6E6F5', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${pct}%`,
+          background: `linear-gradient(90deg, ${C.gold500}, ${C.gold400})`,
+          borderRadius: 99,
+          transition: 'width 0.3s ease'
+        }} />
       </div>
-      <span className="text-xs text-slate-500 flex-shrink-0">{current}/{total}</span>
+      <span style={{ fontSize: 12, color: C.textSub, flexShrink: 0 }}>{current}/{total}</span>
     </div>
   )
 }
@@ -40,33 +45,61 @@ function ProgressBar({ current, total }) {
 // ─── Bloc question ────────────────────────────────────────────────────────────
 function QuestionBlock({ question, idx, selected, onSelect }) {
   return (
-    <div className="bg-ink-800 border border-ink-600 rounded-2xl p-5">
-      <div className="flex items-start gap-3 mb-4">
-        <span className="flex-shrink-0 w-7 h-7 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-violet-400">
+    <div style={{
+      background: C.white,
+      border: `1px solid ${C.navy600}`,
+      borderRadius: 16,
+      padding: 20,
+      boxShadow: '0 2px 8px rgba(26,58,92,0.07)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+        <span style={{
+          flexShrink: 0,
+          width: 28, height: 28,
+          borderRadius: 10,
+          background: C.gold200,
+          border: `1px solid ${C.gold300}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, fontWeight: 700, color: C.navy900
+        }}>
           {idx + 1}
         </span>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs px-1.5 py-0.5 rounded font-semibold
-              ${question.type === 'QCM' ? 'bg-violet-500/20 text-violet-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{
+              fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 700,
+              background: question.type === 'QCM' ? C.navy600 : C.gold200,
+              color: question.type === 'QCM' ? C.navy800 : C.navy900,
+            }}>
               {question.type}
             </span>
-            <span className="text-xs text-amber-400">{question.points} pt{question.points > 1 ? 's' : ''}</span>
+            <span style={{ fontSize: 12, color: C.gold500, fontWeight: 600 }}>
+              {question.points} pt{question.points > 1 ? 's' : ''}
+            </span>
           </div>
-          <p className="text-sm font-medium text-slate-100 leading-relaxed">{question.texte}</p>
+          <p style={{ fontSize: 14, fontWeight: 500, color: C.textMain, lineHeight: 1.6 }}>{question.texte}</p>
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {(question.reponses || []).map((r) => (
           <button key={r.id} onClick={() => onSelect(r.id)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all border
-              ${selected === r.id
-                ? 'bg-violet-600/20 border-violet-500/50 text-violet-300'
-                : 'bg-ink-700 border-ink-600 text-slate-300 hover:bg-ink-600 hover:border-slate-500'}`}>
-            <span className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
-              ${selected === r.id ? 'bg-violet-500 border-violet-500' : 'border-slate-600'}`}>
-              {selected === r.id && <span className="w-2 h-2 rounded-full bg-white" />}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '10px 16px', borderRadius: 12, fontSize: 14, textAlign: 'left',
+              cursor: 'pointer', transition: 'all 0.15s',
+              background: selected === r.id ? C.gold200 : C.ivory500,
+              border: selected === r.id ? `1.5px solid ${C.gold500}` : `1.5px solid ${C.navy600}`,
+              color: selected === r.id ? C.navy900 : C.textMain,
+            }}>
+            <span style={{
+              width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: selected === r.id ? C.gold500 : 'transparent',
+              border: selected === r.id ? `2px solid ${C.gold500}` : `2px solid ${C.navy700}`,
+              transition: 'all 0.15s'
+            }}>
+              {selected === r.id && <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.white }} />}
             </span>
             {r.texte}
           </button>
@@ -121,14 +154,11 @@ export default function ExamenPassage() {
       const tent      = tentData.tentative || tentData
       const expiresAt = tentData.expiresAt || tentData.expires_at || tent.expires_at
 
-      // Si la tentative retournée est déjà expirée (edge case),
-      // on affiche une erreur claire mais on ne bloque pas
       if (expiresAt && new Date(expiresAt) <= new Date()) {
         setError('Ce passage est expiré. Contactez votre tuteur.')
         return
       }
 
-      // Charger les questions
       const { data: examData } = await examensAPI.getById(id)
       const qs = (examData.questions || []).map(q => ({
         ...q,
@@ -161,7 +191,6 @@ export default function ExamenPassage() {
         questionId: parseInt(questionId),
         reponseId:  parseInt(reponseId),
       }))
-      // L'API attend { reponses: [...] }
       const { data } = await examensAPI.soumettre(tentative.id, reponsesArr)
       setResult(data)
       setPhase('result')
@@ -180,10 +209,10 @@ export default function ExamenPassage() {
 
   // ─── Écran de chargement ──────────────────────────────────────────────────
   if (phase === 'loading') return (
-    <div className="min-h-screen bg-ink-950 flex items-center justify-center">
+    <div style={{ minHeight: '100vh', background: C.ivory500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {error ? (
-        <div className="text-center">
-          <p className="text-rose-400 text-lg mb-4">{error}</p>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: C.error, fontSize: 16, marginBottom: 16 }}>{error}</p>
           <Btn variant="ghost" onClick={() => navigate(-1)}>← Retour</Btn>
         </div>
       ) : <Spinner size="lg" />}
@@ -192,44 +221,78 @@ export default function ExamenPassage() {
 
   // ─── Écran de confirmation avant démarrage ────────────────────────────────
   if (phase === 'confirm') return (
-    <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
-      <div className="bg-ink-800 border border-ink-600 rounded-3xl p-8 max-w-md w-full">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-3xl mx-auto mb-4">📝</div>
-          <h1 className="text-xl font-bold text-slate-100">{examen?.titre}</h1>
-          <p className="text-sm text-slate-400 mt-1">{examen?.description}</p>
+    <div style={{
+      minHeight: '100vh',
+      background: `linear-gradient(135deg, ${C.navy900} 0%, #0D2137 50%, ${C.navy900} 100%)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
+    }}>
+      <div style={{
+        background: C.white,
+        border: `1px solid ${C.navy600}`,
+        borderRadius: 24,
+        padding: 32,
+        maxWidth: 420,
+        width: '100%',
+        boxShadow: '0 24px 60px rgba(26,58,92,0.3)'
+      }}>
+        {/* Header avec accent doré */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 18,
+            background: `linear-gradient(135deg, ${C.gold500}, ${C.gold400})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 28, margin: '0 auto 16px',
+            boxShadow: `0 8px 24px ${C.gold300}`
+          }}>📝</div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: C.navy900 }}>{examen?.titre}</h1>
+          <p style={{ fontSize: 13, color: C.textSub, marginTop: 4 }}>{examen?.description}</p>
         </div>
 
-        {error && <p className="text-rose-400 text-sm text-center mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">{error}</p>}
+        {error && (
+          <p style={{
+            color: C.error, fontSize: 13, textAlign: 'center', marginBottom: 16,
+            background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 12, padding: 12
+          }}>{error}</p>
+        )}
 
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
           {[
             { icon: '⏱', label: 'Durée', value: `${examen?.duree_minutes} min` },
             { icon: '🎯', label: 'Pour réussir', value: `${examen?.note_passage}%` },
             { icon: '❓', label: 'Questions', value: examen?.questions?.length || '—' },
           ].map(({ icon, label, value }) => (
-            <div key={label} className="bg-ink-700 rounded-2xl p-3 text-center">
-              <p className="text-lg">{icon}</p>
-              <p className="text-sm font-bold text-slate-100 mt-1">{value}</p>
-              <p className="text-xs text-slate-500">{label}</p>
+            <div key={label} style={{
+              background: C.ivory500,
+              border: `1px solid ${C.navy600}`,
+              borderRadius: 14, padding: 12, textAlign: 'center'
+            }}>
+              <p style={{ fontSize: 18 }}>{icon}</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.navy900, marginTop: 4 }}>{value}</p>
+              <p style={{ fontSize: 11, color: C.textSub }}>{label}</p>
             </div>
           ))}
         </div>
 
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-6 text-xs text-amber-400">
+        {/* Warning */}
+        <div style={{
+          background: C.gold200,
+          border: `1px solid ${C.gold300}`,
+          borderRadius: 12, padding: 12, marginBottom: 24,
+          fontSize: 12, color: C.navy900
+        }}>
           ⚠️ Une fois démarré, le chronomètre ne peut pas être mis en pause. Assurez-vous d'être prêt !
         </div>
 
-        <div className="flex gap-3">
-          <Btn variant="ghost" onClick={() => navigate(-1)} className="flex-1">Annuler</Btn>
-          <Btn onClick={handleDemarrer} className="flex-1">▶ Commencer l'examen</Btn>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Btn variant="ghost" onClick={() => navigate(-1)} style={{ flex: 1 }}>Annuler</Btn>
+          <Btn variant="gold" onClick={handleDemarrer} style={{ flex: 1 }}>▶ Commencer l'examen</Btn>
         </div>
       </div>
     </div>
   )
 
   // ─── Écran de résultat ────────────────────────────────────────────────────
-    // ─── Écran de résultat ────────────────────────────────────────────────────
   if (phase === 'result') {
     const resultatsVisibles = result?.resultatsVisibles
     const dateAff = result?.dateAffichageResultats
@@ -240,36 +303,61 @@ export default function ExamenPassage() {
       : null
 
     return (
-      <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
-        <div className="bg-ink-800 border border-ink-600 rounded-3xl p-8 max-w-md w-full text-center">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 bg-emerald-500/20 border-2 border-emerald-500/40">
+      <div style={{
+        minHeight: '100vh',
+        background: `linear-gradient(135deg, ${C.navy900} 0%, #0D2137 50%, ${C.navy900} 100%)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
+      }}>
+        <div style={{
+          background: C.white,
+          border: `1px solid ${C.navy600}`,
+          borderRadius: 24, padding: 32,
+          maxWidth: 420, width: '100%',
+          textAlign: 'center',
+          boxShadow: '0 24px 60px rgba(26,58,92,0.3)'
+        }}>
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%',
+            background: `linear-gradient(135deg, ${C.gold500}, ${C.gold400})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 36, margin: '0 auto 16px',
+            boxShadow: `0 8px 24px ${C.gold300}`
+          }}>
             ✅
           </div>
-          <h2 className="text-2xl font-bold mb-2 text-emerald-400">
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: C.navy900 }}>
             Vos réponses ont été envoyées avec succès !
           </h2>
-          <p className="text-slate-400 text-sm mb-6">{examen?.titre}</p>
+          <p style={{ color: C.textSub, fontSize: 13, marginBottom: 24 }}>{examen?.titre}</p>
 
           {dateAff && !resultatsVisibles && (
-            <div className="bg-ink-700 border border-violet-500/30 rounded-2xl p-4 mb-4">
-              <p className="text-violet-400 font-semibold text-sm mb-1">🔒 Résultats cachés</p>
-              <p className="text-xs text-slate-400 leading-relaxed">
+            <div style={{
+              background: C.navy600,
+              border: `1px solid ${C.navy700}`,
+              borderRadius: 16, padding: 16, marginBottom: 16
+            }}>
+              <p style={{ color: C.navy800, fontWeight: 600, fontSize: 13, marginBottom: 6 }}>🔒 Résultats cachés</p>
+              <p style={{ fontSize: 12, color: C.textSub, lineHeight: 1.6 }}>
                 Pour garantir l'équité, votre résultat et le corrigé seront révélés à tous les étudiants en même temps le
               </p>
-              <p className="text-amber-400 font-bold text-sm mt-2">📅 {dateAff}</p>
+              <p style={{ color: C.gold500, fontWeight: 700, fontSize: 13, marginTop: 8 }}>📅 {dateAff}</p>
             </div>
           )}
 
           {resultatsVisibles && result?.certificat && (
-            <div className="bg-amber-500/10 border border-amber-400/30 rounded-2xl p-4 mb-4">
-              <p className="text-amber-400 font-semibold text-sm">🎓 Certificat obtenu !</p>
-              <p className="text-xs text-amber-400/70 mt-1">N° {result.certificat.numero_certificat}</p>
-              <p className="text-xs text-slate-400 mt-1">Vous recevrez un email de confirmation.</p>
+            <div style={{
+              background: C.gold200,
+              border: `1px solid ${C.gold300}`,
+              borderRadius: 16, padding: 16, marginBottom: 16
+            }}>
+              <p style={{ color: C.gold500, fontWeight: 600, fontSize: 13 }}>🎓 Certificat obtenu !</p>
+              <p style={{ fontSize: 12, color: C.textSub, marginTop: 4 }}>N° {result.certificat.numero_certificat}</p>
+              <p style={{ fontSize: 12, color: C.textSub, marginTop: 4 }}>Vous recevrez un email de confirmation.</p>
             </div>
           )}
 
-          <div className="flex flex-col gap-2">
-            <Btn onClick={() => navigate('/dashboard/examens')}>↩ Retour aux examens</Btn>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Btn variant="primary" onClick={() => navigate('/dashboard/examens')}>↩ Retour aux examens</Btn>
             {resultatsVisibles && (
               <Btn variant="ghost" onClick={() => navigate(`/examens/${id}/resultats`)}>
                 📊 Voir le corrigé
@@ -285,34 +373,55 @@ export default function ExamenPassage() {
   const isListeComplete = examen?.mode_affichage === 'LISTE_COMPLETE'
 
   return (
-    <div className="min-h-screen bg-ink-950 flex flex-col">
+    <div style={{ minHeight: '100vh', background: C.ivory500, display: 'flex', flexDirection: 'column' }}>
       {/* Header barre fixe */}
-      <div className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 border-b
-        ${isUrgent ? 'bg-rose-950 border-rose-800' : 'bg-ink-900 border-ink-700'}`}>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-sm">📝</div>
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 16px',
+        background: isUrgent ? '#7F1D1D' : C.navy900,
+        borderBottom: isUrgent ? '1px solid #B91C1C' : `1px solid ${C.navy800}`,
+        boxShadow: '0 2px 12px rgba(26,58,92,0.3)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 12,
+            background: `linear-gradient(135deg, ${C.gold500}, ${C.gold400})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16
+          }}>📝</div>
           <div>
-            <p className="text-xs font-semibold text-slate-200 leading-none truncate max-w-48">{examen?.titre}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{questionsRepondues}/{questions.length} répondues</p>
+            <p style={{ fontSize: 12, fontWeight: 600, color: C.white, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {examen?.titre}
+            </p>
+            <p style={{ fontSize: 11, color: C.navy600, marginTop: 1 }}>
+              {questionsRepondues}/{questions.length} répondues
+            </p>
           </div>
         </div>
 
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono font-bold text-sm
-          ${isUrgent ? 'text-rose-400 bg-rose-500/20 border border-rose-500/30 animate-pulse'
-                     : 'text-slate-200 bg-ink-800 border border-ink-600'}`}>
+        {/* Timer */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 12px', borderRadius: 12,
+          fontFamily: 'monospace', fontWeight: 700, fontSize: 14,
+          background: isUrgent ? 'rgba(239,68,68,0.2)' : C.gold200,
+          border: isUrgent ? '1px solid rgba(239,68,68,0.4)' : `1px solid ${C.gold300}`,
+          color: isUrgent ? '#FCA5A5' : C.navy900,
+          animation: isUrgent ? 'pulse 1s infinite' : 'none'
+        }}>
           ⏱ {String(mins).padStart(2,'0')}:{String(secs).padStart(2,'0')}
         </div>
 
-        <Btn size="sm" onClick={() => setConfirmEnd(true)} disabled={submitting}>
+        <Btn size="sm" variant="gold" onClick={() => setConfirmEnd(true)} disabled={submitting}>
           {submitting ? '…' : '✅ Terminer'}
         </Btn>
       </div>
 
       {/* Contenu */}
-      <div className="flex-1 pt-16 pb-8 overflow-y-auto">
+      <div style={{ flex: 1, paddingTop: 64, paddingBottom: 32, overflowY: 'auto' }}>
         {isListeComplete ? (
           /* Mode liste complète */
-          <div className="max-w-2xl mx-auto p-4 flex flex-col gap-6">
+          <div style={{ maxWidth: 672, margin: '0 auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 20 }}>
             <ProgressBar current={questionsRepondues} total={questions.length} />
             {questions.map((q, idx) => (
               <QuestionBlock key={q.id} question={q} idx={idx} selected={reponses[q.id]}
@@ -321,12 +430,15 @@ export default function ExamenPassage() {
           </div>
         ) : (
           /* Mode question par question */
-          <div className="max-w-2xl mx-auto p-4 flex flex-col gap-4">
+          <div style={{ maxWidth: 672, margin: '0 auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <ProgressBar current={currentIdx + 1} total={questions.length} />
 
             {questions.length === 0 ? (
-              <div className="bg-ink-800 border border-rose-500/30 rounded-2xl p-6 text-center">
-                <p className="text-rose-400 text-sm">Aucune question chargée. Rechargez la page.</p>
+              <div style={{
+                background: C.white, border: `1px solid #FCA5A5`,
+                borderRadius: 16, padding: 24, textAlign: 'center'
+              }}>
+                <p style={{ color: C.error, fontSize: 13 }}>Aucune question chargée. Rechargez la page.</p>
               </div>
             ) : question ? (
               <QuestionBlock
@@ -337,27 +449,43 @@ export default function ExamenPassage() {
                 onSelect={(rId) => selectReponse(question.id, rId)} />
             ) : null}
 
-            <div className="flex justify-between gap-3 mt-2">
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 8 }}>
               <Btn variant="ghost" disabled={currentIdx === 0}
                 onClick={() => setCurrentIdx(i => i - 1)}>
                 ← Précédent
               </Btn>
               {currentIdx < questions.length - 1 ? (
-                <Btn onClick={() => setCurrentIdx(i => i + 1)}>Suivant →</Btn>
+                <Btn variant="primary" onClick={() => setCurrentIdx(i => i + 1)}>Suivant →</Btn>
               ) : (
-                <Btn onClick={() => setConfirmEnd(true)}>✅ Terminer</Btn>
+                <Btn variant="gold" onClick={() => setConfirmEnd(true)}>✅ Terminer</Btn>
               )}
             </div>
 
             {/* Navigation dots */}
             {questions.length > 1 && (
-              <div className="flex flex-wrap gap-1.5 justify-center mt-2">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 8 }}>
                 {questions.map((q, i) => (
                   <button key={i} onClick={() => setCurrentIdx(i)}
-                    className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all
-                      ${i === currentIdx ? 'bg-violet-600 text-white' :
-                        reponses[q.id] ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                        'bg-ink-700 text-slate-400 hover:bg-ink-600'}`}>
+                    style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      background: i === currentIdx
+                        ? `linear-gradient(135deg, ${C.navy800}, ${C.navy700})`
+                        : reponses[q.id]
+                          ? C.gold200
+                          : C.ivory500,
+                      border: i === currentIdx
+                        ? 'none'
+                        : reponses[q.id]
+                          ? `1px solid ${C.gold400}`
+                          : `1px solid ${C.navy600}`,
+                      color: i === currentIdx
+                        ? C.white
+                        : reponses[q.id]
+                          ? C.navy900
+                          : C.textSub,
+                    }}>
                     {i + 1}
                   </button>
                 ))}
@@ -369,21 +497,36 @@ export default function ExamenPassage() {
 
       {/* Modal confirmation fin */}
       {confirmEnd && (
-        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
-          <div className="bg-ink-800 border border-ink-600 rounded-3xl p-6 max-w-sm w-full">
-            <h3 className="text-lg font-bold text-slate-100 mb-2">Terminer l'examen ?</h3>
-            <p className="text-sm text-slate-400 mb-1">
-              Vous avez répondu à <strong className="text-slate-200">{questionsRepondues}/{questions.length}</strong> questions.
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
+        }}>
+          <div style={{
+            background: C.white,
+            border: `1px solid ${C.navy600}`,
+            borderRadius: 24, padding: 24,
+            maxWidth: 380, width: '100%',
+            boxShadow: '0 24px 60px rgba(26,58,92,0.3)'
+          }}>
+            {/* Accent doré en haut */}
+            <div style={{
+              height: 4, borderRadius: '4px 4px 0 0',
+              background: `linear-gradient(90deg, ${C.gold500}, ${C.gold400})`,
+              margin: '-24px -24px 20px'
+            }} />
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: C.navy900, marginBottom: 8 }}>Terminer l'examen ?</h3>
+            <p style={{ fontSize: 13, color: C.textSub, marginBottom: 4 }}>
+              Vous avez répondu à <strong style={{ color: C.navy900 }}>{questionsRepondues}/{questions.length}</strong> questions.
             </p>
             {questionsRepondues < questions.length && (
-              <p className="text-xs text-amber-400 mb-4">
+              <p style={{ fontSize: 12, color: C.gold500, marginBottom: 16 }}>
                 ⚠️ {questions.length - questionsRepondues} question(s) sans réponse.
               </p>
             )}
-            <p className="text-xs text-slate-500 mb-5">Après validation, vous ne pourrez plus modifier vos réponses.</p>
-            <div className="flex gap-3">
-              <Btn variant="ghost" onClick={() => setConfirmEnd(false)} className="flex-1">Annuler</Btn>
-              <Btn onClick={() => handleSoumettre(false)} disabled={submitting} className="flex-1">
+            <p style={{ fontSize: 11, color: C.textSub, marginBottom: 20 }}>Après validation, vous ne pourrez plus modifier vos réponses.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Btn variant="ghost" onClick={() => setConfirmEnd(false)} style={{ flex: 1 }}>Annuler</Btn>
+              <Btn variant="gold" onClick={() => handleSoumettre(false)} disabled={submitting} style={{ flex: 1 }}>
                 {submitting ? 'Envoi…' : 'Confirmer'}
               </Btn>
             </div>
