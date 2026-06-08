@@ -981,139 +981,199 @@ export default function Salle() {
         </div>
       )}
 
-      {/* ── Modal planifier séance AVEC validation matière/tarif ──────── */}
+      {/* ── Modal planifier séance — thème navy+gold (même que EmploiDuTemps) ── */}
       <Modal open={showPlan} onClose={() => { setShowPlan(false); setPlanForm({ titre:'', matiere:'', dateDebut:'', duree:60, heureDebut:'', creneauDispo:null }); setMesTarifs([]); setMesDispos([]) }} title="📅 Planifier une séance" width="max-w-xl">
-        <form onSubmit={handlePlanifier} className="flex flex-col gap-4">
-          <FormGroup label="Titre *">
-            <input required value={planForm.titre} onChange={e => setPlanForm(f => ({...f, titre:e.target.value}))} placeholder="ex: Cours d'Algèbre" />
-          </FormGroup>
+        <div style={{ maxHeight:'80vh', overflowY:'auto' }}>
+          <form onSubmit={handlePlanifier} style={{ display:'flex', flexDirection:'column', gap:0 }}>
 
-          {/* ⚠️ Matière OBLIGATOIRE avec message d'avertissement */}
-          <FormGroup label="Matière / Tarif *">
-            {mesTarifs.length > 0 ? (
-              <select required value={planForm.matiere} onChange={e => setPlanForm(f => ({...f, matiere:e.target.value}))}>
-                <option value="">— Sélectionner une matière (obligatoire) —</option>
-                {mesTarifs.map(t => (<option key={t.id} value={t.matiere}>{t.matiere} — {t.tarif_heure} DH/h</option>))}
-              </select>
-            ) : (
-              <div>
-                <input required value={planForm.matiere} onChange={e => setPlanForm(f => ({...f, matiere:e.target.value}))} placeholder="ex: Mathématiques (obligatoire pour le calcul du montant)" />
-                <p className="text-xs text-amber-400 mt-1">⚠️ Configurez vos tarifs dans l'espace tuteur pour un calcul automatique.</p>
+            {/* ── Étape 1 : Titre ─────────────────────────────── */}
+            <div style={{ padding:'14px 24px', borderBottom:'1px solid #E8D5A3' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                <div style={{ width:22, height:22, borderRadius:'50%', background:'#0A1628', border:'1.5px solid #C5A059', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <span style={{ fontSize:10, fontWeight:800, color:'#C5A059' }}>1</span>
+                </div>
+                <span style={{ fontSize:12, fontWeight:700, color:'#8B9CB5', textTransform:'uppercase', letterSpacing:'0.05em' }}>Titre de la séance</span>
               </div>
-            )}
-            {!planForm.matiere && (
-              <p className="text-xs text-rose-400 mt-1 font-semibold">⚠️ La matière est obligatoire — l'admin ne pourra pas payer sans tarif associé.</p>
-            )}
-          </FormGroup>
+              <input required value={planForm.titre} onChange={e => setPlanForm(f => ({...f, titre:e.target.value}))} placeholder="ex: Cours d'Algèbre Linéaire"
+                style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:'1.5px solid #E8D5A3', background:'#FFFFFF', color:'#0A1628', fontSize:13, outline:'none', boxSizing:'border-box' }}
+                onFocus={e => e.target.style.borderColor='#C5A059'} onBlur={e => e.target.style.borderColor='#E8D5A3'} />
+            </div>
 
-          {/* Étape 1 — Créneau de disponibilité */}
-          <FormGroup label="1. Choisir le créneau de disponibilité *">
-            {mesDispos.length === 0 ? (
-              <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3">
-                <p className="text-xs text-amber-400">⚠️ Aucune disponibilité configurée.</p>
-                <a href="/dashboard/disponibilites" className="text-xs text-amber-300 underline mt-1 block">→ Configurer mes disponibilités</a>
+            {/* ── Étape 2 : Matière & Tarif ───────────────────── */}
+            <div style={{ padding:'14px 24px', borderBottom:'1px solid #E8D5A3' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                <div style={{ width:22, height:22, borderRadius:'50%', background:'#0A1628', border:'1.5px solid #C5A059', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <span style={{ fontSize:10, fontWeight:800, color:'#C5A059' }}>2</span>
+                </div>
+                <span style={{ fontSize:12, fontWeight:700, color:'#8B9CB5', textTransform:'uppercase', letterSpacing:'0.05em' }}>Matière & Tarif</span>
               </div>
-            ) : (() => {
-              const JOURS = ['','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche']
-              const creneaux = []
-              const now = new Date()
-              for (let s = 0; s < 4; s++) {
-                for (const d of mesDispos) {
-                  const today = new Date(now); today.setHours(0,0,0,0)
-                  const todayISO = today.getDay() === 0 ? 7 : today.getDay()
-                  let diff = d.jour_semaine - todayISO + s * 7; if (s===0 && diff<0) diff+=7
-                  const date = new Date(today); date.setDate(today.getDate() + diff)
-                  const [h,m] = d.heure_debut.split(':').map(Number); date.setHours(h,m,0,0)
-                  if (date <= now) continue
-                  const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
-                  creneaux.push({ key:`${dateStr}-${d.heure_debut}`, dateStr, label:`${JOURS[d.jour_semaine]} ${date.getDate()}/${date.getMonth()+1} · ${d.heure_debut} → ${d.heure_fin}`, heureDebut:d.heure_debut, heureFin:d.heure_fin, dateObj:new Date(date) })
-                }
-              }
-              creneaux.sort((a,b) => a.dateObj - b.dateObj)
-              return (
-                <div className="flex flex-col gap-1.5 max-h-44 overflow-y-auto pr-1">
-                  {creneaux.map(cr => {
-                    const sel = planForm.creneauDispo?.key === cr.key
+              {mesTarifs.length > 0 ? (
+                <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                  {mesTarifs.map(t => {
+                    const sel = planForm.matiere === t.matiere
                     return (
-                      <button key={cr.key} type="button"
-                        onClick={() => {
-                          const [hd] = cr.heureDebut.split(':').map(Number)
-                          const [hf,mf] = cr.heureFin.split(':').map(Number)
-                          const maxDur = (hf*60+mf) - (hd*60)
-                          setPlanForm(f => ({ ...f, creneauDispo:cr, heureDebut:cr.heureDebut, duree:Math.min(f.duree,maxDur), dateDebut:`${cr.dateStr}T${cr.heureDebut}` }))
-                        }}
-                        className="w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2"
-                        style={{ background:sel?'rgba(124,58,237,0.15)':'transparent', border:sel?'1.5px solid #7c3aed':'1px solid rgba(255,255,255,0.08)', color:sel?'#a78bfa':'#64748b', fontWeight:sel?600:400 }}>
-                        <span>{sel?'✓':'○'}</span><span>{cr.label}</span>
+                      <button key={t.id} type="button" onClick={() => setPlanForm(f => ({...f, matiere:t.matiere}))}
+                        style={{ padding:'8px 14px', borderRadius:10, cursor:'pointer', transition:'all 0.15s', background:sel?'#0A1628':'#FFFFFF', border:sel?'2px solid #C5A059':'1.5px solid #E8D5A3', display:'flex', flexDirection:'column', alignItems:'flex-start', gap:2 }}>
+                        <span style={{ fontSize:12, fontWeight:700, color:sel?'#C5A059':'#0A1628' }}>{t.matiere}</span>
+                        <span style={{ fontSize:10, color:sel?'#C5A059':'#8B9CB5' }}>{t.tarif_heure} DH/h</span>
                       </button>
                     )
                   })}
                 </div>
-              )
-            })()}
-          </FormGroup>
+              ) : (
+                <div>
+                  <input required value={planForm.matiere} onChange={e => setPlanForm(f => ({...f, matiere:e.target.value}))} placeholder="ex: Mathématiques"
+                    style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:'1.5px solid #E8D5A3', background:'#FFFFFF', color:'#0A1628', fontSize:13, outline:'none', boxSizing:'border-box' }}
+                    onFocus={e => e.target.style.borderColor='#C5A059'} onBlur={e => e.target.style.borderColor='#E8D5A3'} />
+                  <p style={{ fontSize:11, color:'#F59E0B', marginTop:6 }}>⚠️ Configurez vos tarifs pour un calcul automatique.</p>
+                </div>
+              )}
+              {!planForm.matiere && <p style={{ fontSize:11, color:'#EF4444', marginTop:6, fontWeight:600 }}>⚠️ Matière obligatoire — l'admin ne peut pas payer sans tarif.</p>}
+            </div>
 
-          {/* Étape 2 — Heure de début précise dans le créneau */}
-          {planForm.creneauDispo && (() => {
-            const cr = planForm.creneauDispo
-            const [hDeb,mDeb] = cr.heureDebut.split(':').map(Number)
-            const [hFin,mFin] = cr.heureFin.split(':').map(Number)
-            const totalMinFin = hFin*60+mFin
-            const heures = []
-            for (let min = hDeb*60+mDeb; min <= totalMinFin-30; min+=30) {
-              heures.push(`${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`)
-            }
-            const [hC,mC] = planForm.heureDebut.split(':').map(Number)
-            const dureeMax = totalMinFin - (hC*60+mC)
-            const finMin = hC*60+mC + Math.min(planForm.duree, dureeMax)
-            const heureFin = `${String(Math.floor(finMin/60)).padStart(2,'0')}:${String(finMin%60).padStart(2,'0')}`
-            return (
-              <>
-                <FormGroup label="2. Heure de début *">
-                  <div className="flex flex-wrap gap-2">
+            {/* ── Étape 3 : Créneau ───────────────────────────── */}
+            <div style={{ padding:'14px 24px', borderBottom:'1px solid #E8D5A3' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                <div style={{ width:22, height:22, borderRadius:'50%', background:'#0A1628', border:'1.5px solid #C5A059', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <span style={{ fontSize:10, fontWeight:800, color:'#C5A059' }}>3</span>
+                </div>
+                <span style={{ fontSize:12, fontWeight:700, color:'#8B9CB5', textTransform:'uppercase', letterSpacing:'0.05em' }}>Choisir un créneau</span>
+              </div>
+              {mesDispos.length === 0 ? (
+                <div style={{ borderRadius:10, background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.3)', padding:'12px 14px' }}>
+                  <p style={{ fontSize:12, color:'#F59E0B', margin:'0 0 4px' }}>⚠️ Aucune disponibilité configurée.</p>
+                  <a href="/dashboard/disponibilites" style={{ fontSize:11, color:'#FCD34D' }}>→ Configurer mes disponibilités</a>
+                </div>
+              ) : (() => {
+                const JNOMS = ['','Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
+                const MOIS  = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+                const seen  = new Set()
+                const creneaux = []
+                const now   = new Date()
+                const today = new Date(now); today.setHours(0,0,0,0)
+                for (let dayOffset = 0; dayOffset < 28; dayOffset++) {
+                  const date = new Date(today); date.setDate(today.getDate() + dayOffset)
+                  const jourISO = date.getDay() === 0 ? 7 : date.getDay()
+                  for (const d of mesDispos) {
+                    if (d.jour_semaine !== jourISO) continue
+                    const [h, m] = d.heure_debut.split(':').map(Number)
+                    const dateAvecHeure = new Date(date); dateAvecHeure.setHours(h, m, 0, 0)
+                    const [hf, mf] = d.heure_fin.split(':').map(Number)
+                    const dateFinCreneau = new Date(date); dateFinCreneau.setHours(hf, mf, 0, 0)
+                    if (dateFinCreneau <= now) continue
+                    const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+                    const key = `${dateStr}-${d.heure_debut}`
+                    if (seen.has(key)) continue
+                    seen.add(key)
+                    creneaux.push({ key, dateStr, heureDebut:d.heure_debut, heureFin:d.heure_fin, dateObj:new Date(dateAvecHeure), jourNom:JNOMS[jourISO], jour:date.getDate(), mois:MOIS[date.getMonth()] })
+                  }
+                }
+                if (creneaux.length === 0) return <p style={{ fontSize:12, color:'#F59E0B' }}>Aucun créneau dans les 28 prochains jours.</p>
+                return (
+                  <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:220, overflowY:'auto', paddingRight:2 }}>
+                    {creneaux.map(cr => {
+                      const sel = planForm.creneauDispo?.key === cr.key
+                      const [hd,md] = cr.heureDebut.split(':').map(Number)
+                      const [hf,mf] = cr.heureFin.split(':').map(Number)
+                      const maxDur = (hf*60+mf) - (hd*60+md)
+                      return (
+                        <button key={cr.key} type="button"
+                          onClick={() => setPlanForm(f => ({ ...f, creneauDispo:cr, heureDebut:cr.heureDebut, duree:Math.min(f.duree||60,maxDur), dateDebut:`${cr.dateStr}T${cr.heureDebut}` }))}
+                          style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:11, cursor:'pointer', transition:'all 0.15s', background:sel?'#0A1628':'transparent', border:sel?'2px solid #C5A059':'1px solid #E8D5A3' }}>
+                          <div style={{ flexShrink:0, width:40, height:40, borderRadius:10, background:sel?'rgba(197,160,89,0.12)':'rgba(197,160,89,0.06)', border:`1px solid ${sel?'#C5A059':'#E8D5A3'}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                            <span style={{ fontSize:8, fontWeight:700, color:sel?'#C5A059':'#8B9CB5', textTransform:'uppercase' }}>{cr.jourNom}</span>
+                            <span style={{ fontSize:16, fontWeight:800, color:sel?'#C5A059':'#0A1628', lineHeight:1.2 }}>{cr.jour}</span>
+                            <span style={{ fontSize:8, color:sel?'#C5A059':'#8B9CB5' }}>{cr.mois}</span>
+                          </div>
+                          <div style={{ flex:1, textAlign:'left' }}>
+                            <div style={{ fontSize:13, fontWeight:700, color:sel?'#C5A059':'#0A1628' }}>{cr.heureDebut} – {cr.heureFin}</div>
+                            <div style={{ fontSize:10, color:'#8B9CB5', marginTop:1 }}>{maxDur} min disponibles</div>
+                          </div>
+                          {sel && <span style={{ color:'#C5A059' }}>✓</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+
+            {/* ── Étape 4 : Heure & Durée ─────────────────────── */}
+            {planForm.creneauDispo && (() => {
+              const cr = planForm.creneauDispo
+              const [hDeb,mDeb] = cr.heureDebut.split(':').map(Number)
+              const [hFin,mFin] = cr.heureFin.split(':').map(Number)
+              const totalMinFin = hFin*60+mFin
+              const heures = []
+              for (let min = hDeb*60+mDeb; min <= totalMinFin-5; min+=30)
+                heures.push(`${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`)
+              const [hC,mC] = (planForm.heureDebut||cr.heureDebut).split(':').map(Number)
+              const dureeMax = totalMinFin - (hC*60+mC)
+              const finMin = hC*60+mC + Math.min(planForm.duree, dureeMax)
+              const heureFin = `${String(Math.floor(finMin/60)).padStart(2,'0')}:${String(finMin%60).padStart(2,'0')}`
+              return (
+                <div style={{ padding:'14px 24px', borderBottom:'1px solid #E8D5A3' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                    <div style={{ width:22, height:22, borderRadius:'50%', background:'#0A1628', border:'1.5px solid #C5A059', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <span style={{ fontSize:10, fontWeight:800, color:'#C5A059' }}>4</span>
+                    </div>
+                    <span style={{ fontSize:12, fontWeight:700, color:'#8B9CB5', textTransform:'uppercase', letterSpacing:'0.05em' }}>Heure & Durée</span>
+                  </div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:8 }}>
                     {heures.map(h => {
                       const sel = planForm.heureDebut === h
                       return (
                         <button key={h} type="button"
-                          onClick={() => { const [hh,mm]=h.split(':').map(Number); const max=totalMinFin-(hh*60+mm); setPlanForm(f=>({...f,heureDebut:h,duree:Math.min(f.duree,max),dateDebut:`${cr.dateStr}T${h}`})) }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                          style={{ background:sel?'#7c3aed':'rgba(255,255,255,0.05)', border:sel?'2px solid #7c3aed':'1.5px solid rgba(255,255,255,0.1)', color:sel?'#fff':'#94a3b8' }}>
+                          onClick={() => { const [hh,mm]=h.split(':').map(Number); const max=totalMinFin-(hh*60+mm); setPlanForm(f=>({...f,heureDebut:h,duree:Math.min(f.duree||5,max),dateDebut:`${cr.dateStr}T${h}`})) }}
+                          style={{ padding:'7px 16px', borderRadius:9, cursor:'pointer', fontSize:13, fontWeight:700, transition:'all 0.15s', background:sel?'#C5A059':'transparent', border:sel?'2px solid #C5A059':'1.5px solid #E8D5A3', color:sel?'#fff':'#8B9CB5' }}>
                           {h}
                         </button>
                       )
                     })}
                   </div>
-                </FormGroup>
-                <FormGroup label="3. Durée de la séance">
-                  <div className="flex items-center gap-3">
-                    <input type="number" min={30} max={dureeMax} step={30} value={planForm.duree}
-                      onChange={e => setPlanForm(f => ({...f, duree:Math.min(Number(e.target.value),dureeMax)}))}
-                      style={{width:90}} />
-                    <span className="text-xs text-slate-400">min</span>
-                    {planForm.heureDebut && (
-                      <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg" style={{background:'rgba(124,58,237,0.1)',border:'1px solid rgba(124,58,237,0.3)'}}>
-                        <span className="text-sm font-bold text-violet-300">{planForm.heureDebut}</span>
-                        <div className="flex-1 h-0.5 rounded" style={{background:'linear-gradient(90deg,#7c3aed,#a78bfa)'}} />
-                        <span className="text-sm font-bold" style={{color:'#C5A059'}}>{heureFin}</span>
-                      </div>
-                    )}
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                    <span style={{ fontSize:11, color:'#8B9CB5', fontWeight:600 }}>Ou saisir manuellement :</span>
+                    <input type="time" value={planForm.heureDebut || ''} min={cr.heureDebut} max={cr.heureFin}
+                      onChange={e => { const h=e.target.value; if(!h)return; const [hh,mm]=h.split(':').map(Number); const max=totalMinFin-(hh*60+mm); if(max<5)return; setPlanForm(f=>({...f,heureDebut:h,duree:Math.min(f.duree||5,max),dateDebut:`${cr.dateStr}T${h}`})) }}
+                      style={{ padding:'7px 12px', borderRadius:9, border:'1.5px solid #E8D5A3', background:'#FFFFFF', color:'#0A1628', fontSize:13, fontWeight:700, outline:'none' }} />
                   </div>
-                  <p className="text-xs text-slate-600 mt-1">Durée max dans ce créneau : {dureeMax} min</p>
-                </FormGroup>
-                <div className="rounded-xl p-3 flex flex-col gap-1" style={{background:'rgba(124,58,237,0.08)',border:'1px solid rgba(124,58,237,0.25)'}}>
-                  <p className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Récapitulatif</p>
-                  <p className="text-xs text-slate-300">{cr.label.split('·')[0].trim()}</p>
-                  <p className="text-xs font-bold" style={{color:'#a78bfa'}}>🕐 {planForm.heureDebut} → {heureFin} ({Math.min(planForm.duree,dureeMax)} min)</p>
+                  {planForm.heureDebut && (
+                    <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, background:'#FFFFFF', border:'1.5px solid #E8D5A3', borderRadius:10, padding:'6px 12px' }}>
+                        <span style={{ fontSize:11, color:'#8B9CB5' }}>Durée :</span>
+                        <input type="number" min={5} max={dureeMax} step={5} value={planForm.duree}
+                          onChange={e => setPlanForm(f=>({...f,duree:Math.min(Number(e.target.value),dureeMax)}))}
+                          style={{ width:60, border:'none', background:'transparent', color:'#0A1628', fontSize:13, fontWeight:700, outline:'none', textAlign:'center' }} />
+                        <span style={{ fontSize:11, color:'#8B9CB5' }}>min</span>
+                      </div>
+                      <div style={{ flex:1, minWidth:140, display:'flex', alignItems:'center', gap:8, padding:'9px 14px', borderRadius:10, background:'linear-gradient(135deg,#0A1628,rgba(197,160,89,0.12))', border:'1.5px solid rgba(197,160,89,0.25)' }}>
+                        <span style={{ fontSize:18 }}>🕐</span>
+                        <div>
+                          <div style={{ fontSize:14, fontWeight:800, color:'#C5A059' }}>{planForm.heureDebut} → {heureFin}</div>
+                          <div style={{ fontSize:10, color:'#8B9CB5' }}>{planForm.duree} minutes</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </>
-            )
-          })()}
+              )
+            })()}
 
-          <div className="flex gap-3 justify-end pt-1">
-            <Btn variant="secondary" onClick={() => setShowPlan(false)}>Annuler</Btn>
-            <Btn type="submit" disabled={!planForm.creneauDispo || !planForm.heureDebut || !planForm.matiere}>Planifier</Btn>
-          </div>
-        </form>
+            {/* ── Footer ─────────────────────────────────────────── */}
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end', padding:'16px 24px 20px', borderTop:'1px solid #E8D5A3', marginTop:4 }}>
+              <button type="button"
+                onClick={() => { setShowPlan(false); setPlanForm({ titre:'', matiere:'', dateDebut:'', duree:60, heureDebut:'', creneauDispo:null }); setMesTarifs([]); setMesDispos([]) }}
+                style={{ padding:'9px 20px', borderRadius:10, border:'1.5px solid #E8D5A3', background:'transparent', color:'#8B9CB5', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                Annuler
+              </button>
+              <button type="submit"
+                disabled={!planForm.creneauDispo || !planForm.heureDebut || !planForm.matiere || !planForm.titre}
+                style={{ padding:'9px 24px', borderRadius:10, border:'none', fontSize:13, fontWeight:700, cursor:(!planForm.creneauDispo||!planForm.heureDebut||!planForm.matiere||!planForm.titre)?'not-allowed':'pointer', transition:'all 0.2s', background:(!planForm.creneauDispo||!planForm.heureDebut||!planForm.matiere||!planForm.titre)?'rgba(197,160,89,0.3)':'#C5A059', color:(!planForm.creneauDispo||!planForm.heureDebut||!planForm.matiere||!planForm.titre)?'rgba(255,255,255,0.4)':'#fff' }}>
+                📅 Planifier la séance
+              </button>
+            </div>
+          </form>
+        </div>
       </Modal>
 
       <Modal open={showInviteTuteur} onClose={() => setShowInviteTuteur(false)} title="👨‍🏫 Inviter un tuteur">
