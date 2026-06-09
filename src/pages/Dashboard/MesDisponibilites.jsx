@@ -4,11 +4,11 @@ import Header from '../../components/Header/Header'
 import { Btn, Spinner, ToastContainer } from '../../components/UI'
 import { useToast } from '../../hooks/useToast'
 
-const HEURES = Array.from({ length: 29 }, (_, i) => {
-  const h = Math.floor(i / 2) + 6
+const HEURES = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2)
   const m = i % 2 === 0 ? '00' : '30'
   return `${String(h).padStart(2,'0')}:${m}`
-}).filter(h => h <= '22:00')
+})
 
 const JOURS_COURT = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam']
 const MOIS_NOMS   = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']

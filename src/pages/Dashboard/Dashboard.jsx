@@ -57,7 +57,7 @@ const SalleCard = ({ salle, onRejoindre, onDemanderInvitation, onOuvrir, userRol
               {demandeEnvoyee ? '⏳ Demande envoyée' : '📨 Demander à rejoindre'}
             </Btn>
           ) : (
-            <Btn size="sm" className="w-full justify-center" style={{color:"#b81d1d"}}
+            <Btn size="sm" className="w-full justify-center" style={{color:"#628ecc"}}
               onClick={() => onRejoindre(salle)}>
               ➕ Rejoindre
             </Btn>

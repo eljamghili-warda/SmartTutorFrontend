@@ -503,8 +503,11 @@ export default function EmploiDuTemps() {
                     const date = new Date(today)
                     date.setDate(today.getDate() + dayOffset)
                     const jourISO = date.getDay() === 0 ? 7 : date.getDay()
+                    const dateStr0 = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
                     for (const d of mesDispos) {
-                      if (d.jour_semaine !== jourISO) continue
+                      const matchJour = d.jour_semaine === jourISO
+                      const matchDate = d.date_specifique && d.date_specifique.slice(0,10) === dateStr0
+                      if (!matchJour && !matchDate) continue
                       const [h, m] = d.heure_debut.split(':').map(Number)
                       const dateAvecHeure = new Date(date); dateAvecHeure.setHours(h, m, 0, 0)
                       // Vérifier la fin du créneau (pas le début) — si la fin est déjà passée, on skip
@@ -585,8 +588,6 @@ export default function EmploiDuTemps() {
                       <input
                         type="time"
                         value={form.heureDebut || ''}
-                        min={cr.heureDebut}
-                        max={cr.heureFin}
                         onChange={e => {
                           const h = e.target.value
                           if (!h) return

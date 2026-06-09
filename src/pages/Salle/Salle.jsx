@@ -1240,10 +1240,10 @@ export default function Salle() {
                           flexShrink: 0, width: 22, height: 22, borderRadius: 6,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           background: 'rgba(198,40,40,0.10)', border: '1px solid rgba(198,40,40,0.20)',
-                          color: '#ef5350', fontSize: 11, cursor: 'pointer', opacity: 0, transition: 'opacity 0.15s',
+                          color: '#ef5350', fontSize: 11, cursor: 'pointer', opacity: 1, transition: 'background 0.15s',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'rgba(198,40,40,0.20)' }}
-                        onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.background = 'rgba(198,40,40,0.10)' }}>
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(198,40,40,0.30)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(198,40,40,0.10)' }}>
                         ✕
                       </button>
                     )}
@@ -1307,107 +1307,226 @@ export default function Salle() {
           )}
 
           {/* ── Séances ───────────────────────────────────────────────── */}
-          {rightTab === 'seances' && (
-            <div style={{ flex: 1, overflowY: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {isTuteur && (
-                <button onClick={async () => {
-                  setShowPlan(true)
-                  try {
-                    const [tarifsRes, disposRes] = await Promise.all([tarifsAPI.getMesTarifs(), seancesAPI.getDisponibilites()])
-                    setMesTarifs(tarifsRes.data); setMesDispos(disposRes.data)
-                    if (tarifsRes.data.length === 1) setPlanForm(f => ({ ...f, matiere: tarifsRes.data[0].matiere }))
-                  } catch { setMesTarifs([]); setMesDispos([]) }
-                }} style={{
-                  width: '100%', padding: '8px 12px', borderRadius: 10,
-                  background: 'rgba(197,160,89,0.08)', border: '1px dashed rgba(197,160,89,0.35)',
-                  color: '#C5A059', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  transition: 'all 0.15s',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.14)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(197,160,89,0.08)'}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/></svg>
-                  Planifier une séance
-                </button>
-              )}
-              {seances.map(s => {
-                const sStatutColor = { PLANIFIEE: '#C5A059', EN_ATTENTE_PAIEMENT: '#F59E0B', CONFIRMEE: '#4CAF50', EN_COURS: '#2196F3', REALISEE: '#4CAF50', ANNULEE: '#ef5350' }
-                const sStatutLabel = { PLANIFIEE: 'Planifiée', EN_ATTENTE_PAIEMENT: 'En attente paiement', CONFIRMEE: 'Confirmée', EN_COURS: 'En cours', REALISEE: 'Réalisée', ANNULEE: 'Annulée' }
-                const col = sStatutColor[s.statut] || '#6B7B8D'
-                return (
-                  <div key={s.id} style={{
-                    borderRadius: 12, background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(197,160,89,0.12)', overflow: 'hidden',
-                  }}>
-                    {/* Barre colorée en haut */}
-                    <div style={{ height: 3, background: col }} />
-                    <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: '#E2E8F0', lineHeight: 1.3 }}>{s.titre}</p>
-                        <span style={{ fontSize: 10, fontWeight: 600, color: col, flexShrink: 0, padding: '2px 7px', borderRadius: 20, background: `${col}18`, border: `1px solid ${col}35` }}>
-                          {sStatutLabel[s.statut] || s.statut}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 12 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'rgba(197,160,89,0.55)' }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" strokeWidth="2"/></svg>
-                          {new Date(s.date_debut).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'rgba(197,160,89,0.55)' }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><polyline points="12 6 12 12 16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                          {s.duree} min
-                        </div>
-                      </div>
-                      {s.montant_total > 0 && (
-                        <p style={{ fontSize: 11, color: '#C5A059', fontWeight: 600 }}>{s.montant_total} DH</p>
-                      )}
-                      {isAdmin && (s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE') && (
-                        <div style={{ marginTop: 2, padding: '8px 10px', borderRadius: 8, background: s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? 'rgba(33,150,243,0.08)' : 'rgba(245,158,11,0.08)', border: `1px solid ${s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? 'rgba(33,150,243,0.20)' : 'rgba(245,158,11,0.20)'}` }}>
-                          {s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? (
-                            <>
-                              <p style={{ fontSize: 10, color: '#60a5fa', marginBottom: 6 }}>Fonds sécurisés — libération après réalisation</p>
-                              <button disabled style={{ width: '100%', padding: '6px', borderRadius: 8, background: '#0f172a', color: '#60a5fa', border: '1px solid #1e40af', fontSize: 11, fontWeight: 600, cursor: 'not-allowed', opacity: 0.8 }}>Payé — en escrow</button>
-                            </>
-                          ) : (
-                            <>
-                              <p style={{ fontSize: 10, color: '#F59E0B', marginBottom: 6 }}>En attente de votre paiement</p>
-                              <button onClick={() => setPaiementSeanceId(s.id)} style={{ width: '100%', padding: '7px', borderRadius: 8, background: 'linear-gradient(135deg, #C5A059, #D4B06A)', color: '#0A1628', border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Payer maintenant</button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                      {(s.statut === 'PLANIFIEE' || s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut === 'CONFIRMEE') && isTuteur && (
-                        <button onClick={() => handleAnnulerSeance(s.id)} style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(198,40,40,0.08)', border: '1px solid rgba(198,40,40,0.20)', color: '#ef5350', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(198,40,40,0.16)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(198,40,40,0.08)'}>
-                          Annuler la séance
-                        </button>
-                      )}
-                      {s.statut === 'EN_COURS' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4CAF50', display: 'inline-block' }} />
-                            <p style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600 }}>Séance en cours</p>
-                          </div>
-                          {isTuteur && activeCall && (
-                            <button onClick={handleEndCall} style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(198,40,40,0.08)', border: '1px solid rgba(198,40,40,0.20)', color: '#ef5350', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                              Terminer la séance
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-              {seances.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(197,160,89,0.30)', fontSize: 12 }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }}><rect x="3" y="4" width="18" height="18" rx="2" stroke="#C5A059" strokeWidth="1.5"/><line x1="3" y1="10" x2="21" y2="10" stroke="#C5A059" strokeWidth="1.5"/><line x1="8" y1="2" x2="8" y2="6" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  Aucune séance planifiée
-                </div>
-              )}
+         {/* ── Séances ───────────────────────────────────────────────── */}
+{rightTab === 'seances' && (
+  <div style={{ 
+    flex: 1, 
+    overflowY: 'auto',  // ← SCROLL activé
+    padding: '12px', 
+    display: 'flex', 
+    flexDirection: 'column', 
+    gap: '12px',
+    minHeight: 0,       // ← important pour que le scroll fonctionne
+  }}>
+    {isTuteur && (
+      <button onClick={async () => {
+        setShowPlan(true)
+        try {
+          const [tarifsRes, disposRes] = await Promise.all([tarifsAPI.getMesTarifs(), seancesAPI.getDisponibilites()])
+          setMesTarifs(tarifsRes.data); setMesDispos(disposRes.data)
+          if (tarifsRes.data.length === 1) setPlanForm(f => ({ ...f, matiere: tarifsRes.data[0].matiere }))
+        } catch { setMesTarifs([]); setMesDispos([]) }
+      }} style={{
+        width: '100%', 
+        padding: '10px 12px', 
+        borderRadius: 10,
+        background: 'rgba(197,160,89,0.08)', 
+        border: '1px dashed rgba(197,160,89,0.35)',
+        color: '#C5A059', 
+        fontSize: 13, 
+        fontWeight: 600, 
+        cursor: 'pointer',
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        gap: 6,
+        transition: 'all 0.15s',
+        flexShrink: 0,
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(197,160,89,0.14)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'rgba(197,160,89,0.08)'}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="#C5A059" strokeWidth="2" strokeLinecap="round"/></svg>
+        Planifier une séance
+      </button>
+    )}
+    
+    {/* Liste des séances avec SCROLL */}
+    {seances.map(s => {
+      const sStatutColor = { PLANIFIEE: '#C5A059', EN_ATTENTE_PAIEMENT: '#F59E0B', CONFIRMEE: '#4CAF50', EN_COURS: '#2196F3', REALISEE: '#4CAF50', ANNULEE: '#ef5350' }
+      const sStatutLabel = { PLANIFIEE: 'Planifiée', EN_ATTENTE_PAIEMENT: 'En attente paiement', CONFIRMEE: 'Confirmée', EN_COURS: 'En cours', REALISEE: 'Réalisée', ANNULEE: 'Annulée' }
+      const col = sStatutColor[s.statut] || '#6B7B8D'
+      return (
+        <div key={s.id} style={{
+          borderRadius: 14,
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(197,160,89,0.15)',
+          overflow: 'hidden',
+          flexShrink: 0,  // ← empêche la compression
+        }}>
+          {/* Barre colorée en haut - plus épaisse */}
+          <div style={{ height: 4, background: col }} />
+          
+          {/* Contenu de la carte - padding agrandi */}
+          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            
+            {/* Titre + statut */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: '#E2E8F0', lineHeight: 1.3, flex: 1 }}>
+                {s.titre}
+              </p>
+              <span style={{ 
+                fontSize: 10, 
+                fontWeight: 600, 
+                color: col, 
+                flexShrink: 0, 
+                padding: '3px 8px', 
+                borderRadius: 20, 
+                background: `${col}18`, 
+                border: `1px solid ${col}35` 
+              }}>
+                {sStatutLabel[s.statut] || s.statut}
+              </span>
             </div>
-          )}
+            
+            {/* Date et durée */}
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(197,160,89,0.6)' }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+                {new Date(s.date_debut).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(197,160,89,0.6)' }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                  <polyline points="12 6 12 12 16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                {s.duree} min
+              </div>
+            </div>
+            
+            {/* Matière */}
+            {s.matiere && (
+              <p style={{ fontSize: 11, color: 'rgba(197,160,89,0.5)' }}>📚 {s.matiere}</p>
+            )}
+            
+            {/* Montant */}
+            {s.montant_total > 0 && (
+              <p style={{ fontSize: 12, color: '#C5A059', fontWeight: 700 }}>{s.montant_total} DH</p>
+            )}
+            
+            {/* Bouton paiement pour admin */}
+            {isAdmin && (s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE') && (
+              <div style={{ 
+                marginTop: 4, 
+                padding: '10px 12px', 
+                borderRadius: 10, 
+                background: s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? 'rgba(33,150,243,0.08)' : 'rgba(245,158,11,0.08)', 
+                border: `1px solid ${s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? 'rgba(33,150,243,0.20)' : 'rgba(245,158,11,0.20)'}` 
+              }}>
+                {s.statut_paiement === 'EN_ATTENTE_LIBERATION' || s.statut === 'CONFIRMEE' ? (
+                  <>
+                    <p style={{ fontSize: 10, color: '#60a5fa', marginBottom: 6 }}>Fonds sécurisés — libération après réalisation</p>
+                    <button disabled style={{ 
+                      width: '100%', 
+                      padding: '7px', 
+                      borderRadius: 8, 
+                      background: '#0f172a', 
+                      color: '#60a5fa', 
+                      border: '1px solid #1e40af', 
+                      fontSize: 11, 
+                      fontWeight: 600, 
+                      cursor: 'not-allowed', 
+                      opacity: 0.8 
+                    }}>
+                      Payé — en escrow
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 10, color: '#F59E0B', marginBottom: 6 }}>En attente de votre paiement</p>
+                    <button onClick={() => setPaiementSeanceId(s.id)} style={{ 
+                      width: '100%', 
+                      padding: '8px', 
+                      borderRadius: 8, 
+                      background: 'linear-gradient(135deg, #C5A059, #D4B06A)', 
+                      color: '#0A1628', 
+                      border: 'none', 
+                      fontSize: 12, 
+                      fontWeight: 700, 
+                      cursor: 'pointer' 
+                    }}>
+                      Payer maintenant
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            
+            {/* Bouton annuler pour tuteur */}
+            {(s.statut === 'PLANIFIEE' || s.statut === 'EN_ATTENTE_PAIEMENT' || s.statut === 'CONFIRMEE') && isTuteur && (
+              <button onClick={() => handleAnnulerSeance(s.id)} style={{ 
+                width: '100%', 
+                padding: '8px', 
+                borderRadius: 8, 
+                background: 'rgba(198,40,40,0.08)', 
+                border: '1px solid rgba(198,40,40,0.20)', 
+                color: '#ef5350', 
+                fontSize: 12, 
+                fontWeight: 600, 
+                cursor: 'pointer', 
+                transition: 'all 0.15s' 
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(198,40,40,0.16)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(198,40,40,0.08)'}>
+                Annuler la séance
+              </button>
+            )}
+            
+            {/* Séance en cours */}
+            {s.statut === 'EN_COURS' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+                  <p style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600 }}>Séance en cours</p>
+                </div>
+                {isTuteur && activeCall && (
+                  <button onClick={handleEndCall} style={{ 
+                    width: '100%', 
+                    padding: '8px', 
+                    borderRadius: 8, 
+                    background: 'rgba(198,40,40,0.08)', 
+                    border: '1px solid rgba(198,40,40,0.20)', 
+                    color: '#ef5350', 
+                    fontSize: 12, 
+                    fontWeight: 600, 
+                    cursor: 'pointer' 
+                  }}>
+                    Terminer la séance
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    })}
+    
+    {/* Message vide */}
+    {seances.length === 0 && (
+      <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(197,160,89,0.30)', fontSize: 13 }}>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 10px', display: 'block', opacity: 0.4 }}>
+          <rect x="3" y="4" width="18" height="18" rx="2" stroke="#C5A059" strokeWidth="1.5"/>
+          <line x1="3" y1="10" x2="21" y2="10" stroke="#C5A059" strokeWidth="1.5"/>
+          <line x1="8" y1="2" x2="8" y2="6" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="16" y1="2" x2="16" y2="6" stroke="#C5A059" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        Aucune séance planifiée
+      </div>
+    )}
+  </div>
+)}
 
           {/* ── Examens ───────────────────────────────────────────────── */}
           {rightTab === 'examens' && (
@@ -1766,8 +1885,11 @@ export default function Salle() {
                 for (let dayOffset = 0; dayOffset < 28; dayOffset++) {
                   const date = new Date(today); date.setDate(today.getDate() + dayOffset)
                   const jourISO = date.getDay() === 0 ? 7 : date.getDay()
+                  const dateStr0 = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
                   for (const d of mesDispos) {
-                    if (d.jour_semaine !== jourISO) continue
+                    const matchJour = d.jour_semaine === jourISO
+                    const matchDate = d.date_specifique && d.date_specifique.slice(0,10) === dateStr0
+                    if (!matchJour && !matchDate) continue
                     const [h, m] = d.heure_debut.split(':').map(Number)
                     const dateAvecHeure = new Date(date); dateAvecHeure.setHours(h, m, 0, 0)
                     const [hf, mf] = d.heure_fin.split(':').map(Number)
